@@ -9,5 +9,8 @@ export const QUOTE_LIMITS = {
   maxTaxRateBasisPoints: 10_000,
 } as const;
 
+/** DB templates.key 와 같아야 한다 (tests/db 에서 확인) */
+export const QUOTE_TEMPLATE_VERSION = "quote-template@1";
+
 /** 기본 세율 10% (D06 확정 전 제안값) */
 export const DEFAULT_TAX_RATE_BASIS_POINTS = 1000;
