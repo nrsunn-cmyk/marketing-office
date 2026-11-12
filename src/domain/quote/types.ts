@@ -20,6 +20,8 @@ export interface QuoteItemInput {
   unitPriceWon: number | null;
   /** 단가 0원을 '무료 항목'으로 명시 확인했는지. */
   freeItemConfirmed?: boolean;
+  /** 단가가 있는데 줄 금액이 1원 미만이라 0원이 되는 것을 확인했는지. */
+  zeroAmountConfirmed?: boolean;
 }
 
 export interface QuoteInput {
@@ -47,6 +49,7 @@ export type QuoteIssueCode =
   | "UNIT_PRICE_NEGATIVE"
   | "UNIT_PRICE_TOO_LARGE"
   | "UNIT_PRICE_ZERO_UNCONFIRMED"
+  | "LINE_ROUNDS_TO_ZERO_UNCONFIRMED"
   | "DATE_INVALID"
   | "VALID_UNTIL_BEFORE_ISSUE_DATE"
   | "AMOUNT_TOO_LARGE";

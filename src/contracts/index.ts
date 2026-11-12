@@ -84,6 +84,7 @@ export const quoteItemSchema = z.object({
   quantityHundredths: z.number().nullable(),
   unitPriceWon: z.number().nullable(),
   freeItemConfirmed: z.boolean().default(false),
+  zeroAmountConfirmed: z.boolean().default(false),
 });
 
 /**

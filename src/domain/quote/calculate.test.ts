@@ -107,6 +107,27 @@ describe("T09 부적합 입력 차단", () => {
     expect(r.isFinalizable).toBe(false);
   });
 
+  it("1원 미만이라 0원이 되는 줄은 확인 전까지 확정 불가, 확인 후 허용 (사용자 결정 2026-11-13)", () => {
+    const before = calculateQuote(quote("EXCLUSIVE", [item(1, 1)]));
+    expect(codes(before)).toEqual(["LINE_ROUNDS_TO_ZERO_UNCONFIRMED"]);
+    expect(before.lines[0].amountWon).toBe(0);
+    expect(before.isFinalizable).toBe(false);
+    const after = calculateQuote(quote("EXCLUSIVE", [item(1, 1, { zeroAmountConfirmed: true })]));
+    expect(after.issues).toEqual([]);
+    expect(after.isFinalizable).toBe(true);
+  });
+
+  it("0.5원 이상이면 1원으로 올라가 경고 없음", () => {
+    const r = calculateQuote(quote("EXCLUSIVE", [item(1, 50)]));
+    expect(r.issues).toEqual([]);
+    expect(r.lines[0].amountWon).toBe(1);
+  });
+
+  it("확인된 무료 항목(단가 0원)은 0원 줄 경고 대상이 아니다", () => {
+    const r = calculateQuote(quote("EXCLUSIVE", [item(1, 0, { freeItemConfirmed: true })]));
+    expect(r.issues).toEqual([]);
+  });
+
   it("문제 있는 행은 합계에서 빠지고 나머지는 미리보기로 계산된다", () => {
     const r = calculateQuote(quote("EXCLUSIVE", [item(100, 10_000), item(100, null)]));
     expect(r.subtotalWon).toBe(10_000);

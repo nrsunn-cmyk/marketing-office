@@ -108,6 +108,14 @@ export function calculateQuote(input: QuoteInput): QuoteCalculation {
       continue;
     }
     const amount = roundHalfUpDiv(BigInt(item.quantityHundredths) * BigInt(item.unitPriceWon), QTY_SCALE);
+    // 단가가 있는데 1원 미만이라 0원이 되는 줄은 대부분 입력 실수다. 확인 전에는 확정을 막는다.
+    if (amount === 0n && item.unitPriceWon > 0 && !item.zeroAmountConfirmed) {
+      issues.push({
+        code: "LINE_ROUNDS_TO_ZERO_UNCONFIRMED",
+        itemId: item.id,
+        message: "이 줄은 1원 미만이라 0원으로 계산됩니다. 수량·단가를 확인해 주세요.",
+      });
+    }
     sum += amount;
     lines.push({ id: item.id, amountWon: Number(amount) });
   }
