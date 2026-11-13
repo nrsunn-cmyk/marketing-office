@@ -135,6 +135,8 @@ export function buildLogoBrief(input: LogoBriefInput): LogoBriefOutcome {
   const promptParts = [`'${companyName}' 로고 디자인`];
   if (values.industry) promptParts.push(`업종: ${values.industry}`);
   if (values.description) promptParts.push(`회사 설명: ${values.description}`);
+  if (values.mainCustomers) promptParts.push(`주요 고객: ${values.mainCustomers}`);
+  if (values.strengths.length) promptParts.push(`강점: ${join(values.strengths)}`);
   if (values.preferredStyles.length) promptParts.push(`분위기: ${join(values.preferredStyles)}`);
   if (values.colors.length) promptParts.push(`색상: ${join(values.colors)}`);
   if (values.references.length) promptParts.push(`참고: ${join(values.references)}`);
