@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import type { FormState } from "@/app/_components/form-state";
-import { addTextAsset, addUrlAsset, uploadFileAsset, type AssetOwner } from "./server";
+import { addTextAsset, addUrlAsset, confirmPendingUpload, uploadFileAsset, type AssetOwner } from "./server";
 
 function ownerFrom(fd: FormData): AssetOwner | null {
   const id = z.uuid();
@@ -49,4 +49,15 @@ export async function addUrlAssetAction(_prev: FormState, fd: FormData): Promise
   if (!r.ok) return { message: r.message };
   refresh();
   return { ok: true, message: "링크를 저장했습니다. (서버가 그 주소에 접속하지는 않습니다)" };
+}
+
+export async function confirmUploadAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const assetId = z.uuid().safeParse(fd.get("assetId"));
+  if (!assetId.success) return { message: "잘못된 요청입니다." };
+  const r = await confirmPendingUpload(assetId.data);
+  refresh();
+  if (!r.ok) return { message: r.message };
+  return r.data.status === "stored"
+    ? { ok: true, message: "파일이 저장소에 있어 보관 완료로 표시했습니다." }
+    : { message: "저장소에 파일이 없어 실패로 표시했습니다. 파일을 다시 올려 주세요." };
 }

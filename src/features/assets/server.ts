@@ -141,17 +141,66 @@ export async function uploadFileAsset(owner: AssetOwner, file: File): Promise<Re
     .from(ASSET_BUCKET)
     .upload(objectKey, bytes, { contentType: check.mime, upsert: false });
 
-  const { error: statusError } = await sb
+  const { data: marked, error: statusError } = await sb
     .from("source_assets")
     .update({ upload_status: uploadError ? "failed" : "stored" })
-    .eq("id", id);
-  if (statusError) console.error("[uploadFileAsset] 상태 기록 실패:", statusError.code, statusError.message);
+    .eq("id", id)
+    .eq("upload_status", "pending")
+    .select("id");
 
   if (uploadError) {
     console.error("[uploadFileAsset] 저장소 업로드 실패:", uploadError.message);
     return fail("UPLOAD_FAILED", "파일을 저장하지 못했습니다. 다시 올려 주세요.");
   }
+  // CR05: 파일은 저장됐지만 '보관됨' 표시를 못 했으면 성공으로 안내하지 않는다. 다시 확인으로 복구한다.
+  if (statusError || !marked || marked.length !== 1) {
+    console.error("[uploadFileAsset] 상태 기록 실패:", statusError?.code, statusError?.message ?? `갱신 ${marked?.length ?? 0}행`);
+    return fail(
+      "UPLOAD_FAILED",
+      "파일은 받았지만 보관 완료 표시를 하지 못했습니다. 자료 목록에서 '저장 다시 확인'을 눌러 주세요.",
+    );
+  }
   return ok({ id });
+}
+
+/**
+ * '올리는 중'으로 남은 파일 다시 확인 (CR05 복구).
+ * 파일을 다시 올리지 않고 저장소에 실제로 있는지만 보고 상태를 정한다. 그래서 자료·파일이 중복되지 않는다.
+ */
+export async function confirmPendingUpload(assetId: string): Promise<Result<{ status: "stored" | "failed" }>> {
+  const { workspace } = await requireWorkspace();
+  const sb = await createSupabaseServerClient();
+  const { data: asset, error } = await sb
+    .from("source_assets")
+    .select("id, kind, object_key, upload_status")
+    .eq("workspace_id", workspace.id)
+    .eq("id", assetId)
+    .maybeSingle();
+  if (error) return fromDbError("confirmPendingUpload", error);
+  if (!asset || asset.kind !== "file" || !asset.object_key) return fail("NOT_FOUND", "파일을 찾을 수 없습니다.");
+  if (asset.upload_status === "stored") return ok({ status: "stored" });
+  if (asset.upload_status !== "pending") return fail("VALIDATION", "다시 확인할 수 있는 상태가 아닙니다.");
+
+  const key = asset.object_key;
+  const folder = key.slice(0, key.lastIndexOf("/"));
+  const name = key.slice(key.lastIndexOf("/") + 1);
+  const { data: listed, error: listError } = await sb.storage.from(ASSET_BUCKET).list(folder, { search: name });
+  if (listError) {
+    console.error("[confirmPendingUpload] 저장소 확인 실패:", listError.message);
+    return fail("ERROR", "저장소를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+  const status = listed?.some((o) => o.name === name) ? "stored" : "failed";
+  const { data: marked, error: updateError } = await sb
+    .from("source_assets")
+    .update({ upload_status: status })
+    .eq("id", assetId)
+    .eq("upload_status", "pending")
+    .select("id");
+  if (updateError || !marked || marked.length !== 1) {
+    console.error("[confirmPendingUpload] 상태 기록 실패:", updateError?.code, updateError?.message ?? `갱신 ${marked?.length ?? 0}행`);
+    return fail("UPLOAD_FAILED", "상태를 기록하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+  return ok({ status });
 }
 
 /** 내려받기용 1분짜리 서명 주소. 저장이 끝난 본인 파일만. */

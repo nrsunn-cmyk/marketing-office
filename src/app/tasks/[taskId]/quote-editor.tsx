@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { calculateDraft, parseQuoteForm, type QuoteFormText, type QuoteRowText } from "@/domain/quote/form";
-import { formatWon } from "@/domain/quote/parse";
+import { formatWon, parseWon } from "@/domain/quote/parse";
 import { QUOTE_LIMITS } from "@/domain/quote/limits";
 import { saveQuoteDraftAction } from "@/features/quotes/actions";
 import { EMPTY_FORM_STATE } from "../../_components/form-state";
@@ -91,7 +91,9 @@ export function QuoteEditor({ taskId, revision, initial }: { taskId: string; rev
             const issues = [...(lineIssues.get(r.id) ?? [])];
             const qErr = parseErrors[`row-${r.id}-quantity`] ?? serverErrors[`row-${r.id}-quantity`];
             const pErr = parseErrors[`row-${r.id}-unitPrice`] ?? serverErrors[`row-${r.id}-unitPrice`];
-            const priceZero = r.unitPrice.trim() === "0";
+            // CR06: 원문이 아니라 해석한 금액으로 판단한다("0", "0원", "0 원" 모두 0원)
+            const parsedPrice = parseWon(r.unitPrice);
+            const priceZero = parsedPrice.ok && parsedPrice.value === 0;
             const roundsToZero = issues.some((m) => m.includes("1원 미만"));
             return (
               <tr key={r.id}>

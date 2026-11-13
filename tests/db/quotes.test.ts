@@ -198,3 +198,100 @@ describe("finalize_quote (T08·R04·C08)", () => {
     }
   });
 });
+
+describe("CR03 확정 견적은 finalize_quote 경로로만", () => {
+  it("로그인 사용자는 견적·고정본·견적 번호를 직접 만들 수 없다", async () => {
+    const d = await draft();
+    await expectDbError(
+      asOwner((tx) => tx.query("insert into quotes (workspace_id, task_id, artifact_id) values ($1, $2, $3)", [f.workspaceId, d.task, d.artifact_id])),
+      /row-level security/,
+    );
+    const r = await finalize(d, priced("EXCLUSIVE", 1000, [[100, 1_000]]));
+    await expectDbError(
+      asOwner((tx) =>
+        tx.query(
+          `insert into quote_versions (workspace_id, quote_id, artifact_id, artifact_version_id, supplier_snapshot, customer_snapshot, tax_mode, tax_rate_bp, subtotal_won, tax_won, total_won)
+           values ($1, $2, $3, $4, '{}', '{}', 'NO_TAX', 0, 1, 0, 1)`,
+          [f.workspaceId, r.quote_id, d.artifact_id, d.version_id],
+        ),
+      ),
+      /row-level security/,
+    );
+    await expectDbError(
+      asOwner((tx) => tx.query("insert into quote_number_sequences (workspace_id, year, last_number) values ($1, 2099, 1)", [f.workspaceId])),
+      /row-level security/,
+    );
+  });
+
+  it("정상 확정 후 행·금액은 그대로, 바꾸려면 새 초안을 다시 확정해야 한다", async () => {
+    const d = await draft();
+    const r = await finalize(d, priced("EXCLUSIVE", 1000, [[200, 50_000]]));
+    const count = async () =>
+      (await one<{ n: number }>(db, "select count(*)::int as n from quote_items where quote_version_id = $1", [r.quote_version_id])).n;
+    expect(await count()).toBe(1);
+    await expectDbError(
+      asOwner((tx) =>
+        tx.query(
+          "insert into quote_items (workspace_id, quote_version_id, position, name, quantity_hundredths, unit_price_won, line_amount_won) values ($1, $2, 5, 'x', 100, 1, 1)",
+          [f.workspaceId, r.quote_version_id],
+        ),
+      ),
+      /row-level security/,
+    );
+    expect(await count()).toBe(1);
+  });
+
+  it("다른 업무실의 공급자 정보로는 확정할 수 없다", async () => {
+    const d = await draft();
+    const other = await createUser(db, "supplier-other@example.test");
+    const ws = await asUser(db, other, (tx) => one<{ id: string }>(tx, "select setup_workspace('남의 업무실', '남의 상호') as id"));
+    const sup = await one<{ id: string }>(db, "select id from supplier_profiles where workspace_id = $1", [ws.id]);
+    const p = priced("EXCLUSIVE", 1000, [[100, 1_000]]);
+    await expectDbError(
+      asOwner((tx) =>
+        tx.query(
+          `select * from finalize_quote($1, $2, $3, '{}', '{}', 'EXCLUSIVE', 1000, $4, $5, $6, '2026-11-13', null, null, null, $7)`,
+          [d.artifact_id, d.version_id, sup.id, p.sub, p.tax, p.total, JSON.stringify(p.items)],
+        ),
+      ),
+      /VALIDATION/,
+    );
+  });
+});
+
+describe("CR04 결과 버전의 입력 스냅샷은 같은 작업의 것", () => {
+  it("같은 작업의 스냅샷은 연결되고(직접 수정 흐름), 다른 작업 것은 거절", async () => {
+    await asOwner(async (tx) => {
+      const taskA = await createTask(tx, f, f.projectA);
+      const taskA2 = await createTask(tx, f, f.projectA);
+      const snapA = await one<{ id: string }>(
+        tx,
+        "insert into task_input_snapshots (workspace_id, task_id, profile_snapshot, input_hash) values ($1, $2, '{}', 'h') returning id",
+        [f.workspaceId, taskA],
+      );
+      const art = await one<{ id: string }>(
+        tx,
+        "insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief') returning id",
+        [f.workspaceId, f.projectA, taskA],
+      );
+      await tx.query(
+        "insert into artifact_versions (workspace_id, artifact_id, version, content, input_snapshot_id, generator) values ($1, $2, 1, '{}', $3, 'template')",
+        [f.workspaceId, art.id, snapA.id],
+      );
+      const art2 = await one<{ id: string }>(
+        tx,
+        "insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief') returning id",
+        [f.workspaceId, f.projectA, taskA2],
+      );
+      // 같은 고객이라도 다른 작업의 스냅샷은 안 된다
+      await tx.query("savepoint s");
+      await expect(
+        tx.query(
+          "insert into artifact_versions (workspace_id, artifact_id, version, content, input_snapshot_id, generator) values ($1, $2, 1, '{}', $3, 'template')",
+          [f.workspaceId, art2.id, snapA.id],
+        ),
+      ).rejects.toThrow(/SOURCE_MISMATCH/);
+      await tx.query("rollback to savepoint s");
+    });
+  });
+});

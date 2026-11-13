@@ -1,4 +1,4 @@
-import { addTextAssetAction, addUrlAssetAction, uploadAssetAction } from "@/features/assets/actions";
+import { addTextAssetAction, addUrlAssetAction, confirmUploadAction, uploadAssetAction } from "@/features/assets/actions";
 import { listAssets, type AssetOwner } from "@/features/assets/server";
 import { ASSET_KIND_LABELS, EXTRACTION_STATUS_LABELS, UPLOAD_STATUS_LABELS } from "@/domain/state/labels";
 import styles from "../ui.module.css";
@@ -55,6 +55,11 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
                 <span className={styles.badge}>{UPLOAD_STATUS_LABELS[a.upload_status] ?? a.upload_status}</span>
                 {a.kind === "file" && a.upload_status === "stored" && (
                   <a href={`/assets/${a.id}/download`}>내려받기</a>
+                )}
+                {a.kind === "file" && a.upload_status === "pending" && (
+                  <ActionForm action={confirmUploadAction} submitLabel="저장 다시 확인" pendingLabel="확인 중…" className={styles.row}>
+                    <input type="hidden" name="assetId" value={a.id} />
+                  </ActionForm>
                 )}
               </div>
             </li>

@@ -45,9 +45,25 @@ export function run(cmd: string, args: string[], input?: string): string {
   return r.stdout;
 }
 
-/** 로컬 DB 컨테이너에서 SQL 실행 (관리자 권한). */
+const isLocalApi = () => /^http:\/\/(127\.0\.0\.1|localhost):/.test(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+
+/**
+ * 검증용 SQL 실행 (관리자 권한).
+ * - 로컬: 로컬 DB 컨테이너
+ * - 원격: BACKUP_DB_URL(운영 DB 연결 주소)이 꼭 있어야 한다. 없으면 실행하지 않는다.
+ *   (API는 원격을 보는데 SQL만 로컬을 보면 서로 다른 DB를 검사하게 된다 — Codex 검수 지적)
+ *   psql 프로그램은 로컬 DB 컨테이너 안의 것을 빌려 쓴다.
+ */
 export function psql(sql: string): string {
-  return run("docker", ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
+  const remote = process.env.BACKUP_DB_URL;
+  if (!isLocalApi() && !remote) {
+    throw new Error("원격 Supabase를 검증하려면 BACKUP_DB_URL(DB 연결 주소)을 함께 지정해야 합니다. 서로 다른 DB를 검사하지 않기 위해 중단합니다.");
+  }
+  if (isLocalApi() && remote) {
+    throw new Error("로컬 API 주소와 원격 BACKUP_DB_URL이 함께 지정됐습니다. 검사 대상을 하나로 맞춰 주세요.");
+  }
+  const target = remote ? [remote] : ["-U", "postgres", "-d", "postgres"];
+  return run("docker", ["exec", "-i", DB_CONTAINER, "psql", ...target, "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
 }
 
 export async function tableCounts(sb: SupabaseClient): Promise<Record<string, number>> {

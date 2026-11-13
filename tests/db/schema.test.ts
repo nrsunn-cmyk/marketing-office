@@ -586,27 +586,29 @@ describe("M3 업무실 처음 설정 (setup_workspace)", () => {
 });
 
 describe("견적 저장 (R04·R06·C08)", () => {
+  // 견적·고정본·항목은 로그인 사용자가 직접 넣을 수 없다(CR03, finalize_quote 만 가능).
+  // 이 묶음은 DB 제약(금액 규칙·불변성)을 시험하므로 관리자 권한으로 직접 넣는다.
   async function createQuote() {
-    return asOwner(async (tx) => {
+    const { task, artifactId, versionId } = await asOwner(async (tx) => {
       const task = await createTask(tx, f, f.projectB, "quote");
-      const { artifactId, versionId } = await createArtifactWithVersion(tx, f, f.projectB, task, "quote");
+      return { task, ...(await createArtifactWithVersion(tx, f, f.projectB, task, "quote")) };
+    });
+    {
       const quote = await one<{ id: string }>(
-        tx,
+        db,
         "insert into quotes (workspace_id, task_id, artifact_id) values ($1, $2, $3) returning id",
         [f.workspaceId, task, artifactId],
       );
       return { quoteId: quote.id, artifactId, versionId };
-    });
+    }
   }
 
   const insertVersion = (q: { quoteId: string; artifactId: string; versionId: string }, sub: number, tax: number, total: number, mode = "EXCLUSIVE", bp = 1000) =>
-    asOwner((tx) =>
-      tx.query(
+    db.query(
         `insert into quote_versions (workspace_id, quote_id, artifact_id, artifact_version_id, supplier_snapshot, customer_snapshot,
            tax_mode, tax_rate_bp, subtotal_won, tax_won, total_won)
          values ($1, $2, $3, $4, '{}', '{}', $5, $6, $7, $8, $9) returning id`,
         [f.workspaceId, q.quoteId, q.artifactId, q.versionId, mode, bp, sub, tax, total],
-      ),
     );
 
   it("합계 ≠ 공급가 + 세액이면 저장 거부", async () => {
@@ -620,11 +622,19 @@ describe("견적 저장 (R04·R06·C08)", () => {
   it("정상 견적 버전과 항목 저장, 이후 수정 불가 (T12)", async () => {
     const q = await createQuote();
     const qv = (await insertVersion(q, 100_000, 10_000, 110_000)).rows[0] as { id: string };
-    await asOwner((tx) =>
-      tx.query(
-        "insert into quote_items (workspace_id, quote_version_id, position, name, quantity_hundredths, unit_price_won, line_amount_won) values ($1, $2, 0, '로고 기획', 200, 50000, 100000)",
-        [f.workspaceId, qv.id],
+    await db.query(
+      "insert into quote_items (workspace_id, quote_version_id, position, name, quantity_hundredths, unit_price_won, line_amount_won) values ($1, $2, 0, '로고 기획', 200, 50000, 100000)",
+      [f.workspaceId, qv.id],
+    );
+    // 로그인 사용자는 확정 견적에 행을 더할 수 없다 (CR03)
+    await expectDbError(
+      asOwner((tx) =>
+        tx.query(
+          "insert into quote_items (workspace_id, quote_version_id, position, name, quantity_hundredths, unit_price_won, line_amount_won) values ($1, $2, 9, '사후 추가', 100, 1, 1)",
+          [f.workspaceId, qv.id],
+        ),
       ),
+      /row-level security/,
     );
     await expectImmutable("quote_items", "update quote_items set unit_price_won = 1 where quote_version_id = $1", [qv.id]);
     await expectImmutable("quote_versions", "update quote_versions set total_won = 1 where id = $1", [qv.id]);
@@ -634,11 +644,9 @@ describe("견적 저장 (R04·R06·C08)", () => {
     const q = await createQuote();
     const qv = (await insertVersion(q, 0, 0, 0)).rows[0] as { id: string };
     const item = (pos: number, qty: number, price: number | null) =>
-      asOwner((tx) =>
-        tx.query(
-          "insert into quote_items (workspace_id, quote_version_id, position, name, quantity_hundredths, unit_price_won) values ($1, $2, $3, 'x', $4, $5)",
-          [f.workspaceId, qv.id, pos, qty, price],
-        ),
+      db.query(
+        "insert into quote_items (workspace_id, quote_version_id, position, name, quantity_hundredths, unit_price_won) values ($1, $2, $3, 'x', $4, $5)",
+        [f.workspaceId, qv.id, pos, qty, price],
       );
     await item(0, 100, null);
     await expectDbError(item(1, 0, 100), /check constraint/);
@@ -648,8 +656,8 @@ describe("견적 저장 (R04·R06·C08)", () => {
   it("견적 번호는 확정할 때 차례대로 발번되고, 같은 견적은 같은 번호", async () => {
     const q1 = await createQuote();
     const q2 = await createQuote();
-    const assign = (id: string) =>
-      asOwner(async (tx) => (await one<{ n: string }>(tx, "select assign_quote_number($1, '2026-11-13') as n", [id])).n);
+    // 번호 발번은 확정 함수 안에서만 쓰는 내부 함수다(CR03). 번호 규칙 자체는 관리자 권한으로 시험한다.
+    const assign = async (id: string) => (await one<{ n: string }>(db, "select assign_quote_number($1, '2026-11-13') as n", [id])).n;
     expect(await assign(q1.quoteId)).toBe("Q-2026-0001");
     expect(await assign(q2.quoteId)).toBe("Q-2026-0002");
     expect(await assign(q1.quoteId)).toBe("Q-2026-0001");
@@ -657,25 +665,23 @@ describe("견적 저장 (R04·R06·C08)", () => {
 
   it("해가 바뀌면 번호가 0001부터 다시 시작한다", async () => {
     const q = await createQuote();
-    const n = await asOwner(async (tx) => (await one<{ n: string }>(tx, "select assign_quote_number($1, '2027-01-02') as n", [q.quoteId])).n);
+    const n = (await one<{ n: string }>(db, "select assign_quote_number($1, '2027-01-02') as n", [q.quoteId])).n;
     expect(n).toBe("Q-2027-0001");
   });
 
   it("정해진 견적 번호는 바꿀 수 없다", async () => {
     const q = await createQuote();
-    await asOwner((tx) => tx.query("select assign_quote_number($1, '2026-11-13')", [q.quoteId]));
-    await expectDbError(
-      asOwner((tx) => tx.query("update quotes set quote_number = 'Q-2026-9999' where id = $1", [q.quoteId])),
-      /FROZEN_COLUMN/,
-    );
+    await db.query("select assign_quote_number($1, '2026-11-13')", [q.quoteId]);
+    await expectDbError(db.query("update quotes set quote_number = 'Q-2026-9999' where id = $1", [q.quoteId]), /FROZEN_COLUMN/);
+    // 로그인 사용자는 견적 행을 고칠 권한 자체가 없다(0행)
+    const r = await asOwner((tx) => tx.query("update quotes set quote_number = 'Q-2026-9999' where id = $1", [q.quoteId]));
+    expect(r.affectedRows).toBe(0);
   });
 
-  it("다른 계정은 남의 견적에 번호를 발번할 수 없다", async () => {
+  it("로그인 사용자는 본인 것이라도 번호 발번 함수를 직접 부를 수 없다 (CR03)", async () => {
     const q = await createQuote();
+    await expectDbError(asOwner((tx) => tx.query("select assign_quote_number($1)", [q.quoteId])), /permission denied/);
     const stranger = await createUser(db, "quote-stranger@example.test");
-    await expectDbError(
-      asUser(db, stranger, (tx) => tx.query("select assign_quote_number($1)", [q.quoteId])),
-      /NOT_FOUND/,
-    );
+    await expectDbError(asUser(db, stranger, (tx) => tx.query("select assign_quote_number($1)", [q.quoteId])), /permission denied/);
   });
 });
