@@ -36,6 +36,36 @@ describe("T06 로고 브리프 (입력 조합형)", () => {
     expect(r.generator).toEqual({ mode: "template", templateVersion: LOGO_TEMPLATE_VERSION });
   });
 
+  it("입력한 모든 항목이 이미지 프롬프트에도 들어간다 (CR02)", () => {
+    const r = ok(full);
+    for (const v of ["동네 빵집", "천연 발효종", "30~40대 직장인", "천연 발효, 당일 생산", "따뜻함", "크림색", "손글씨", "캐릭터"]) {
+      expect(r.imagePrompt).toContain(v);
+    }
+    expect(r.imagePrompt).toContain("주요 고객: 30~40대 직장인");
+    expect(r.imagePrompt).toContain("강점: 천연 발효, 당일 생산");
+  });
+
+  it("Codex 재현: 주요 고객·강점만 있어도 프롬프트에 반영", () => {
+    const r = ok({ companyName: "A", mainCustomers: "senior customers", strengths: ["fast local service"] });
+    expect(r.imagePrompt).toBe("'A' 로고 디자인. 주요 고객: senior customers. 강점: fast local service.");
+  });
+
+  const fields: Array<[keyof LogoBriefInput, LogoBriefInput[keyof LogoBriefInput]]> = [
+    ["industry", "다른 업종"],
+    ["description", "다른 설명"],
+    ["mainCustomers", "다른 고객"],
+    ["strengths", ["다른 강점"]],
+    ["preferredStyles", ["다른 분위기"]],
+    ["colors", ["다른 색"]],
+    ["references", ["다른 참고"]],
+    ["forbidden", ["다른 금지"]],
+    ["extraNotes", "다른 요청"],
+  ];
+  it.each(fields)("%s 하나만 바꿔도 이미지 프롬프트가 달라진다", (field, value) => {
+    const changed = ok({ ...full, [field]: value });
+    expect(changed.imagePrompt).not.toBe(ok(full).imagePrompt);
+  });
+
   it("같은 입력이면 같은 결과 (결정적)", () => {
     expect(ok(full)).toEqual(ok(structuredClone(full)));
   });

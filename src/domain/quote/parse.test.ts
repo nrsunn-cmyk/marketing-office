@@ -9,8 +9,9 @@ describe("parseQuantity", () => {
     ["0.01", 1],
     ["1,000", 100_000],
     [" 2 ", 200],
+    ["\t3\n", 300],
     ["1.500", 150],
-  ])("%s → %s", (text, value) => {
+  ])("%j → %s", (text, value) => {
     expect(parseQuantity(text)).toEqual({ ok: true, value });
   });
 
@@ -26,7 +27,16 @@ describe("parseQuantity", () => {
     ["1,00", "INVALID"],
     ["1e3", "INVALID"],
     ["99999999999999999999", "TOO_LARGE"],
-  ])("%s → %s", (text, reason) => {
+    // CR01: 숫자 안의 공백·줄바꿈·탭은 이어 붙이지 않는다
+    ["1\n2", "INVALID"],
+    ["1 2", "INVALID"],
+    ["1\t2", "INVALID"],
+    ["1. 5", "INVALID"],
+    // CR01: 수량에는 단위를 받지 않는다
+    ["2원", "INVALID"],
+    ["2%", "INVALID"],
+    ["2개", "INVALID"],
+  ])("%j → %s", (text, reason) => {
     expect(parseQuantity(text)).toEqual({ ok: false, reason });
   });
 });
@@ -36,8 +46,10 @@ describe("parseWon", () => {
     ["50000", 50_000],
     ["50,000", 50_000],
     ["50,000원", 50_000],
+    ["50,000 원", 50_000],
+    [" 50,000원\n", 50_000],
     ["0", 0],
-  ])("%s → %s", (text, value) => {
+  ])("%j → %s", (text, value) => {
     expect(parseWon(text)).toEqual({ ok: true, value });
   });
 
@@ -49,7 +61,17 @@ describe("parseWon", () => {
     ["10.5", "INVALID"],
     ["-100", "NEGATIVE"],
     ["5만", "INVALID"],
-  ])("%s → %s", (text, reason) => {
+    // CR01 재현
+    ["1 0", "INVALID"],
+    ["1\n0", "INVALID"],
+    ["50,000  원", "INVALID"],
+    ["50,000원원", "INVALID"],
+    ["50,000%", "INVALID"],
+    ["원50,000", "INVALID"],
+    ["50,00", "INVALID"],
+    ["5,0000", "INVALID"],
+    [",000", "INVALID"],
+  ])("%j → %s", (text, reason) => {
     expect(parseWon(text)).toEqual({ ok: false, reason });
   });
 });
@@ -58,10 +80,28 @@ describe("parseTaxRatePercent", () => {
   it.each([
     ["10", 1000],
     ["10%", 1000],
+    ["10 %", 1000],
     ["3.3", 330],
+    ["3.3%", 330],
     ["0", 0],
-  ])("%s → %s bp", (text, value) => {
+  ])("%j → %s bp", (text, value) => {
     expect(parseTaxRatePercent(text)).toEqual({ ok: true, value });
+  });
+
+  it("빈 입력은 null", () => {
+    expect(parseTaxRatePercent(" ")).toEqual({ ok: true, value: null });
+  });
+
+  it.each([
+    // CR01 재현: 세율 칸의 '원'은 오류
+    ["10원", "INVALID"],
+    ["1 0", "INVALID"],
+    ["10%%", "INVALID"],
+    ["%10", "INVALID"],
+    ["-10", "NEGATIVE"],
+    ["3.333", "TOO_PRECISE"],
+  ])("%j → %s", (text, reason) => {
+    expect(parseTaxRatePercent(text)).toEqual({ ok: false, reason });
   });
 });
 
