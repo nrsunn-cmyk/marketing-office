@@ -215,17 +215,23 @@ isOneToOne: false
                   ]
                 },"generation_runs": {
                   Row: {
-                    "action": string,"attempt": number,"created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"idempotency_key": string,"input_hash": string,"mode": string | null,"model_id": string | null,"provider": string | null,"revision": number,"started_at": string | null,"status": string,"task_id": string,"updated_at": string,"workspace_id": string
+                    "action": string,"artifact_version_id": string | null,"attempt": number,"created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"idempotency_key": string,"input_hash": string,"mode": string | null,"model_id": string | null,"provider": string | null,"revision": number,"started_at": string | null,"status": string,"task_id": string,"updated_at": string,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "action": string,"attempt"?: number,"created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"idempotency_key": string,"input_hash": string,"mode"?: string | null,"model_id"?: string | null,"provider"?: string | null,"revision"?: number,"started_at"?: string | null,"status"?: string,"task_id": string,"updated_at"?: string,"workspace_id": string
+                    "action": string,"artifact_version_id"?: string | null,"attempt"?: number,"created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"idempotency_key": string,"input_hash": string,"mode"?: string | null,"model_id"?: string | null,"provider"?: string | null,"revision"?: number,"started_at"?: string | null,"status"?: string,"task_id": string,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "action"?: string,"attempt"?: number,"created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"idempotency_key"?: string,"input_hash"?: string,"mode"?: string | null,"model_id"?: string | null,"provider"?: string | null,"revision"?: number,"started_at"?: string | null,"status"?: string,"task_id"?: string,"updated_at"?: string,"workspace_id"?: string
+                    "action"?: string,"artifact_version_id"?: string | null,"attempt"?: number,"created_at"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"idempotency_key"?: string,"input_hash"?: string,"mode"?: string | null,"model_id"?: string | null,"provider"?: string | null,"revision"?: number,"started_at"?: string | null,"status"?: string,"task_id"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "generation_runs_artifact_version_id_fkey"
+      columns: ["artifact_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "generation_runs_workspace_id_task_id_fkey"
       columns: ["workspace_id","task_id"]
 isOneToOne: false
@@ -529,6 +535,19 @@ isOneToOne: false
           Functions: {
             "assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
+                           },
+"decide_version":
+{ Args: { "p_artifact_id": string,"p_comment"?: string,"p_decision": string,"p_version_id": string }; Returns: undefined
+                           },
+"record_generation":
+{ Args: { "p_content": Json,"p_extra_inputs": Json,"p_idempotency_key": string,"p_input_hash": string,"p_mode": string,"p_profile_snapshot": Json,"p_source_refs": Json,"p_task_id": string }; Returns: {
+              "artifact_id": string,"reused": boolean,"version": number,"version_id": string
+            }[]
+                           },
+"save_manual_version":
+{ Args: { "p_artifact_id": string,"p_content": Json,"p_expected_revision": number }; Returns: {
+              "version": number,"version_id": string
+            }[]
                            },
 "setup_workspace":
 { Args: { "p_address"?: string,"p_business_number"?: string,"p_email"?: string,"p_legal_name": string,"p_name": string,"p_phone"?: string,"p_representative"?: string }; Returns: string

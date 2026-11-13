@@ -4,9 +4,17 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 import { MACHINES, type ProjectStatus } from "@/domain/state";
-import { PROJECT_KIND_LABELS, PROJECT_STATUS_LABELS } from "@/domain/state/labels";
+import { randomUUID } from "node:crypto";
+import {
+  PROJECT_KIND_LABELS,
+  PROJECT_STATUS_LABELS,
+  TASK_STATUS_LABELS,
+  TASK_TYPE_LABELS,
+} from "@/domain/state/labels";
 import { formatWon } from "@/domain/quote/parse";
 import { changeProjectStatusAction } from "@/features/projects/actions";
+import { createTaskAction } from "@/features/tasks/actions";
+import { listTasks } from "@/features/tasks/server";
 import { getProject } from "@/features/projects/server";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
@@ -32,6 +40,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
   const project = await getProject(projectId);
   if (!project) notFound();
   const nextStates = MACHINES.project[project.status as ProjectStatus] ?? [];
+  const tasks = await listTasks(project.id);
 
   return (
     <>
@@ -77,6 +86,34 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
             ))}
           </div>
         )}
+      </section>
+      <section className={styles.section} aria-labelledby="tasks">
+        <h2 id="tasks" className={styles.subtitle}>
+          작업
+        </h2>
+        {tasks.length === 0 ? (
+          <p className={styles.muted}>아직 작업이 없습니다.</p>
+        ) : (
+          <ul className={styles.list} aria-label="작업 목록">
+            {tasks.map((t) => (
+              <li key={t.id} className={styles.listItem}>
+                <Link href={`/tasks/${t.id}`}>{TASK_TYPE_LABELS[t.type]}</Link>
+                <span className={styles.badge}>{TASK_STATUS_LABELS[t.status] ?? t.status}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <ActionForm action={createTaskAction} submitLabel="작업 시작" className={styles.row}>
+          <input type="hidden" name="projectId" value={project.id} />
+          <input type="hidden" name="idempotencyKey" value={randomUUID()} />
+          <label htmlFor="task-type">새 작업</label>
+          <select id="task-type" name="type" defaultValue="logo_brief">
+            <option value="logo_brief">{TASK_TYPE_LABELS.logo_brief}</option>
+            <option value="quote" disabled>
+              {TASK_TYPE_LABELS.quote} (다음 단계에서)
+            </option>
+          </select>
+        </ActionForm>
       </section>
       <AssetsPanel owner={{ projectId: project.id }} heading="프로젝트 자료" />
     </>

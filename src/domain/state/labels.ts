@@ -34,3 +34,26 @@ export const ASSET_KIND_LABELS: Record<string, string> = {
   url: "링크",
   text: "메모",
 };
+
+export const TASK_STATUS_LABELS: Record<string, string> = {
+  draft: "작성 전",
+  waiting_material: "자료 대기",
+  ready: "준비됨",
+  running: "만드는 중",
+  review: "검토 중",
+  changes_requested: "수정 요청",
+  completed: "완료(승인)",
+  failed: "실패",
+  cancelled: "취소",
+};
+
+export const TASK_TYPE_LABELS: Record<string, string> = {
+  logo_brief: "로고 브리프·프롬프트",
+  quote: "견적",
+};
+
+export const GENERATOR_LABELS: Record<string, string> = {
+  template: "입력 조합으로 생성",
+  ai: "AI 생성",
+  manual: "직접 수정",
+};
