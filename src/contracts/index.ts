@@ -21,6 +21,24 @@ const tagList = (maxItems: number, maxLen: number) =>
 
 const isoDate = z.iso.date();
 
+/** 업무실 처음 설정: 업무실 이름 + 우리 회사(공급자) 정보 */
+export const workspaceSetupSchema = z.object({
+  name: requiredText(200, "업무실 이름을 입력해 주세요."),
+  legalName: requiredText(200, "상호를 입력해 주세요."),
+  representative: optionalText(100),
+  businessNumber: optionalText(20),
+  phone: optionalText(50),
+  email: z
+    .union([z.literal(""), z.email("이메일 형식이 올바르지 않습니다.")])
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v : null)),
+  address: optionalText(500),
+});
+export type WorkspaceSetupInput = z.infer<typeof workspaceSetupSchema>;
+
+export const loginEmailSchema = z.email("이메일 형식이 올바르지 않습니다.").max(320);
+
 export const clientInputSchema = z.object({
   name: requiredText(200, "고객명을 입력해 주세요."),
   industry: optionalText(100),

@@ -499,6 +499,41 @@ describe("상태 전이 (DB 트리거)", () => {
   });
 });
 
+describe("M3 업무실 처음 설정 (setup_workspace)", () => {
+  it("업무실과 공급자 1번 버전을 함께 만들고, 다시 불러도 같은 업무실", async () => {
+    const uid = await createUser(db, "setup@example.test");
+    const call = () =>
+      asUser(db, uid, async (tx) =>
+        (await one<{ id: string }>(tx, "select setup_workspace('새 업무실', '나다움 마케팅', '대표', null, null, null, null) as id")).id,
+      );
+    const first = await call();
+    const second = await call();
+    expect(second).toBe(first);
+    const supplier = await one<{ legal_name: string; version: number; representative: string | null; phone: string | null }>(
+      db,
+      "select legal_name, version, representative, phone from supplier_profiles where workspace_id = $1",
+      [first],
+    );
+    expect(supplier).toEqual({ legal_name: "나다움 마케팅", version: 1, representative: "대표", phone: null });
+    const audit = await db.query("select action from audit_events where workspace_id = $1", [first]);
+    expect(audit.rows).toEqual([{ action: "setup" }]);
+  });
+
+  it("상호가 비면 아무것도 만들지 않는다", async () => {
+    const uid = await createUser(db, "setup-empty@example.test");
+    await expectDbError(
+      asUser(db, uid, (tx) => tx.query("select setup_workspace('업무실', '   ')")),
+      /VALIDATION/,
+    );
+    const r = await db.query("select 1 from workspaces where owner_user_id = $1", [uid]);
+    expect(r.rows).toEqual([]);
+  });
+
+  it("비로그인은 호출할 수 없다", async () => {
+    await expectDbError(asUser(db, null, (tx) => tx.query("select setup_workspace('x', 'y')")), /permission denied/);
+  });
+});
+
 describe("견적 저장 (R04·R06·C08)", () => {
   async function createQuote() {
     return asOwner(async (tx) => {

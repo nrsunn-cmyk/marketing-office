@@ -1,69 +1,32 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { Suspense } from "react";
+import { requireWorkspace } from "@/server/auth/session";
+import styles from "./ui.module.css";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className={styles.page}>
+      <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
+        <Home />
+      </Suspense>
+    </main>
+  );
+}
+
+/** 로그인 정보를 읽는 부분. 요청마다 서버에서 그린다. */
+async function Home() {
+  const { user, workspace } = await requireWorkspace();
+  return (
+    <>
+      <div className={styles.header}>
+        <h1 className={styles.title}>{workspace.name}</h1>
+        <form action="/auth/signout" method="post">
+          <button type="submit" className={styles.button}>
+            로그아웃
+          </button>
+        </form>
+      </div>
+      <p className={styles.muted}>{user.email} 계정으로 로그인했습니다.</p>
+      <p>고객·프로젝트·작업 화면은 다음 단계(M4~M7)에서 추가됩니다.</p>
+    </>
   );
 }

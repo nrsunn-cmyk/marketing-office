@@ -1,0 +1,94 @@
+/* 기능 확인용 최소 화면 스타일. 최종 디자인은 AGY 시안·토큰(M7)으로 교체한다. */
+.page {
+  max-width: 560px;
+  margin: 48px auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.muted {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field input {
+  padding: 10px 12px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #1f3a8a;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.button:focus-visible,
+.field input:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.notice {
+  padding: 12px;
+  border-radius: 6px;
+  background: #eef6ee;
+  border: 1px solid #9ac29a;
+}
+
+.error {
+  padding: 12px;
+  border-radius: 6px;
+  background: #fdecec;
+  border: 1px solid #e3a0a0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .muted {
+    color: #aaa;
+  }
+  .field input {
+    background: #111;
+    color: #eee;
+    border-color: #555;
+  }
+  .notice {
+    background: #13261a;
+    border-color: #2f6b3c;
+  }
+  .error {
+    background: #2b1414;
+    border-color: #7a3030;
+  }
+}
