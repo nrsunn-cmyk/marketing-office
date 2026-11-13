@@ -1,7 +1,9 @@
 /** 서버 기능의 결과. 예외 대신 화면에 보여 줄 수 있는 오류를 돌려준다. */
 export type ErrorCode = "NOT_FOUND" | "CONFLICT" | "VALIDATION" | "INVALID_TRANSITION" | "UPLOAD_FAILED" | "ERROR";
 
-export type Result<T> = { ok: true; data: T } | { ok: false; code: ErrorCode; message: string };
+export type Result<T, E = never> =
+  | { ok: true; data: T }
+  | { ok: false; code: ErrorCode; message: string; errors?: E };
 
 export const ok = <T>(data: T): Result<T> => ({ ok: true, data });
 export const fail = <T = never>(code: ErrorCode, message: string): Result<T> => ({ ok: false, code, message });

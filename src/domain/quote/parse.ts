@@ -61,6 +61,20 @@ export function parseTaxRatePercent(text: string): ParseResult {
   return parseHundredths(m[1]);
 }
 
+/** 100배 정수 수량을 "1.5", "1,000", "0.01"처럼 표시한다 (뒤의 0은 뺀다). */
+export function formatQuantity(hundredths: number): string {
+  const whole = Math.trunc(hundredths / 100);
+  const frac = hundredths % 100;
+  const w = whole.toLocaleString("ko-KR");
+  if (frac === 0) return w;
+  return `${w}.${String(frac).padStart(2, "0").replace(/0$/, "")}`;
+}
+
+/** 만분율 세율을 "10", "3.3"처럼 표시한다. */
+export function formatTaxRate(basisPoints: number): string {
+  return formatQuantity(basisPoints).replace(/,/g, "");
+}
+
 /** 원 단위 정수를 "110,000"처럼 표시한다. */
 export function formatWon(value: number): string {
   return value.toLocaleString("ko-KR");

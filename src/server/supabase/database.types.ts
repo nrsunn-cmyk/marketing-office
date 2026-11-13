@@ -539,9 +539,19 @@ isOneToOne: false
 "decide_version":
 { Args: { "p_artifact_id": string,"p_comment"?: string,"p_decision": string,"p_version_id": string }; Returns: undefined
                            },
+"finalize_quote":
+{ Args: { "p_artifact_id": string,"p_customer_snapshot": Json,"p_issue_date": string,"p_items": Json,"p_notes": string,"p_payment_terms": string,"p_subtotal_won": number,"p_supplier_profile_id": string,"p_supplier_snapshot": Json,"p_tax_mode": string,"p_tax_rate_bp": number,"p_tax_won": number,"p_total_won": number,"p_valid_until": string,"p_version_id": string }; Returns: {
+              "quote_id": string,"quote_number": string,"quote_version_id": string,"reused": boolean
+            }[]
+                           },
 "record_generation":
 { Args: { "p_content": Json,"p_extra_inputs": Json,"p_idempotency_key": string,"p_input_hash": string,"p_mode": string,"p_profile_snapshot": Json,"p_source_refs": Json,"p_task_id": string }; Returns: {
               "artifact_id": string,"reused": boolean,"version": number,"version_id": string
+            }[]
+                           },
+"save_draft_version":
+{ Args: { "p_content": Json,"p_expected_revision": number,"p_input_hash": string,"p_snapshot": Json,"p_task_id": string }; Returns: {
+              "artifact_id": string,"version": number,"version_id": string
             }[]
                            },
 "save_manual_version":

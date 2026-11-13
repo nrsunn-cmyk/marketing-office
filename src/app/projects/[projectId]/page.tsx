@@ -109,9 +109,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
           <label htmlFor="task-type">새 작업</label>
           <select id="task-type" name="type" defaultValue="logo_brief">
             <option value="logo_brief">{TASK_TYPE_LABELS.logo_brief}</option>
-            <option value="quote" disabled>
-              {TASK_TYPE_LABELS.quote} (다음 단계에서)
-            </option>
+            <option value="quote">{TASK_TYPE_LABELS.quote}</option>
           </select>
         </ActionForm>
       </section>

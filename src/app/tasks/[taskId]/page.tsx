@@ -11,6 +11,7 @@ import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { CopyButton } from "../../_components/copy-button";
 import styles from "../../ui.module.css";
+import { QuoteSection } from "./quote-section";
 
 export const metadata: Metadata = { title: "작업 · 마케팅 업무실" };
 
@@ -65,10 +66,12 @@ async function TaskView({
           </div>
         </div>
       ) : (
-        <p className={styles.notice}>견적 작업 화면은 다음 단계(M6)에서 추가됩니다.</p>
+        <QuoteSection detail={detail} />
       )}
 
-      {detail.versions.length > 0 && <VersionHistory detail={detail} shownId={shown?.id ?? null} />}
+      {detail.task.type === "logo_brief" && detail.versions.length > 0 && (
+        <VersionHistory detail={detail} shownId={shown?.id ?? null} />
+      )}
     </>
   );
 }

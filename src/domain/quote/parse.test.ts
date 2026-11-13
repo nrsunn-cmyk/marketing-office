@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatWon, parseQuantity, parseTaxRatePercent, parseWon } from "./parse";
+import { formatQuantity, formatTaxRate, formatWon, parseQuantity, parseTaxRatePercent, parseWon } from "./parse";
 
 describe("parseQuantity", () => {
   it.each([
@@ -102,6 +102,26 @@ describe("parseTaxRatePercent", () => {
     ["3.333", "TOO_PRECISE"],
   ])("%j → %s", (text, reason) => {
     expect(parseTaxRatePercent(text)).toEqual({ ok: false, reason });
+  });
+});
+
+describe("formatQuantity / formatTaxRate", () => {
+  it.each([
+    [100, "1"],
+    [150, "1.5"],
+    [105, "1.05"],
+    [1, "0.01"],
+    [100_000, "1,000"],
+    [123_456_78, "123,456.78"],
+  ])("%s → %s", (h, text) => {
+    expect(formatQuantity(h)).toBe(text);
+    // 다시 읽으면 같은 값 (표시 ↔ 입력이 어긋나지 않는다)
+    expect(parseQuantity(text)).toEqual({ ok: true, value: h });
+  });
+  it("세율", () => {
+    expect(formatTaxRate(1000)).toBe("10");
+    expect(formatTaxRate(330)).toBe("3.3");
+    expect(formatTaxRate(0)).toBe("0");
   });
 });
 

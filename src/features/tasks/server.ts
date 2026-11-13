@@ -81,7 +81,6 @@ export async function listTasks(projectId: string): Promise<TaskSummary[]> {
  * 아직 구현하지 않은 작업 유형은 만들지 않는다.
  */
 export async function createTask(projectId: string, type: TaskType, idempotencyKey: string): Promise<Result<{ id: string }>> {
-  if (type !== "logo_brief") return fail("VALIDATION", "아직 지원하지 않는 작업입니다.");
   const { workspace } = await requireWorkspace();
   const sb = await createSupabaseServerClient();
   const { data: template, error: tplError } = await sb

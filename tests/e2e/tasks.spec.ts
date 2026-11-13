@@ -39,7 +39,7 @@ test("고객·프로필·프로젝트 준비 후 로고 작업 시작, 입력은
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "C 로고" })).toBeVisible();
 
-  await expect(page.getByRole("option", { name: /견적 \(다음 단계에서\)/ })).toBeDisabled();
+  await expect(page.getByLabel("새 작업").locator("option")).toHaveText(["로고 브리프·프롬프트", "견적"]);
   await page.getByRole("button", { name: "작업 시작" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "로고 브리프·프롬프트" })).toBeVisible();
   taskUrl = page.url();

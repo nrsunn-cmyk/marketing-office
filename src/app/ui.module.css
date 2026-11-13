@@ -227,3 +227,75 @@
     border-color: #333;
   }
 }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #ddd;
+  padding: 6px 4px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table td input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.table td input[type="checkbox"] {
+  width: auto;
+}
+
+.num {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: end;
+  gap: 4px 24px;
+}
+
+.totals dd {
+  text-align: right;
+  margin: 0;
+}
+
+.fieldError {
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  .table th,
+  .table td {
+    border-color: #333;
+  }
+  .table td input {
+    background: #111;
+    color: #eee;
+    border-color: #555;
+  }
+  .fieldError {
+    color: #f97066;
+  }
+}
