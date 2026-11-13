@@ -1,5 +1,5 @@
 /** 로컬 Supabase에 들어 있는 Mailpit(가짜 메일함)에서 로그인 메일을 읽는다. 테스트 전용. */
-const MAILPIT = "http://127.0.0.1:54324/api/v1";
+const MAILPIT = process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:54324/api/v1";
 
 interface MessageSummary {
   ID: string;

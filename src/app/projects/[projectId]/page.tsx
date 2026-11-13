@@ -19,18 +19,21 @@ import { getProject } from "@/features/projects/server";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
+import { MobileActionSheet } from "../../_components/mobile-action-sheet";
 import styles from "../../ui.module.css";
 
 export const metadata: Metadata = { title: "프로젝트 · 마케팅 업무실" };
 
 export default function ProjectPage({ params }: PageProps<"/projects/[projectId]">) {
   return (
-    <main className={`${styles.page} ${styles.wide}`}>
+    <>
       <AppNav />
+      <main className={`${styles.page} ${styles.wide}`}>
       <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
         <ProjectView params={params} />
       </Suspense>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -52,7 +55,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
         <h2 id="project-info" className={styles.subtitle}>
           프로젝트 정보
         </h2>
-        <dl>
+        <dl className={styles.facts}>
           <dt>종류</dt>
           <dd>
             {PROJECT_KIND_LABELS[project.kind]}
@@ -78,6 +81,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
                 action={changeProjectStatusAction}
                 submitLabel={`${PROJECT_STATUS_LABELS[to]}(으)로`}
                 className={styles.row}
+                variant="secondary"
               >
                 <input type="hidden" name="id" value={project.id} />
                 <input type="hidden" name="revision" value={project.revision} />
@@ -103,6 +107,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
             ))}
           </ul>
         )}
+        <MobileActionSheet title="새 작업">
         <ActionForm action={createTaskAction} submitLabel="작업 시작" className={styles.row}>
           <input type="hidden" name="projectId" value={project.id} />
           <input type="hidden" name="idempotencyKey" value={randomUUID()} />
@@ -112,6 +117,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
             <option value="quote">{TASK_TYPE_LABELS.quote}</option>
           </select>
         </ActionForm>
+        </MobileActionSheet>
       </section>
       <AssetsPanel owner={{ projectId: project.id }} heading="프로젝트 자료" />
     </>

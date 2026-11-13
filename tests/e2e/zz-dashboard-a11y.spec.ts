@@ -11,6 +11,7 @@ import { clearMailbox, waitForLoginLink } from "./mailpit";
 test.describe.configure({ mode: "serial" });
 
 const CLIENT = unique("가상고객E 카페");
+const PROJECT = unique("E 메뉴판");
 let projectUrl = "";
 let taskUrl = "";
 
@@ -27,7 +28,9 @@ async function noHorizontalScroll(page: Page) {
 
 async function axe(page: Page, label: string) {
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
-  const summary = r.violations.map((v) => `${v.id}(${v.impact}): ${v.nodes.length}개 — ${v.help}`);
+  const summary = r.violations.map(
+    (v) => `${v.id}(${v.impact}): ${v.nodes.length}개 — ${v.help} — ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" / ")}`,
+  );
   expect(summary, `${label} 접근성 위반`).toEqual([]);
 }
 
@@ -38,10 +41,10 @@ test("T17 현황: 실제 데이터로 숫자·오늘 처리할 작업·납기 �
   await page.getByRole("button", { name: "고객 등록" }).click();
   await expect(page.getByRole("heading", { level: 1, name: CLIENT })).toBeVisible();
   await page.getByText("새 프로젝트").click();
-  await page.getByLabel("프로젝트 제목 (필수)").fill("E 메뉴판");
+  await page.getByLabel("프로젝트 제목 (필수)").fill(PROJECT);
   await page.getByLabel("납기").fill(tomorrow());
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "E 메뉴판" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: PROJECT })).toBeVisible();
   projectUrl = page.url();
   await page.getByRole("button", { name: "작업 시작" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "로고 브리프·프롬프트" })).toBeVisible();
@@ -57,9 +60,9 @@ test("T17 현황: 실제 데이터로 숫자·오늘 처리할 작업·납기 �
     await expect(tile).toBeVisible();
     expect(Number(await tile.locator("span").nth(1).textContent())).toBeGreaterThanOrEqual(label === "자료 대기 프로젝트" ? 0 : 1);
   }
-  await expect(page.getByRole("region", { name: "납기 임박" }).getByRole("link", { name: "E 메뉴판" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "오늘 처리할 작업" }).getByText("E 메뉴판")).toBeVisible();
-  await expect(page.getByRole("region", { name: "최근 결과물" }).getByText("E 메뉴판").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "납기 임박" }).getByRole("link", { name: PROJECT, exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "오늘 처리할 작업" }).getByText(PROJECT)).toBeVisible();
+  await expect(page.getByRole("region", { name: "최근 결과물" }).getByText(PROJECT).first()).toBeVisible();
   // 참고 이미지의 예시 숫자(65%·95% 등)는 나오지 않는다
   await expect(page.getByText(/\d+%/)).toHaveCount(0);
 });
@@ -139,4 +142,55 @@ test("T19 휴대폰 폭(390)과 200% 확대(640)에서 가로 스크롤 없음",
       await noHorizontalScroll(page);
     }
   }
+});
+
+test("다크 모드에서도 접근성 위반 없음, 테마 전환 버튼은 선택을 기억한다", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await loginWithWorkspace(page);
+  for (const url of ["/", "/clients", projectUrl, taskUrl]) {
+    await page.goto(url);
+    await page.waitForLoadState("networkidle");
+    await axe(page, `다크 ${url}`);
+  }
+  // OS가 다크여도 버튼으로 밝은 화면을 고르면 다시 열어도 유지된다
+  const toggle = page.getByRole("button", { name: "어두운 화면" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("button", { name: "어두운 화면" })).toHaveAttribute("aria-pressed", "false");
+  await axe(page, "밝은 화면 선택 후");
+});
+
+test("모바일 새 작업 시트: 키보드 닫기·포커스 복귀·작업 생성과 견적 화면", async ({ page }, testInfo) => {
+  await loginWithWorkspace(page);
+  await page.goto("/");
+  await expect(page.getByText(/^기준 시각:/)).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.screenshot({ path: testInfo.outputPath("dashboard-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(projectUrl);
+  const opener = page.getByRole("button", { name: "새 작업 열기" });
+  await opener.click();
+  const sheet = page.getByRole("dialog", { name: "새 작업" });
+  await expect(sheet).toBeVisible();
+  await axe(page, "모바일 새 작업 시트");
+  await page.screenshot({ path: testInfo.outputPath("mobile-action-sheet.png") });
+  await page.keyboard.press("Escape");
+  await expect(sheet).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await page.mouse.click(8, 100);
+  await expect(sheet).not.toBeVisible();
+  await opener.click();
+  await sheet.getByLabel("새 작업", { exact: true }).selectOption("quote");
+  await sheet.getByRole("button", { name: "작업 시작" }).click();
+  await expect(page.getByRole("form", { name: "견적 작성" })).toBeVisible();
+  await noHorizontalScroll(page);
+  await axe(page, "모바일 견적");
+  await page.screenshot({ path: testInfo.outputPath("quote-mobile-light.png") });
+  await page.getByRole("button", { name: "어두운 화면" }).click();
+  await axe(page, "다크 모바일 견적");
+  await page.screenshot({ path: testInfo.outputPath("quote-mobile-dark.png") });
 });

@@ -57,7 +57,7 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
                   <a href={`/assets/${a.id}/download`}>내려받기</a>
                 )}
                 {a.kind === "file" && a.upload_status === "pending" && (
-                  <ActionForm action={confirmUploadAction} submitLabel="저장 다시 확인" pendingLabel="확인 중…" className={styles.row}>
+                  <ActionForm action={confirmUploadAction} submitLabel="저장 다시 확인" pendingLabel="확인 중…" className={styles.row} variant="secondary">
                     <input type="hidden" name="assetId" value={a.id} />
                   </ActionForm>
                 )}

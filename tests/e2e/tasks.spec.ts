@@ -76,7 +76,7 @@ test("T06 브리프 만들기: 입력 반영, 빈 항목은 '확인 필요', 상
 });
 
 test("T06 복사: 프롬프트가 클립보드에 그대로 들어간다", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3000" });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000" });
   await loginWithWorkspace(page);
   await page.goto(taskUrl);
   await page.getByRole("button", { name: "프롬프트 복사" }).click();

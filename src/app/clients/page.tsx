@@ -11,8 +11,9 @@ export const metadata: Metadata = { title: "고객 · 마케팅 업무실" };
 
 export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
   return (
-    <main className={`${styles.page} ${styles.wide}`}>
+    <>
       <AppNav />
+      <main className={`${styles.page} ${styles.wide}`}>
       <h1 className={styles.title}>고객</h1>
       <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
         <ClientList searchParams={searchParams} />
@@ -36,7 +37,8 @@ export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
           </div>
         </ActionForm>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 

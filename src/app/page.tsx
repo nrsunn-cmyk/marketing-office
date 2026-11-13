@@ -9,12 +9,14 @@ import styles from "./ui.module.css";
 
 export default function HomePage() {
   return (
-    <main className={`${styles.page} ${styles.wide}`}>
+    <>
       <AppNav />
+      <main className={`${styles.page} ${styles.wide}`}>
       <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
         <Home />
       </Suspense>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -52,20 +54,21 @@ async function Home() {
 }
 
 function Dashboard({ data, today }: { data: DashboardData; today: string }) {
-  const tiles: Array<[string, number, string]> = [
-    ["진행 중 프로젝트", data.counts.openProjects, "접수·자료 대기·진행·검토 중인 프로젝트"],
-    ["검토 대기 작업", data.counts.tasksInReview, "결과를 확인하고 승인해야 하는 작업"],
-    ["자료 대기 프로젝트", data.counts.waitingMaterial, "고객 자료를 기다리는 프로젝트"],
-    ["7일 안 납기", data.counts.dueSoon, `${today}부터 7일 안에 납기가 있는 진행 중 프로젝트`],
+  // 숫자 색은 AGY S02 시안(진행 파랑·검토 주황·자료 회색·납기 빨강). 색만으로 뜻을 전하지 않도록 이름을 함께 쓴다.
+  const tiles: Array<[string, number, string, string]> = [
+    ["진행 중 프로젝트", data.counts.openProjects, "접수·자료 대기·진행·검토 중인 프로젝트", styles.toneInfo],
+    ["검토 대기 작업", data.counts.tasksInReview, "결과를 확인하고 승인해야 하는 작업", styles.toneWarning],
+    ["자료 대기 프로젝트", data.counts.waitingMaterial, "고객 자료를 기다리는 프로젝트", ""],
+    ["7일 안 납기", data.counts.dueSoon, `${today}부터 7일 안에 납기가 있는 진행 중 프로젝트`, styles.toneDanger],
   ];
   return (
     <>
       <p className={styles.muted}>기준 시각: {new Date(data.asOf).toLocaleString("ko-KR")} · 실제 저장된 값만 집계합니다.</p>
       <ul className={styles.tiles} aria-label="현황 숫자">
-        {tiles.map(([label, n, help]) => (
+        {tiles.map(([label, n, help, tone]) => (
           <li key={label} className={styles.tile}>
             <span className={styles.tileLabel}>{label}</span>
-            <span className={styles.tileValue}>{n}</span>
+            <span className={`${styles.tileValue} ${tone}`}>{n}</span>
             <span className={styles.muted}>{help}</span>
           </li>
         ))}

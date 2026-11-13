@@ -12,8 +12,9 @@ export const metadata: Metadata = { title: "프로젝트 · 마케팅 업무실"
 
 export default function ProjectsPage() {
   return (
-    <main className={`${styles.page} ${styles.wide}`}>
+    <>
       <AppNav />
+      <main className={`${styles.page} ${styles.wide}`}>
       <h1 className={styles.title}>프로젝트</h1>
       <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
         <ProjectList />
@@ -41,7 +42,8 @@ export default function ProjectsPage() {
           </div>
         </ActionForm>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 

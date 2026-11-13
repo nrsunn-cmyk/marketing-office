@@ -109,7 +109,7 @@ test("T01 허용 목록에 없는 계정은 관리자 링크가 있어도 들어
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email: STRANGER,
-    options: { redirectTo: "http://127.0.0.1:3000/auth/callback" },
+    options: { redirectTo: `${process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000"}/auth/callback` },
   });
   expect(error).toBeNull();
   await page.goto(data.properties!.action_link);

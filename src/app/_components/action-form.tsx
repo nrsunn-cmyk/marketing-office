@@ -15,6 +15,7 @@ export function ActionForm({
   children,
   resetOnSuccess = false,
   className,
+  variant = "primary",
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
@@ -22,6 +23,8 @@ export function ActionForm({
   children?: ReactNode;
   resetOnSuccess?: boolean;
   className?: string;
+  /** primary: 화면의 주된 동작 / secondary: 상태 바꾸기·보관 같은 보조 동작 */
+  variant?: "primary" | "secondary";
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY_FORM_STATE);
   const formRef = useRef<HTMLFormElement>(null);
@@ -46,7 +49,7 @@ export function ActionForm({
           {state.message}
         </p>
       )}
-      <button type="submit" className={styles.button} disabled={pending}>
+      <button type="submit" className={variant === "primary" ? styles.button : styles.secondaryButton} disabled={pending}>
         {pending ? pendingLabel : submitLabel}
       </button>
     </form>

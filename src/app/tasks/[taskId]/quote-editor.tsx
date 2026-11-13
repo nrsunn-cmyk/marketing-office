@@ -132,7 +132,7 @@ export function QuoteEditor({ taskId, revision, initial }: { taskId: string; rev
                     </div>
                   ))}
                 </td>
-                <td>
+                <td data-label="수량">
                   <input
                     aria-label={`${i + 1}번째 줄 수량`}
                     inputMode="decimal"
@@ -142,7 +142,7 @@ export function QuoteEditor({ taskId, revision, initial }: { taskId: string; rev
                     size={6}
                   />
                 </td>
-                <td>
+                <td data-label="단가 (원)">
                   <input
                     aria-label={`${i + 1}번째 줄 단가`}
                     inputMode="numeric"
@@ -152,7 +152,7 @@ export function QuoteEditor({ taskId, revision, initial }: { taskId: string; rev
                     size={10}
                   />
                 </td>
-                <td className={styles.num} aria-label={`${i + 1}번째 줄 금액`}>
+                <td data-label="금액 (원)" className={styles.num} aria-label={`${i + 1}번째 줄 금액`}>
                   {amount == null ? "—" : formatWon(amount)}
                 </td>
                 <td>

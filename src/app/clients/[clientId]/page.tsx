@@ -21,12 +21,14 @@ export const metadata: Metadata = { title: "고객 작업실 · 마케팅 업무
 
 export default function ClientPage({ params }: PageProps<"/clients/[clientId]">) {
   return (
-    <main className={`${styles.page} ${styles.wide}`}>
+    <>
       <AppNav />
+      <main className={`${styles.page} ${styles.wide}`}>
       <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
         <ClientWorkspace params={params} />
       </Suspense>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -69,6 +71,7 @@ async function ClientWorkspace({ params }: { params: PageProps<"/clients/[client
           action={archiveClientAction}
           submitLabel={client.archived_at ? "보관 해제" : "고객 보관하기"}
           className={styles.row}
+          variant="secondary"
         >
           <input type="hidden" name="id" value={client.id} />
           <input type="hidden" name="revision" value={client.revision} />
