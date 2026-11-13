@@ -11,6 +11,7 @@ import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { CopyButton } from "../../_components/copy-button";
 import styles from "../../ui.module.css";
+import { DeliveryPanel } from "./delivery-panel";
 import { QuoteSection } from "./quote-section";
 
 export const metadata: Metadata = { title: "작업 · 마케팅 업무실" };
@@ -68,6 +69,8 @@ async function TaskView({
       ) : (
         <QuoteSection detail={detail} />
       )}
+
+      <DeliveryPanel detail={detail} />
 
       {detail.task.type === "logo_brief" && detail.versions.length > 0 && (
         <VersionHistory detail={detail} shownId={shown?.id ?? null} />

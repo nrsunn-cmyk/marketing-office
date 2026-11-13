@@ -23,7 +23,8 @@ export async function loginWithWorkspace(page: Page) {
   // 첫 화면(/)은 내용이 흘러 들어온 뒤에야 처음 설정(/setup)으로 보낼 수 있다.
   // 주소가 아니라 실제로 나타난 화면(설정 폼 또는 첫 화면 메뉴)을 기다린다.
   const setupField = page.getByLabel("업무실 이름 (필수)");
-  const homeMenu = page.getByRole("link", { name: "고객 관리" });
+  // 상단 메뉴는 처음 설정으로 보내기 전에도 그려지므로, 로그인 정보를 읽은 뒤에만 나오는 현황 내용을 기다린다
+  const homeMenu = page.getByText(/^기준 시각:|^아직 데이터가 없습니다$/);
   await expect(setupField.or(homeMenu)).toBeVisible();
   if (await setupField.isVisible()) {
     await setupField.fill("나다움 업무실");

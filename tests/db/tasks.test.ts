@@ -199,3 +199,49 @@ describe("decide_version (T14·R08)", () => {
     );
   });
 });
+
+describe("record_delivery (T18)", () => {
+  const deliver = (artifactId: string, at = "now()", method = "email_manual") =>
+    asOwner((tx) =>
+      tx.query(`select record_delivery($1, $2, ${at === "now()" ? "now()" : "$3::timestamptz"}, '직접 메일로 보냄')`, at === "now()" ? [artifactId, method] : [artifactId, method, at]),
+    );
+
+  it("승인 전에는 기록할 수 없다", async () => {
+    const task = await newTask();
+    const g = await generate(task, newKey());
+    await expectDbError(deliver(g.artifact_id), /VALIDATION/);
+  });
+
+  it("승인본 버전으로 고정되어 기록된다 (이후 새 초안이 생겨도)", async () => {
+    const task = await newTask();
+    const g1 = await generate(task, newKey());
+    await asOwner((tx) => tx.query("select decide_version($1, $2, 'approved')", [g1.artifact_id, g1.version_id]));
+    await generate(task, newKey(), "h2");
+    await deliver(g1.artifact_id);
+    const d = await one<{ artifact_version_id: string; method: string; note: string }>(
+      db,
+      "select artifact_version_id, method, note from delivery_records dr join artifact_versions av on av.id = dr.artifact_version_id where av.artifact_id = $1",
+      [g1.artifact_id],
+    );
+    expect(d).toEqual({ artifact_version_id: g1.version_id, method: "email_manual", note: "직접 메일로 보냄" });
+  });
+
+  it("미래 시각·알 수 없는 방법은 거절", async () => {
+    const task = await newTask();
+    const g = await generate(task, newKey());
+    await asOwner((tx) => tx.query("select decide_version($1, $2, 'approved')", [g.artifact_id, g.version_id]));
+    await expectDbError(deliver(g.artifact_id, "2999-01-01T00:00:00Z"), /VALIDATION/);
+    await expectDbError(deliver(g.artifact_id, "now()", "auto_send"), /check constraint/);
+  });
+
+  it("다른 계정은 기록할 수 없다", async () => {
+    const task = await newTask();
+    const g = await generate(task, newKey());
+    await asOwner((tx) => tx.query("select decide_version($1, $2, 'approved')", [g.artifact_id, g.version_id]));
+    const stranger = await createUser(db, "delivery-stranger@example.test");
+    await expectDbError(
+      asUser(db, stranger, (tx) => tx.query("select record_delivery($1, 'other', now())", [g.artifact_id])),
+      /NOT_FOUND/,
+    );
+  });
+});

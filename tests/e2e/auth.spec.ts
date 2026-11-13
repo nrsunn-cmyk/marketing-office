@@ -61,7 +61,8 @@ test("본인: 링크 로그인 → 처음 설정 → 첫 화면", async ({ page 
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: "나다움 업무실" })).toBeVisible();
-  await expect(page.getByText(`${OWNER} 계정으로 로그인했습니다.`)).toBeVisible();
+  await expect(page.getByText(OWNER, { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "아직 데이터가 없습니다" })).toBeVisible();
 
   // 업무실이 있으면 처음 설정 화면에 다시 들어갈 수 없다
   await page.goto("/setup");

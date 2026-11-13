@@ -544,6 +544,9 @@ isOneToOne: false
               "quote_id": string,"quote_number": string,"quote_version_id": string,"reused": boolean
             }[]
                            },
+"record_delivery":
+{ Args: { "p_artifact_id": string,"p_delivered_at": string,"p_method": string,"p_note"?: string }; Returns: string
+                           },
 "record_generation":
 { Args: { "p_content": Json,"p_extra_inputs": Json,"p_idempotency_key": string,"p_input_hash": string,"p_mode": string,"p_profile_snapshot": Json,"p_source_refs": Json,"p_task_id": string }; Returns: {
               "artifact_id": string,"reused": boolean,"version": number,"version_id": string
