@@ -92,3 +92,114 @@
     border-color: #7a3030;
   }
 }
+
+.wide {
+  max-width: 960px;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+  flex-wrap: wrap;
+}
+
+.navRight {
+  margin-left: auto;
+}
+
+.linkButton {
+  background: none;
+  border: 0;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+}
+
+.listItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #999;
+  font-size: 0.8rem;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.field textarea,
+.field select {
+  padding: 10px 12px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.field textarea {
+  min-height: 80px;
+}
+
+.secondaryButton {
+  padding: 8px 14px;
+  border: 1px solid #1f3a8a;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  .nav {
+    border-color: #333;
+  }
+  .section,
+  .listItem {
+    border-color: #333;
+  }
+  .field textarea,
+  .field select {
+    background: #111;
+    color: #eee;
+    border-color: #555;
+  }
+}

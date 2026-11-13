@@ -499,6 +499,57 @@ describe("상태 전이 (DB 트리거)", () => {
   });
 });
 
+describe("M4 자료 파일 저장소 정책", () => {
+  const put = (uid: string | null, name: string) =>
+    asUser(db, uid, (tx) => tx.query("insert into storage.objects (bucket_id, name) values ('source-assets', $1)", [name]));
+
+  it("비공개 버킷, 10MB, 허용 형식 4가지 (D05)", async () => {
+    const b = await one<{ public: boolean; file_size_limit: string; allowed_mime_types: string[] }>(
+      db,
+      "select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'source-assets'",
+    );
+    expect(b.public).toBe(false);
+    expect(Number(b.file_size_limit)).toBe(10 * 1024 * 1024);
+    expect(b.allowed_mime_types.sort()).toEqual(["application/pdf", "image/jpeg", "image/png", "text/plain"]);
+  });
+
+  it("본인 업무실 폴더에는 올리고 읽을 수 있다", async () => {
+    const name = `${f.workspaceId}/${crypto.randomUUID()}/original.pdf`;
+    await put(f.userId, name);
+    const r = await asOwner((tx) => tx.query("select name from storage.objects where name = $1", [name]));
+    expect(r.rows).toHaveLength(1);
+  });
+
+  it("다른 계정은 본인 폴더에 올릴 수도, 본인 파일을 볼 수도 없다 (T01)", async () => {
+    const stranger = await createUser(db, "storage-stranger@example.test");
+    const name = `${f.workspaceId}/${crypto.randomUUID()}/original.png`;
+    await put(f.userId, name);
+    await expectDbError(put(stranger, `${f.workspaceId}/${crypto.randomUUID()}/x.png`), /row-level security/);
+    const r = await asUser(db, stranger, (tx) => tx.query("select name from storage.objects where name = $1", [name]));
+    expect(r.rows).toEqual([]);
+  });
+
+  it("업무실 id가 아닌 폴더 이름은 오류 없이 거절", async () => {
+    await expectDbError(put(f.userId, "not-a-uuid/file.pdf"), /row-level security/);
+    await expectDbError(put(f.userId, `../${f.workspaceId}/file.pdf`), /row-level security/);
+  });
+
+  it("다른 버킷에는 올릴 수 없다", async () => {
+    await db.query("insert into storage.buckets (id, name) values ('other', 'other') on conflict do nothing");
+    await expectDbError(
+      asOwner((tx) => tx.query("insert into storage.objects (bucket_id, name) values ('other', $1)", [`${f.workspaceId}/x.pdf`])),
+      /row-level security/,
+    );
+  });
+
+  it("본인도 파일을 수정·삭제할 수 없다 (정책 없음)", async () => {
+    const name = `${f.workspaceId}/${crypto.randomUUID()}/original.txt`;
+    await put(f.userId, name);
+    const del = await asOwner((tx) => tx.query("delete from storage.objects where name = $1", [name]));
+    expect(del.affectedRows).toBe(0);
+  });
+});
+
 describe("M3 업무실 처음 설정 (setup_workspace)", () => {
   it("업무실과 공급자 1번 버전을 함께 만들고, 다시 불러도 같은 업무실", async () => {
     const uid = await createUser(db, "setup@example.test");

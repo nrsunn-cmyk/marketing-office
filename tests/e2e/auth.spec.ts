@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { loginAsOwner, OWNER, requestLink } from "./helpers";
 import { clearMailbox, countMessagesTo, waitForLoginLink } from "./mailpit";
 
 /**
@@ -7,23 +8,9 @@ import { clearMailbox, countMessagesTo, waitForLoginLink } from "./mailpit";
  * 사전 조건: npm run e2e:reset (DB 초기화 + owner@marketing-office.test 계정 생성)
  */
 
-const OWNER = "owner@marketing-office.test";
 const STRANGER = "stranger@marketing-office.test";
 
 test.describe.configure({ mode: "serial" });
-
-async function requestLink(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("이메일").fill(email);
-  await page.getByRole("button", { name: "로그인 링크 받기" }).click();
-  await expect(page.getByRole("status")).toContainText("등록된 이메일이면 로그인 링크를 보냈습니다");
-}
-
-async function loginAsOwner(page: Page) {
-  await clearMailbox();
-  await requestLink(page, OWNER);
-  await page.goto(await waitForLoginLink(OWNER));
-}
 
 test("비로그인 상태로 첫 화면에 가면 로그인 화면으로 보낸다", async ({ page }) => {
   await page.goto("/");

@@ -2,6 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabasePublicEnv } from "@/server/env";
+import type { Database } from "./database.types";
 
 /**
  * 요청마다 새로 만드는 서버용 Supabase 클라이언트.
@@ -10,7 +11,7 @@ import { supabasePublicEnv } from "@/server/env";
 export async function createSupabaseServerClient() {
   const { url, publishableKey } = supabasePublicEnv();
   const cookieStore = await cookies();
-  return createServerClient(url, publishableKey, {
+  return createServerClient<Database>(url, publishableKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();

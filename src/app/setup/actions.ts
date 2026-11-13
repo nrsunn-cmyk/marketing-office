@@ -24,11 +24,11 @@ export async function setupWorkspace(_prev: SetupState, formData: FormData): Pro
   const { error } = await supabase.rpc("setup_workspace", {
     p_name: v.name,
     p_legal_name: v.legalName,
-    p_representative: v.representative,
-    p_business_number: v.businessNumber,
-    p_phone: v.phone,
-    p_email: v.email,
-    p_address: v.address,
+    p_representative: v.representative ?? undefined,
+    p_business_number: v.businessNumber ?? undefined,
+    p_phone: v.phone ?? undefined,
+    p_email: v.email ?? undefined,
+    p_address: v.address ?? undefined,
   });
   if (error) {
     console.error("[setup] 업무실 생성 실패:", error.code, error.message);
