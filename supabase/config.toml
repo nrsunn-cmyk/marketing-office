@@ -254,6 +254,11 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# 한국어 로그인 메일 (운영 Supabase 대시보드에도 같은 내용을 넣는다: docs/production-setup.md)
+[auth.email.template.magic_link]
+subject = "[마케팅 업무실] 로그인 링크"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

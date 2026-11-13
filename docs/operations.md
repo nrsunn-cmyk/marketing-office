@@ -40,7 +40,9 @@ RESTORE_DRILL_CONFIRM=local npm run backup:restore-drill -- <백업 폴더>   # 
 - 운영 복원: 새 Supabase 프로젝트 → 마이그레이션 적용(`supabase db push`) → `public.templates` 비우고 `data.sql` 적용(트리거 끈 상태) → 파일 업로드 → `backup:verify`. 원래 프로젝트를 덮어쓰지 않는다.
 - 복원 후 앱 확인: `RESTORE_CHECK=1 npx playwright test tests/e2e/restore-check.spec.ts` (훈련 데이터 기준).
 
-## 4. 운영 배포 전 확인 (사용자 결정 필요 항목 포함)
+## 4. 운영 배포 전 확인
+
+가입부터 배포 후 확인까지 단계별 안내: `docs/production-setup.md` (결정: Vercel Pro + Supabase 운영 프로젝트 + 메일 발송 서비스)
 
 | 항목 | 내용 |
 |---|---|
