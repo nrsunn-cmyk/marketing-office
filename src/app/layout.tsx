@@ -2,9 +2,17 @@ import type { Metadata } from "next";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 
+/**
+ * 브라우저 탭 아이콘(icon.svg)·아이폰 홈 화면 아이콘(apple-icon.png)·링크 미리보기 그림(opengraph-image.png)은
+ * src/app 안의 파일 이름 규칙으로 Next.js가 자동으로 넣는다. 그림은 AGY 브랜드 에셋(scripts/brand/render-brand.mjs).
+ * 로그인해야 쓰는 개인 업무실이라 검색 엔진에는 올리지 않는다.
+ */
 export const metadata: Metadata = {
   title: "마케팅 업무실",
   description: "1인 운영 AI 마케팅 업무실",
+  applicationName: "마케팅 업무실",
+  robots: { index: false, follow: false },
+  openGraph: { title: "마케팅 업무실", description: "1인 운영 AI 마케팅 업무실", locale: "ko_KR", type: "website" },
 };
 
 /**

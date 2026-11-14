@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getSessionUser } from "@/server/auth/session";
@@ -16,6 +17,7 @@ const ERRORS: Record<string, string> = {
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className={styles.page}>
+      <Image src="/brand/logo-symbol.svg" alt="" width={48} height={48} unoptimized priority className={styles.loginMark} />
       <h1 className={styles.title}>마케팅 업무실 로그인</h1>
       <Suspense fallback={null}>
         <LoginStatus searchParams={searchParams} />

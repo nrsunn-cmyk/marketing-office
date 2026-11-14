@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import styles from "../ui.module.css";
@@ -14,9 +15,8 @@ export function AppNav() {
     <header className={styles.appHeader}>
       <div className={styles.appHeaderInner}>
         <Link href="/" className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">
-            M
-          </span>
+          {/* AGY 심볼(Plan/AGY-Visual-Assets-20261114). 글자 이름이 옆에 있어 그림은 꾸밈으로 둔다 */}
+          <Image src="/brand/logo-symbol.svg" alt="" width={28} height={28} unoptimized priority className={styles.brandMark} />
           마케팅 업무실
         </Link>
         <nav aria-label="주 메뉴" className={styles.nav}>

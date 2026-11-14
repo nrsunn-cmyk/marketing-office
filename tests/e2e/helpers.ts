@@ -4,7 +4,18 @@ import { clearMailbox, waitForLoginLink } from "./mailpit";
 
 export const OWNER = "owner@marketing-office.test";
 
+/**
+ * 같은 주소로 로그인 메일을 1초 안에 두 번 요청하면 Supabase가 429로 거절하고 메일이 오지 않는다
+ * (supabase/config.toml [auth.email] max_frequency = "1s"). 시험이 이어서 로그인할 때 부딪히지 않도록,
+ * 같은 주소의 직전 요청에서 1.2초가 지나지 않았으면 남은 시간만 기다린다.
+ */
+const lastRequestAt = new Map<string, number>();
+const EMAIL_GAP_MS = 1_200;
+
 export async function requestLink(page: Page, email: string) {
+  const wait = (lastRequestAt.get(email) ?? 0) + EMAIL_GAP_MS - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastRequestAt.set(email, Date.now());
   await page.goto("/login");
   await page.getByLabel("이메일").fill(email);
   await page.getByRole("button", { name: "로그인 링크 받기" }).click();

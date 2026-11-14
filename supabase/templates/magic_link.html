@@ -1,16 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
+<!--
+  AGY 로그인 메일(Plan/AGY-Visual-Assets-20261114/login-magic-link-email.html)을 바탕으로 함.
+  사실과 맞게 고친 곳: 링크 유효 시간 15분 → 1시간(supabase/config.toml otp_expiry = 3600, 운영도 같은 값),
+  바닥글의 특정 회사 이름 → 앱 이름(사업자 정보는 코드에 넣지 않음). 운영 Supabase 메일 본문에 이 파일을 붙여 넣는다.
+-->
 <html lang="ko">
-  <body style="font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; line-height: 1.6; color: #222;">
-    <h2 style="margin: 0 0 12px;">마케팅 업무실 로그인</h2>
-    <p>아래 버튼을 누르면 로그인됩니다. 이 링크는 <strong>1시간 동안 한 번만</strong> 쓸 수 있습니다.</p>
-    <p>
-      <a href="{{ .ConfirmationURL }}"
-         style="display: inline-block; padding: 10px 18px; background: #1f3a8a; color: #fff; text-decoration: none; border-radius: 6px;">
-        로그인하기
-      </a>
-    </p>
-    <p style="color: #666; font-size: 13px;">
-      직접 요청하지 않았다면 이 메일을 무시해 주세요. 링크를 다른 사람에게 전달하지 마세요.
-    </p>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마케팅 업무실 로그인 인증</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container (Max 520px) -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 24px 32px; border-bottom: 2px solid #2563eb;">
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background-color: #2563eb; width: 32px; height: 32px; border-radius: 6px; text-align: center; vertical-align: middle;">
+                    <span style="color: #ffffff; font-weight: 800; font-size: 16px; line-height: 32px; display: inline-block;">M</span>
+                  </td>
+                  <td style="padding-left: 12px;">
+                    <span style="color: #ffffff; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;">마케팅 업무실</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content Body -->
+          <tr>
+            <td style="padding: 36px 32px 28px 32px;">
+              <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #0f172a; line-height: 1.4;">
+                업무실 접속을 위한 인증 링크입니다
+              </h1>
+              <p style="margin: 0 0 24px 0; font-size: 14px; color: #475569; line-height: 1.6;">
+                안녕하세요.<br>
+                마케팅 업무실 전용 시스템 로그인을 위해 아래의 <strong>[업무실 바로 접속하기]</strong> 버튼을 클릭해 주세요.
+              </p>
+
+              <!-- Call to Action Button -->
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 28px 0;">
+                <tr>
+                  <td align="center" style="border-radius: 8px; background-color: #2563eb;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; letter-spacing: -0.2px;">
+                      업무실 바로 접속하기 &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Notice Box -->
+              <div style="background-color: #f1f5f9; border-radius: 8px; padding: 14px 16px; margin-top: 24px; border: 1px solid #cbd5e1;">
+                <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
+                  ⏱️ <strong>보안 유의사항:</strong><br>
+                  • 이 로그인 링크는 발송 시점으로부터 <strong>1시간 동안</strong> 한 번만 쓸 수 있습니다. 링크를 다른 사람에게 전달하지 마세요.<br>
+                  • 본인이 로그인을 요청하지 않았거나 의심스러운 경우, 이 메일을 안전하게 무시하시기 바랍니다.
+                </p>
+              </div>
+
+              <!-- Fallback Plain URL -->
+              <p style="margin: 24px 0 0 0; font-size: 11px; color: #94a3b8; word-break: break-all; line-height: 1.4;">
+                버튼이 클릭되지 않는 경우 아래 주소를 브라우저 주소창에 복사해 입력하세요:<br>
+                <a href="{{ .ConfirmationURL }}" style="color: #2563eb; text-decoration: underline;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+                마케팅 업무실 (Marketing Office)<br>
+                로그인 요청에 따라 자동으로 보낸 메일입니다.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>

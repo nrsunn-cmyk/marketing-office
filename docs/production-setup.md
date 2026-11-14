@@ -20,7 +20,8 @@
    - Redirect URLs: `https://업무실도메인/auth/callback`
 4. **한국어 로그인 메일:** Authentication → Emails → Magic Link
    - 제목: `[마케팅 업무실] 로그인 링크`
-   - 내용: 저장소 `supabase/templates/magic_link.html` 내용을 그대로 붙여 넣기
+   - 내용: 저장소 `supabase/templates/magic_link.html` 내용을 그대로 붙여 넣기 (AGY 디자인 적용본)
+   - 메일에 "1시간 동안 한 번만"이라고 적혀 있다. Authentication → Sign In / Providers → Email의 **Email OTP Expiration이 3600초(1시간)**인지 확인한다. 바꾸면 메일 문구도 함께 고친다.
 5. Claude에게 알려 줄 것: **프로젝트 주소의 ref**(예: `abcd1234...`)만. 키는 알려 주지 않는다.
 
 ## 2단계. 로그인 메일 발송 서비스 (사용자)
