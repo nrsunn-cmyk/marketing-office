@@ -11,8 +11,29 @@ export interface Cursor {
   id: string;
 }
 
-const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
+const ISO_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,6})?(Z|[+-](\d{2}):(\d{2}))$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * 형식뿐 아니라 실제로 있는 날짜·시각인지 본다(CR11). 2026-99-99T25:00:00Z 같은 값이 DB까지 가면
+ * 'date/time field value out of range' 오류로 화면이 멈춘다. 윤년·월말, 시 0–23, 분·초 0–59,
+ * 시간대 ±14:00 이내(분 0–59)만 받는다. 소수 초는 PostgreSQL처럼 6자리(마이크로초)까지.
+ */
+export function isValidTimestamp(value: string): boolean {
+  const m = ISO_TIME.exec(value);
+  if (!m) return false;
+  const [year, month, day, hour, minute, second] = m.slice(1, 7).map(Number) as [number, number, number, number, number, number];
+  if (year < 1 || month < 1 || month > 12 || day < 1) return false;
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]!;
+  if (day > days || hour > 23 || minute > 59 || second > 59) return false;
+  if (m[8] !== "Z") {
+    const offH = Number(m[9]);
+    const offM = Number(m[10]);
+    if (offM > 59 || offH > 14 || (offH === 14 && offM > 0)) return false;
+  }
+  return true;
+}
 
 export function encodeCursor(c: Cursor): string {
   return Buffer.from(`${c.at}|${c.id}`, "utf8").toString("base64url");
@@ -28,7 +49,7 @@ export function decodeCursor(raw: string | null | undefined): Cursor | null {
     return null;
   }
   const [at, id, ...rest] = text.split("|");
-  if (rest.length > 0 || !at || !id || !ISO_TIME.test(at) || !UUID.test(id)) return null;
+  if (rest.length > 0 || !at || !id || !isValidTimestamp(at) || !UUID.test(id)) return null;
   return { at, id };
 }
 

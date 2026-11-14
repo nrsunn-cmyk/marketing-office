@@ -17,7 +17,12 @@ test("복원된 데이터로 로그인·고객·확정 견적 PDF·자료 내려
   await page.getByRole("link", { name: "D 브랜딩" }).click();
   await page.getByRole("list", { name: "작업 목록" }).getByRole("link", { name: "견적" }).click();
   const links = page.getByRole("list", { name: "확정 견적서 목록" }).getByRole("link", { name: "PDF 내려받기" });
-  await expect(links).toHaveCount(2);
+  // 확정 견적 개수는 백업 시점의 자료에 따라 다르다(M13 이후 E2E는 3개). 개수를 고정하지 않고,
+  // 원래 시험 자료의 2개 이상이 보이는지 확인한다. 정확한 개수를 확인하려면 RESTORE_EXPECT_PDFS=개수 (Codex 재검수)
+  await expect(links.first()).toBeVisible();
+  const expected = Number(process.env.RESTORE_EXPECT_PDFS);
+  if (Number.isInteger(expected) && expected > 0) await expect(links).toHaveCount(expected);
+  else expect(await links.count()).toBeGreaterThanOrEqual(2);
   const [download] = await Promise.all([page.waitForEvent("download"), links.first().click()]);
   const pdf = await getDocumentProxy(new Uint8Array(readFileSync(await download.path())));
   const { text } = await extractText(pdf, { mergePages: true });

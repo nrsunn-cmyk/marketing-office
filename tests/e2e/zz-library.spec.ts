@@ -125,7 +125,8 @@ test("자료실·결과물 접근성 검사와 휴대폰 가로 스크롤 없음
 
 test("CR08 제목 없는 메모·링크도 화면에 보이는 이름으로 찾는다", async ({ page }) => {
   const marker = `표시이름-${Date.now().toString(36)}`;
-  const memo = `${marker} 제목 없는 통화 메모, (괄호)와 쉼표 포함`;
+  // 검색어마다 이번 실행의 표시(marker)를 넣어, 같은 DB에서 다시 실행해도 이전 자료가 섞이지 않게 한다(Codex 재검수)
+  const memo = `${marker} 제목 없는 통화 메모, (괄호${marker})와 쉼표 포함`;
   const url = `https://example.com/${marker}`;
   const titled = `${marker}-%_\\자료`;
   // 화면 로그인을 먼저 한다. 시험 자료용 로그인 링크를 바로 이어 만들면 같은 사람 메일 1초 제한에 걸린다.
@@ -142,7 +143,7 @@ test("CR08 제목 없는 메모·링크도 화면에 보이는 이름으로 찾�
   const list = page.getByRole("list", { name: "자료실 목록" });
   for (const [q, expected, kind] of [
     [`${marker} 제목 없는`, memo, ""],
-    [`(괄호)와 쉼표`, memo, ""],
+    [`(괄호${marker})와 쉼표`, memo, ""],
     [url, url, ""],
     [marker, url, "url"],
     [`${marker}-%_\\`, titled, "text"],
