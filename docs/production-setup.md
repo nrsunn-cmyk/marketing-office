@@ -45,7 +45,7 @@ Supabase 기본 메일은 시험용이라 보낼 수 있는 양이 매우 적다
 
 그다음 Claude가 실행·확인:
 
-- `supabase db push` — 마이그레이션 9개 적용 (테이블·권한 규칙·저장소 버킷·DB 함수·CR03/CR04 보호). 적용 전후 `supabase migration list`로 실제 목록 확인
+- `supabase db push` — 저장소의 마이그레이션을 차례로 적용 (현재 최종 후보는 11개). 적용 전후 `supabase migration list`로 실제 목록과 대상 프로젝트를 확인
 - 운영 DB에서 RLS·저장소 정책 확인 (로컬에서 한 시험과 같은 방식, 시험 데이터는 남기지 않음)
 - `npm run db:types` 결과가 로컬과 같은지 확인
 

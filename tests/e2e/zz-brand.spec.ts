@@ -13,6 +13,16 @@ test("탭 아이콘·홈 화면 아이콘·링크 미리보기 그림이 걸려 
   const icon = await head.locator('link[rel="icon"][type="image/svg+xml"]').getAttribute("href");
   const apple = await head.locator('link[rel="apple-touch-icon"]').getAttribute("href");
   const og = await head.locator('meta[property="og:image"]').getAttribute("content");
+  const imageURL = new URL(og!);
+  const siteURL = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000");
+  // Next.js 개발 모드는 파일 기반 이미지를 localhost로 정규화한다. 같은 로컬 서버의 호스트 별칭만 허용한다.
+  const loopback = (host: string) => host === "localhost" || host === "127.0.0.1";
+  if (loopback(imageURL.hostname) && loopback(siteURL.hostname)) {
+    expect(imageURL.protocol).toBe(siteURL.protocol);
+    expect(imageURL.port).toBe(siteURL.port);
+  } else {
+    expect(imageURL.origin).toBe(siteURL.origin);
+  }
   await expect(head.locator('meta[property="og:image:width"]')).toHaveAttribute("content", "1200");
   await expect(head.locator('meta[property="og:image:height"]')).toHaveAttribute("content", "630");
   await expect(head.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
@@ -21,6 +31,8 @@ test("탭 아이콘·홈 화면 아이콘·링크 미리보기 그림이 걸려 
     [apple, "image/png"],
     [og, "image/png"],
     ["/brand/logo-symbol.svg", "image/svg+xml"],
+    ["/brand/logo-horizontal.svg", "image/svg+xml"],
+    ["/brand/logo-horizontal-dark.svg", "image/svg+xml"],
   ] as const) {
     expect(url, type).toBeTruthy();
     const r = await request.get(url!, { maxRedirects: 0 });

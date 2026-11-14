@@ -8,6 +8,8 @@ import "./globals.css";
  * 로그인해야 쓰는 개인 업무실이라 검색 엔진에는 올리지 않는다.
  */
 export const metadata: Metadata = {
+  // 공유 이미지 주소도 로그인 복귀 주소와 같은 앱 주소 설정을 따른다.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "마케팅 업무실",
   description: "1인 운영 AI 마케팅 업무실",
   applicationName: "마케팅 업무실",
