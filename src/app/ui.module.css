@@ -649,7 +649,18 @@
   }
 }
 
-/* 링크를 보조 버튼 모양으로 (머리글의 '설정') */
+/* 목록 쪽 이동 (CR07) */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* 링크를 보조 버튼 모양으로 (머리글의 '설정', 쪽 이동) */
 a.secondaryButton {
   display: inline-flex;
   align-items: center;

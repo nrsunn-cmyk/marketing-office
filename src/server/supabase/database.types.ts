@@ -397,14 +397,14 @@ isOneToOne: false
                   ]
                 },"source_assets": {
                   Row: {
-                    "bytes": number | null,"checksum_sha256": string | null,"client_id": string | null,"created_at": string,"extraction_status": string,"file_name": string | null,"id": string,"kind": string,"mime": string | null,"object_key": string | null,"project_id": string | null,"review_status": string,"revision": number,"text_content": string | null,"updated_at": string,"upload_status": string,"url": string | null,"workspace_id": string
+                    "bytes": number | null,"checksum_sha256": string | null,"client_id": string | null,"created_at": string,"display_name": string | null,"extraction_status": string,"file_name": string | null,"id": string,"kind": string,"mime": string | null,"object_key": string | null,"project_id": string | null,"review_status": string,"revision": number,"text_content": string | null,"updated_at": string,"upload_status": string,"url": string | null,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "bytes"?: number | null,"checksum_sha256"?: string | null,"client_id"?: string | null,"created_at"?: string,"extraction_status"?: string,"file_name"?: string | null,"id"?: string,"kind": string,"mime"?: string | null,"object_key"?: string | null,"project_id"?: string | null,"review_status"?: string,"revision"?: number,"text_content"?: string | null,"updated_at"?: string,"upload_status"?: string,"url"?: string | null,"workspace_id": string
+                    "bytes"?: number | null,"checksum_sha256"?: string | null,"client_id"?: string | null,"created_at"?: string,"display_name"?: never,"extraction_status"?: string,"file_name"?: string | null,"id"?: string,"kind": string,"mime"?: string | null,"object_key"?: string | null,"project_id"?: string | null,"review_status"?: string,"revision"?: number,"text_content"?: string | null,"updated_at"?: string,"upload_status"?: string,"url"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "bytes"?: number | null,"checksum_sha256"?: string | null,"client_id"?: string | null,"created_at"?: string,"extraction_status"?: string,"file_name"?: string | null,"id"?: string,"kind"?: string,"mime"?: string | null,"object_key"?: string | null,"project_id"?: string | null,"review_status"?: string,"revision"?: number,"text_content"?: string | null,"updated_at"?: string,"upload_status"?: string,"url"?: string | null,"workspace_id"?: string
+                    "bytes"?: number | null,"checksum_sha256"?: string | null,"client_id"?: string | null,"created_at"?: string,"display_name"?: never,"extraction_status"?: string,"file_name"?: string | null,"id"?: string,"kind"?: string,"mime"?: string | null,"object_key"?: string | null,"project_id"?: string | null,"review_status"?: string,"revision"?: number,"text_content"?: string | null,"updated_at"?: string,"upload_status"?: string,"url"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {

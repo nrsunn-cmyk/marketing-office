@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
+import { decodeCursor, parsePage } from "@/domain/paging";
 import { listResults } from "@/features/library/server";
 import { AppNav } from "../_components/app-nav";
+import { Pager } from "../_components/pager";
 import styles from "../ui.module.css";
 
 export const metadata: Metadata = { title: "결과물 · 마케팅 업무실" };
@@ -28,7 +30,9 @@ async function Results({ searchParams }: { searchParams: PageProps<"/results">["
   const params = await searchParams;
   const type = params.type === "logo_brief" || params.type === "quote" ? params.type : null;
   const approvedOnly = params.approved === "1";
-  const items = await listResults({ type, approvedOnly });
+  const cursor = decodeCursor(typeof params.cursor === "string" ? params.cursor : null);
+  const page = cursor ? parsePage(params.page) : 1;
+  const { items, total, nextCursor } = await listResults({ type, approvedOnly, cursor });
 
   return (
     <section className={styles.section} aria-labelledby="results-list">
@@ -78,6 +82,17 @@ async function Results({ searchParams }: { searchParams: PageProps<"/results">["
             </li>
           ))}
         </ul>
+      )}
+      {total > 0 && (
+        <Pager
+          basePath="/results"
+          params={{ type, approved: approvedOnly ? "1" : null }}
+          total={total}
+          page={page}
+          shown={items.length}
+          nextCursor={nextCursor}
+          label="결과물"
+        />
       )}
     </section>
   );

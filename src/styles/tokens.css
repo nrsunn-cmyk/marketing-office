@@ -130,7 +130,10 @@
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
+  --text-on-primary: #0b1220; /* 다크 모드 primary(#38bdf8) 위 고대비 텍스트 (대비 8.2:1, WCAG AAA 통과) */
 
+  --primary-50: #0f172a;
+  --primary-100: #1e293b;
   --primary-600: #38bdf8;
   --primary-700: #0ea5e9;
 
@@ -164,7 +167,10 @@
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --text-dim: #64748b;
+    --text-on-primary: #0b1220; /* 다크 모드 primary(#38bdf8) 위 고대비 텍스트 (대비 8.2:1, WCAG AAA 통과) */
 
+    --primary-50: #0f172a;
+    --primary-100: #1e293b;
     --primary-600: #38bdf8;
     --primary-700: #0ea5e9;
 

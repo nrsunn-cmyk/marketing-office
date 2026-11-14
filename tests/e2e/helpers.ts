@@ -42,3 +42,18 @@ export function adminClient() {
 }
 
 export const unique = (label: string) => `${label}-${Date.now().toString(36)}`;
+
+/**
+ * 본인 계정 권한(RLS 적용)의 Supabase 연결. 많은 시험 자료를 화면 없이 빠르게 만들 때 쓴다.
+ * 관리자 키로 일회용 로그인 링크를 만들어 본인으로 로그인한다(로컬 시험 DB 전용).
+ */
+export async function ownerSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(url)) throw new Error("로컬 시험 DB에서만 쓴다");
+  const { data, error } = await adminClient().auth.admin.generateLink({ type: "magiclink", email: OWNER });
+  if (error) throw error;
+  const sb = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
+  const auth = await sb.auth.verifyOtp({ token_hash: data.properties.hashed_token, type: "magiclink" });
+  if (auth.error) throw auth.error;
+  return sb;
+}

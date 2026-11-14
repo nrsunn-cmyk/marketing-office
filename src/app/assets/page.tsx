@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ASSET_KIND_LABELS, EXTRACTION_STATUS_LABELS, UPLOAD_STATUS_LABELS } from "@/domain/state/labels";
+import { decodeCursor, parsePage } from "@/domain/paging";
 import { ASSET_KINDS, listLibrary, type AssetKind } from "@/features/library/server";
 import { AppNav } from "../_components/app-nav";
+import { Pager } from "../_components/pager";
 import styles from "../ui.module.css";
 
 export const metadata: Metadata = { title: "자료실 · 마케팅 업무실" };
@@ -35,7 +37,9 @@ async function Library({ searchParams }: { searchParams: PageProps<"/assets">["s
   const params = await searchParams;
   const kind = (ASSET_KINDS as readonly string[]).includes(String(params.kind)) ? (params.kind as AssetKind) : null;
   const q = typeof params.q === "string" ? params.q : "";
-  const items = await listLibrary({ kind, q });
+  const cursor = decodeCursor(typeof params.cursor === "string" ? params.cursor : null);
+  const page = cursor ? parsePage(params.page) : 1;
+  const { items, total, nextCursor } = await listLibrary({ kind, q, cursor });
 
   return (
     <section className={styles.section} aria-labelledby="library-list">
@@ -70,10 +74,7 @@ async function Library({ searchParams }: { searchParams: PageProps<"/assets">["s
             <li key={a.id} className={styles.listItem}>
               <div>
                 <span className={styles.badge}>{ASSET_KIND_LABELS[a.kind]}</span>{" "}
-                <strong>
-                  {a.file_name ??
-                    (a.kind === "url" ? a.url : `${(a.text_content ?? "").slice(0, 40)}${(a.text_content ?? "").length > 40 ? "…" : ""}`)}
-                </strong>
+                <strong>{a.display_name && a.display_name.length > 60 ? `${a.display_name.slice(0, 60)}…` : a.display_name}</strong>
                 <div className={styles.muted}>
                   {a.client_id && <Link href={`/clients/${a.client_id}`}>{a.client_name}</Link>}
                   {a.project_id && (
@@ -98,7 +99,17 @@ async function Library({ searchParams }: { searchParams: PageProps<"/assets">["s
           ))}
         </ul>
       )}
-      {items.length === 200 && <p className={styles.muted}>최근 200개까지 보여 줍니다. 종류나 이름으로 좁혀 보세요.</p>}
+      {total > 0 && (
+        <Pager
+          basePath="/assets"
+          params={{ kind, q: q || null }}
+          total={total}
+          page={page}
+          shown={items.length}
+          nextCursor={nextCursor}
+          label="자료실"
+        />
+      )}
     </section>
   );
 }
