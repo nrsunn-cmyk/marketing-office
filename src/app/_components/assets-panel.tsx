@@ -72,7 +72,7 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
       <MobileActionSheet title="자료 추가">
       <details>
         <summary>파일 올리기 (PDF·PNG·JPEG·TXT, 10MB까지)</summary>
-        <ActionForm action={uploadAssetAction} submitLabel="파일 올리기" pendingLabel="올리는 중…" resetOnSuccess>
+        <ActionForm action={uploadAssetAction} submitLabel="파일 올리기" pendingLabel="올리는 중…">
           <OwnerFields owner={owner} />
           <div className={styles.field}>
             <label htmlFor="asset-file">파일</label>
@@ -84,7 +84,7 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
 
       <details>
         <summary>메모 추가</summary>
-        <ActionForm action={addTextAssetAction} submitLabel="메모 저장" resetOnSuccess>
+        <ActionForm action={addTextAssetAction} submitLabel="메모 저장">
           <OwnerFields owner={owner} />
           <div className={styles.field}>
             <label htmlFor="memo-title">제목 (선택)</label>
@@ -99,7 +99,7 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
 
       <details>
         <summary>링크 추가</summary>
-        <ActionForm action={addUrlAssetAction} submitLabel="링크 저장" resetOnSuccess>
+        <ActionForm action={addUrlAssetAction} submitLabel="링크 저장">
           <OwnerFields owner={owner} />
           <div className={styles.field}>
             <label htmlFor="link-title">이름 (선택)</label>

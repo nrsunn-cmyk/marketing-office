@@ -36,7 +36,7 @@ export async function DeliveryPanel({ detail }: { detail: TaskDetail }) {
       )}
       <details>
         <summary>전달 기록 남기기</summary>
-        <ActionForm action={recordDeliveryAction} submitLabel="전달 기록 저장" resetOnSuccess>
+        <ActionForm action={recordDeliveryAction} submitLabel="전달 기록 저장">
           <input type="hidden" name="artifactId" value={artifact.id} />
           <div className={styles.field}>
             <label htmlFor="delivery-method">전달 방법</label>

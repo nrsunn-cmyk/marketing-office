@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, type FormEvent } from "react";
 import styles from "../ui.module.css";
 import { setupWorkspace, type SetupState } from "./actions";
 
@@ -16,8 +16,14 @@ const FIELDS: Array<{ name: string; label: string; required?: boolean; type?: st
 
 export function SetupForm() {
   const [state, action, pending] = useActionState<SetupState, FormData>(setupWorkspace, {});
+  // 오류가 나도 입력한 값이 사라지지 않게 직접 보낸다 (ActionForm 과 같은 이유)
+  function submitKeepingValues(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(() => action(formData));
+  }
   return (
-    <form action={action} className={styles.form} noValidate>
+    <form action={action} onSubmit={submitKeepingValues} className={styles.form} noValidate>
       {state.message && (
         <p className={styles.error} role="alert">
           {state.message}

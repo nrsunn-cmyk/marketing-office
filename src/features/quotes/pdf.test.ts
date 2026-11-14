@@ -125,3 +125,78 @@ describe("견적서 PDF", () => {
     expect(a.text).toBe(b.text);
   }, 30_000);
 });
+
+describe("표준 견적서 배치", () => {
+  const sample = (): QuoteDocument => ({
+    ...docFrom([
+      { name: "브랜드 로고 디자인", description: "시안 3종, 수정 2회", qty: 100, price: 1_500_000 },
+      { name: "명함 디자인", description: "양면, 인쇄 파일", qty: 100, price: 300_000 },
+      { name: "상세페이지 기획", qty: 100, price: 200_000 },
+    ]),
+    quoteNumber: "Q-2026-0001",
+    issueDate: "2026-11-14",
+    validUntil: "2026-12-14",
+    projectTitle: "(예시) 브랜드 리뉴얼",
+    supplier: {
+      legalName: "(예시) 나다움 마케팅",
+      representative: "홍길동",
+      businessNumber: "000-00-00000",
+      phone: "02-000-0000",
+      email: "hello@example.com",
+      address: "(예시) 서울특별시 ○○구 ○○로 00",
+      businessType: "서비스",
+      businessItem: "광고대행, 디자인",
+      contactPerson: "홍길동 실장",
+      bankAccount: "(예시) ○○은행 000-000-000000 (예금주 나다움마케팅)",
+    },
+    customer: { name: "(예시) 가나다 베이커리" },
+    paymentTerms: "계약 시 50%, 최종 산출물 승인 후 7일 이내 50%",
+    notes: "부가세 별도 금액입니다. 인쇄비는 포함되지 않습니다.",
+  });
+
+  it("표준 항목이 모두 들어간다: 한글 합계금액·공급자 표·특기사항", async () => {
+    const doc = sample();
+    const buf = await renderQuotePdf(doc);
+    if (process.env.SAVE_PDF_SAMPLES) writeFileSync(join(process.env.SAVE_PDF_SAMPLES, "표준견적서-샘플.pdf"), buf);
+    const { totalPages, text } = await readPdf(buf);
+    expect(totalPages).toBe(1);
+    for (const t of [
+      "견 적 서",
+      "(예시) 가나다 베이커리 귀하",
+      "아래와 같이 견적합니다.",
+      "공 급 자",
+      "000-00-00000",
+      "홍길동 (인)",
+      "서비스",
+      "광고대행, 디자인",
+      "홍길동 실장",
+      `합계금액 일금 이백이십만 원정`,
+      "₩2,200,000",
+      "규격·설명",
+      "시안 3종, 수정 2회",
+      "공급가액 2,000,000원",
+      "세액 200,000원",
+      "합계 2,200,000원",
+      "특기사항",
+      "입금 계좌",
+      "(예시) ○○은행 000-000-000000",
+      "2026-12-14까지 유효합니다.",
+    ]) {
+      expect(text).toContain(t);
+    }
+  }, 30_000);
+
+  it("비어 있는 공급자 항목은 '-'로 표시하고, 특기사항이 없으면 칸을 그리지 않는다", async () => {
+    const doc = { ...sample(), paymentTerms: null, notes: null, validUntil: null };
+    doc.supplier = { ...doc.supplier, businessType: null, businessItem: null, bankAccount: null, contactPerson: null };
+    const { text } = await readPdf(await renderQuotePdf(doc));
+    expect(text).not.toContain("특기사항");
+    expect(text).toMatch(/업태 - 종목 -/);
+  }, 30_000);
+
+  it("부가세 포함 견적은 금액 칸 이름에 '부가세 포함'을 적는다", async () => {
+    const doc = { ...sample(), taxMode: "INCLUSIVE" as const };
+    const { text } = await readPdf(await renderQuotePdf(doc));
+    expect(text).toContain("금액(부가세 포함)");
+  }, 30_000);
+});

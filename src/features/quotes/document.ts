@@ -14,6 +14,13 @@ export interface QuoteDocument {
     phone: string | null;
     email: string | null;
     address: string | null;
+    /** 업태 */
+    businessType?: string | null;
+    /** 종목 */
+    businessItem?: string | null;
+    contactPerson?: string | null;
+    /** 입금 계좌 (특기사항에 표시) */
+    bankAccount?: string | null;
   };
   customer: { name: string };
   items: Array<{

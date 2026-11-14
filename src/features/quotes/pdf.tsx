@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { Document, Font, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { koreanWonPhrase } from "@/domain/quote/korean-amount";
 import { formatQuantity, formatTaxRate, formatWon } from "@/domain/quote/parse";
 import { TAX_MODE_LABELS, type QuoteDocument } from "./document";
 
@@ -48,50 +49,64 @@ export function koreanBreakPoints(word: string): string[] {
   return parts.flatMap((p) => [p, ""]).slice(0, -1);
 }
 
+/*
+ * 표준 견적서 배치 (Plan/견적서양식/표준견적서-샘플.md)
+ * 위: 제목 → 견적 정보·받는 분(왼쪽) | 공급자 표(오른쪽) → 합계금액 띠(한글·숫자)
+ * 가운데: 품목 표(쪽마다 머리 반복, 행 쪼개짐 없음) → 공급가액·세액·합계
+ * 아래: 특기사항(결제 조건·입금 계좌·비고·유효기간) → 쪽 번호
+ */
+const LINE = "#334155";
 const s = StyleSheet.create({
-  page: { fontFamily: "Pretendard", fontSize: 9.5, paddingTop: 40, paddingBottom: 56, paddingHorizontal: 40, lineHeight: 1.45 },
-  draftMark: {
-    position: "absolute",
-    top: 300,
-    left: 120,
-    fontSize: 72,
-    color: "#d0d0d0",
-    transform: "rotate(-30deg)",
-    fontWeight: 700,
-  },
-  title: { fontSize: 22, fontWeight: 700, textAlign: "center", letterSpacing: 8, marginBottom: 12 },
-  meta: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  parties: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  box: { flex: 1, border: "1pt solid #888", padding: 8 },
-  boxTitle: { fontWeight: 700, marginBottom: 4 },
-  totalLine: { fontSize: 12, fontWeight: 700, marginBottom: 8, padding: 8, backgroundColor: "#f2f2f2" },
-  tableHead: { flexDirection: "row", borderBottom: "1pt solid #333", borderTop: "1pt solid #333", paddingVertical: 4, fontWeight: 700 },
-  row: { flexDirection: "row", borderBottom: "0.5pt solid #bbb", paddingVertical: 4 },
-  cNo: { width: "6%", textAlign: "center" },
-  cName: { width: "44%", paddingRight: 6 },
-  cQty: { width: "12%", textAlign: "right", paddingRight: 6 },
-  cPrice: { width: "18%", textAlign: "right", paddingRight: 6 },
-  cAmount: { width: "20%", textAlign: "right" },
-  desc: { color: "#555", fontSize: 8.5 },
-  sums: { marginTop: 10, marginLeft: "50%" },
-  sumRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
-  sumTotal: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, borderTop: "1pt solid #333", fontWeight: 700 },
-  section: { marginTop: 14 },
-  sectionTitle: { fontWeight: 700, marginBottom: 3 },
-  footer: { position: "absolute", top: 841.89 - 36, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", fontSize: 8, color: "#666" },
+  page: { fontFamily: "Pretendard", fontSize: 9.2, paddingTop: 36, paddingBottom: 52, paddingHorizontal: 36, lineHeight: 1.4, color: "#0f172a" },
+  draftMark: { position: "absolute", top: 300, left: 120, fontSize: 72, color: "#d0d0d0", transform: "rotate(-30deg)", fontWeight: 700 },
+  title: { fontSize: 22, fontWeight: 700, textAlign: "center", letterSpacing: 10, marginBottom: 14 },
+  top: { flexDirection: "row", gap: 10, marginBottom: 10 },
+  left: { flex: 1, justifyContent: "space-between" },
+  metaRow: { flexDirection: "row", marginBottom: 2 },
+  metaLabel: { width: 52, color: "#475569" },
+  customer: { fontSize: 13, fontWeight: 700, marginTop: 6, borderBottom: `1pt solid ${LINE}`, paddingBottom: 3 },
+  greeting: { marginTop: 6, color: "#334155" },
+  supplier: { width: "56%", border: `1pt solid ${LINE}` },
+  supplierHead: { backgroundColor: "#f1f5f9", borderBottom: `1pt solid ${LINE}`, paddingVertical: 3, textAlign: "center", fontWeight: 700 },
+  sRow: { flexDirection: "row", borderBottom: "0.5pt solid #94a3b8", minHeight: 18 },
+  sRowLast: { flexDirection: "row", minHeight: 18 },
+  sLabel: { width: 54, backgroundColor: "#f8fafc", borderRight: "0.5pt solid #94a3b8", paddingHorizontal: 4, paddingVertical: 3, fontWeight: 700, fontSize: 8.5 },
+  sValue: { flex: 1, paddingHorizontal: 5, paddingVertical: 3 },
+  sValueSplit: { flex: 1, paddingHorizontal: 5, paddingVertical: 3, borderRight: "0.5pt solid #94a3b8" },
+  seal: { color: "#b91c1c", fontWeight: 700 },
+  totalBar: { flexDirection: "row", justifyContent: "space-between", border: `1.5pt solid ${LINE}`, backgroundColor: "#f1f5f9", paddingVertical: 7, paddingHorizontal: 10, marginBottom: 10 },
+  totalBarText: { fontSize: 11.5, fontWeight: 700 },
+  tableHead: { flexDirection: "row", backgroundColor: "#f1f5f9", borderTop: `1pt solid ${LINE}`, borderBottom: `1pt solid ${LINE}`, paddingVertical: 4, fontWeight: 700 },
+  row: { flexDirection: "row", borderBottom: "0.5pt solid #cbd5e1", paddingVertical: 4 },
+  cNo: { width: "5%", textAlign: "center" },
+  cName: { width: "27%", paddingRight: 4 },
+  cSpec: { width: "22%", paddingRight: 4, color: "#334155" },
+  cQty: { width: "9%", textAlign: "right", paddingRight: 4 },
+  cPrice: { width: "16%", textAlign: "right", paddingRight: 4 },
+  cAmount: { width: "21%", textAlign: "right", paddingRight: 2 },
+  sums: { marginTop: 8, marginLeft: "52%", border: `1pt solid ${LINE}` },
+  sumRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, paddingHorizontal: 8, borderBottom: "0.5pt solid #cbd5e1" },
+  sumTotal: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, paddingHorizontal: 8, backgroundColor: "#f1f5f9", fontWeight: 700, fontSize: 10.5 },
+  notes: { marginTop: 14, border: "0.5pt solid #94a3b8" },
+  notesHead: { backgroundColor: "#f8fafc", borderBottom: "0.5pt solid #94a3b8", paddingVertical: 3, paddingHorizontal: 6, fontWeight: 700 },
+  noteRow: { flexDirection: "row", paddingVertical: 3, paddingHorizontal: 6 },
+  noteLabel: { width: 60, color: "#475569", fontWeight: 700 },
+  noteValue: { flex: 1 },
+  footer: { position: "absolute", top: 841.89 - 34, left: 36, right: 36, flexDirection: "row", justifyContent: "space-between", fontSize: 7.5, color: "#64748b" },
 });
 
 const won = (n: number) => `${formatWon(n)}원`;
+const dash = (v: string | null | undefined) => (v && v.trim() ? v : "-");
 
 export function QuotePdf({ doc }: { doc: QuoteDocument }) {
   const sup = doc.supplier;
-  const supLines = [
-    sup.representative && `대표: ${sup.representative}`,
-    sup.businessNumber && `사업자등록번호: ${sup.businessNumber}`,
-    sup.address,
-    [sup.phone, sup.email].filter(Boolean).join(" · ") || null,
-  ].filter(Boolean) as string[];
   const draft = doc.status === "draft";
+  const inclusive = doc.taxMode === "INCLUSIVE";
+  const notes: Array<[string, string]> = [];
+  if (doc.paymentTerms) notes.push(["결제 조건", doc.paymentTerms]);
+  if (sup.bankAccount) notes.push(["입금 계좌", sup.bankAccount]);
+  if (doc.validUntil) notes.push(["유효기간", `${doc.validUntil}까지 유효합니다.`]);
+  if (doc.notes) notes.push(["비고", doc.notes]);
 
   return (
     <Document title={`견적서 ${doc.quoteNumber ?? "(초안)"}`} author={sup.legalName} language="ko">
@@ -108,49 +123,91 @@ export function QuotePdf({ doc }: { doc: QuoteDocument }) {
             초안
           </Text>
         )}
+
         <Text style={s.title}>견 적 서</Text>
-        <View style={s.meta}>
-          <Text>견적 번호: {doc.quoteNumber ?? "초안 (번호 없음)"}</Text>
-          <Text>
-            작성일: {doc.issueDate ?? "-"}
-            {"   "}유효기간: {doc.validUntil ?? "-"}
+
+        <View style={s.top}>
+          <View style={s.left}>
+            <View>
+              <View style={s.metaRow}>
+                <Text style={s.metaLabel}>견적번호</Text>
+                <Text>{doc.quoteNumber ?? "초안 (번호 없음)"}</Text>
+              </View>
+              <View style={s.metaRow}>
+                <Text style={s.metaLabel}>견적일자</Text>
+                <Text>{dash(doc.issueDate)}</Text>
+              </View>
+              <View style={s.metaRow}>
+                <Text style={s.metaLabel}>유효기간</Text>
+                <Text>{dash(doc.validUntil)}</Text>
+              </View>
+              <View style={s.metaRow}>
+                <Text style={s.metaLabel}>건명</Text>
+                <Text>{doc.projectTitle}</Text>
+              </View>
+            </View>
+            <View>
+              <Text style={s.customer}>{doc.customer.name} 귀하</Text>
+              <Text style={s.greeting}>아래와 같이 견적합니다.</Text>
+            </View>
+          </View>
+
+          <View style={s.supplier}>
+            <Text style={s.supplierHead}>공 급 자</Text>
+            <View style={s.sRow}>
+              <Text style={s.sLabel}>등록번호</Text>
+              <Text style={s.sValue}>{dash(sup.businessNumber)}</Text>
+            </View>
+            <View style={s.sRow}>
+              <Text style={s.sLabel}>상호</Text>
+              <Text style={s.sValueSplit}>{sup.legalName}</Text>
+              <Text style={s.sLabel}>대표자</Text>
+              <Text style={s.sValue}>
+                {dash(sup.representative)} <Text style={s.seal}>(인)</Text>
+              </Text>
+            </View>
+            <View style={s.sRow}>
+              <Text style={s.sLabel}>주소</Text>
+              <Text style={s.sValue}>{dash(sup.address)}</Text>
+            </View>
+            <View style={s.sRow}>
+              <Text style={s.sLabel}>업태</Text>
+              <Text style={s.sValueSplit}>{dash(sup.businessType)}</Text>
+              <Text style={s.sLabel}>종목</Text>
+              <Text style={s.sValue}>{dash(sup.businessItem)}</Text>
+            </View>
+            <View style={s.sRow}>
+              <Text style={s.sLabel}>연락처</Text>
+              <Text style={s.sValue}>{dash([sup.phone, sup.email].filter(Boolean).join(" · "))}</Text>
+            </View>
+            <View style={s.sRowLast}>
+              <Text style={s.sLabel}>담당자</Text>
+              <Text style={s.sValue}>{dash(sup.contactPerson)}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={s.totalBar}>
+          <Text style={s.totalBarText}>합계금액 {koreanWonPhrase(doc.totalWon)}</Text>
+          <Text style={s.totalBarText}>
+            (₩{formatWon(doc.totalWon)} · {TAX_MODE_LABELS[doc.taxMode]}
+            {doc.taxMode !== "NO_TAX" ? ` ${formatTaxRate(doc.taxRateBasisPoints)}%` : ""})
           </Text>
         </View>
-        <View style={s.parties}>
-          <View style={s.box}>
-            <Text style={s.boxTitle}>받는 분</Text>
-            <Text>{doc.customer.name} 귀하</Text>
-            <Text style={s.desc}>{doc.projectTitle}</Text>
-          </View>
-          <View style={s.box}>
-            <Text style={s.boxTitle}>공급자</Text>
-            <Text>{sup.legalName}</Text>
-            {supLines.map((l) => (
-              <Text key={l} style={s.desc}>
-                {l}
-              </Text>
-            ))}
-          </View>
-        </View>
-        <Text style={s.totalLine}>
-          합계 금액: {won(doc.totalWon)} ({TAX_MODE_LABELS[doc.taxMode]}
-          {doc.taxMode !== "NO_TAX" ? `, 세율 ${formatTaxRate(doc.taxRateBasisPoints)}%` : ""})
-        </Text>
 
         <View style={s.tableHead} fixed>
           <Text style={s.cNo}>No</Text>
-          <Text style={s.cName}>항목</Text>
+          <Text style={s.cName}>품명</Text>
+          <Text style={s.cSpec}>규격·설명</Text>
           <Text style={s.cQty}>수량</Text>
           <Text style={s.cPrice}>단가</Text>
-          <Text style={s.cAmount}>금액</Text>
+          <Text style={s.cAmount}>{inclusive ? "금액(부가세 포함)" : "공급가액"}</Text>
         </View>
         {doc.items.map((it) => (
           <View key={it.position} style={s.row} wrap={false}>
             <Text style={s.cNo}>{it.position + 1}</Text>
-            <View style={s.cName}>
-              <Text>{it.name}</Text>
-              {it.description && <Text style={s.desc}>{it.description}</Text>}
-            </View>
+            <Text style={s.cName}>{it.name}</Text>
+            <Text style={s.cSpec}>{it.description ?? ""}</Text>
             <Text style={s.cQty}>{formatQuantity(it.quantityHundredths)}</Text>
             <Text style={s.cPrice}>{formatWon(it.unitPriceWon)}</Text>
             <Text style={s.cAmount}>{formatWon(it.lineAmountWon)}</Text>
@@ -172,16 +229,15 @@ export function QuotePdf({ doc }: { doc: QuoteDocument }) {
           </View>
         </View>
 
-        {doc.paymentTerms && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>지급 조건</Text>
-            <Text>{doc.paymentTerms}</Text>
-          </View>
-        )}
-        {doc.notes && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>비고</Text>
-            <Text>{doc.notes}</Text>
+        {notes.length > 0 && (
+          <View style={s.notes} wrap={false}>
+            <Text style={s.notesHead}>특기사항</Text>
+            {notes.map(([label, value]) => (
+              <View key={label} style={s.noteRow}>
+                <Text style={s.noteLabel}>{label}</Text>
+                <Text style={s.noteValue}>{value}</Text>
+              </View>
+            ))}
           </View>
         )}
       </Page>

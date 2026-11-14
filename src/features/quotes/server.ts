@@ -26,6 +26,8 @@ export interface SupplierRow {
   phone: string | null;
   email: string | null;
   address: string | null;
+  /** 업태·종목·담당자·입금 계좌 (표준 견적서 항목) */
+  extra?: { business_type?: string | null; business_item?: string | null; contact_person?: string | null; bank_account?: string | null } | null;
 }
 
 export interface FinalQuote {
@@ -47,12 +49,13 @@ export async function latestSupplier(): Promise<SupplierRow | null> {
   const sb = await createSupabaseServerClient();
   const { data } = await sb
     .from("supplier_profiles")
-    .select("id, version, legal_name, representative, business_number, phone, email, address")
+    .select("id, version, legal_name, representative, business_number, phone, email, address, extra")
     .eq("workspace_id", workspace.id)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data;
+  // extra 는 DB에서 JSON으로 오므로 견적서에 쓰는 항목 모양으로 맞춘다
+  return data ? { ...data, extra: (data.extra ?? {}) as SupplierRow["extra"] } : null;
 }
 
 export async function listFinalQuotes(artifactId: string): Promise<FinalQuote[]> {
@@ -223,6 +226,10 @@ export async function getQuoteDocument(quoteVersionId: string): Promise<QuoteDoc
       phone: sup.phone,
       email: sup.email,
       address: sup.address,
+      businessType: sup.extra?.business_type ?? null,
+      businessItem: sup.extra?.business_item ?? null,
+      contactPerson: sup.extra?.contact_person ?? null,
+      bankAccount: sup.extra?.bank_account ?? null,
     },
     customer: { name: row.customer_snapshot.name },
     items: (items ?? []).map((it) => ({

@@ -25,6 +25,9 @@ export function AppNav() {
           </Suspense>
         </nav>
         <div className={styles.headerActions}>
+          <Link href="/settings" className={styles.secondaryButton}>
+            설정
+          </Link>
           <ThemeToggle />
           <form action="/auth/signout" method="post">
             <button type="submit" className={styles.secondaryButton}>
