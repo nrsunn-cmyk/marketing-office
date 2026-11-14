@@ -648,3 +648,22 @@
     margin-bottom: var(--space-2);
   }
 }
+
+/* 목록 쪽 이동 (CR07) */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* 링크를 보조 버튼 모양으로 (쪽 이동 등) */
+a.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text-main) !important;
+}
