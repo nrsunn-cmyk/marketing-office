@@ -43,6 +43,11 @@
     "unpdf": "2.1.0",
     "vitest": "5.1.0"
   },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
+  },
   "engines": {
     "node": ">=22"
   }
