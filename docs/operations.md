@@ -36,6 +36,7 @@ RESTORE_DRILL_CONFIRM=local npm run backup:restore-drill -- <백업 폴더>   # 
 
 - 백업 폴더에는 고객 자료가 들어 있다. 암호가 걸린 저장 장치 등 안전한 곳에 두고 공유하지 않는다.
 - 복원 훈련은 **로컬 DB를 비우고** 다시 넣은 뒤 검증한다(행 수·외래키 고아 행·파일 체크섬·견적 금액 재계산). 운영 DB에는 쓰지 않는다.
+- 로컬 복원 훈련 환경에는 `BACKUP_DB_URL`을 넣지 않는다. 원격 DB 주소가 함께 있으면 초기화 전에 중단한다.
 - 운영 백업: `BACKUP_REMOTE=1 npm run backup -- <폴더>` (연결된 Supabase 프로젝트, `supabase link` 필요).
 - 운영 검증: `.env.production.local`로 실행하고 `BACKUP_DB_URL`(DB 연결 주소)을 함께 지정한다. 없으면 검증 스크립트가 멈춘다(API와 SQL이 서로 다른 DB를 보는 것을 막음).
 - 운영 복원: 새 Supabase 프로젝트 → 마이그레이션 적용(`supabase db push`) → `public.templates` 비우고 `data.sql` 적용(트리거 끈 상태) → 파일 업로드 → `backup:verify`. 원래 프로젝트를 덮어쓰지 않는다.

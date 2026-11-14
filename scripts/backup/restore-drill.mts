@@ -22,6 +22,11 @@ if (process.env.RESTORE_DRILL_CONFIRM !== "local" || !/^http:\/\/(127\.0\.0\.1|l
   console.error("로컬 Supabase(127.0.0.1)에서 RESTORE_DRILL_CONFIRM=local 일 때만 실행합니다. 이 훈련은 로컬 DB를 비웁니다.");
   process.exit(1);
 }
+// SQL 대상 확인이 초기화 뒤에서 실패하면 로컬 자료만 지워질 수 있으므로 먼저 차단한다.
+if (process.env.BACKUP_DB_URL) {
+  console.error("로컬 복원 훈련에는 BACKUP_DB_URL을 지정할 수 없습니다. 원격 DB 설정을 제거한 별도 로컬 환경에서 실행하세요. DB는 초기화하지 않았습니다.");
+  process.exit(1);
+}
 const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as Manifest;
 
 // 1) 로컬 DB 비우기 (마이그레이션만 다시 적용된 빈 상태)
