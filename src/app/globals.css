@@ -1,19 +1,8 @@
-/* 디자인 토큰: AGY 소유 파일(src/styles/tokens.css)을 그대로 쓴다. 바꿀 값은 아래에 덧씌운다. */
-@import "../styles/tokens.css";
-
 /*
- * 접근성 보정 (Claude): 다크 모드에서 AGY 토큰의 버튼 배경(--primary-600: 밝은 하늘색 #38bdf8)에
- * 흰 글자를 쓰면 명도 대비가 약 2:1로 기준(4.5:1)에 못 미친다. 다크 모드에서만 버튼 글자를 어둡게 한다.
- * (AGY에 토큰 반영 요청 예정)
+ * 디자인 토큰: AGY 소유 파일(src/styles/tokens.css)을 그대로 쓴다.
+ * 다크 모드 버튼 글자색(--text-on-primary)은 AGY가 2026-11-14 토큰 원본에 반영해 앱의 임시 덧씌움을 지웠다.
  */
-[data-theme="dark"] {
-  --text-on-primary: #0b1220;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --text-on-primary: #0b1220;
-  }
-}
+@import "../styles/tokens.css";
 
 :root {
   color-scheme: light;
