@@ -3,6 +3,7 @@ import { listAssets, type AssetOwner } from "@/features/assets/server";
 import { ASSET_KIND_LABELS, EXTRACTION_STATUS_LABELS, UPLOAD_STATUS_LABELS } from "@/domain/state/labels";
 import styles from "../ui.module.css";
 import { ActionForm } from "./action-form";
+import { MobileActionSheet } from "./mobile-action-sheet";
 
 function OwnerFields({ owner }: { owner: AssetOwner }) {
   return (
@@ -67,13 +68,16 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
         </ul>
       )}
 
+      {/* 넓은 화면은 그대로, 휴대폰은 '자료 추가 열기' 버튼으로 아래쪽 창에서 연다 (AGY 04 §2.2) */}
+      <MobileActionSheet title="자료 추가">
       <details>
         <summary>파일 올리기 (PDF·PNG·JPEG·TXT, 10MB까지)</summary>
         <ActionForm action={uploadAssetAction} submitLabel="파일 올리기" pendingLabel="올리는 중…" resetOnSuccess>
           <OwnerFields owner={owner} />
           <div className={styles.field}>
             <label htmlFor="asset-file">파일</label>
-            <input id="asset-file" name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" />
+            <input id="asset-file" name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" aria-describedby="asset-file-help" />
+            <span id="asset-file-help" className={styles.muted}>휴대폰에서는 파일 고르기 창에서 사진 찍기도 고를 수 있습니다.</span>
           </div>
         </ActionForm>
       </details>
@@ -107,6 +111,7 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
           </div>
         </ActionForm>
       </details>
+      </MobileActionSheet>
     </section>
   );
 }
