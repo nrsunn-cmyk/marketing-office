@@ -87,9 +87,10 @@ const s = StyleSheet.create({
   sums: { marginTop: 8, marginLeft: "52%", border: `1pt solid ${LINE}` },
   sumRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, paddingHorizontal: 8, borderBottom: "0.5pt solid #cbd5e1" },
   sumTotal: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, paddingHorizontal: 8, backgroundColor: "#f1f5f9", fontWeight: 700, fontSize: 10.5 },
-  notes: { marginTop: 14, border: "0.5pt solid #94a3b8" },
+  notes: { marginTop: 14, border: "0.5pt solid #94a3b8", paddingBottom: 3 },
   notesHead: { backgroundColor: "#f8fafc", borderBottom: "0.5pt solid #94a3b8", paddingVertical: 3, paddingHorizontal: 6, fontWeight: 700 },
-  noteRow: { flexDirection: "row", paddingVertical: 3, paddingHorizontal: 6 },
+  noteRow: { flexDirection: "row", paddingTop: 3, paddingHorizontal: 6 },
+  noteRowNext: { flexDirection: "row", paddingHorizontal: 6 },
   noteLabel: { width: 60, color: "#475569", fontWeight: 700 },
   noteValue: { flex: 1 },
   footer: { position: "absolute", top: 841.89 - 34, left: 36, right: 36, flexDirection: "row", justifyContent: "space-between", fontSize: 7.5, color: "#64748b" },
@@ -195,24 +196,27 @@ export function QuotePdf({ doc }: { doc: QuoteDocument }) {
           </Text>
         </View>
 
-        <View style={s.tableHead} fixed>
-          <Text style={s.cNo}>No</Text>
-          <Text style={s.cName}>품명</Text>
-          <Text style={s.cSpec}>규격·설명</Text>
-          <Text style={s.cQty}>수량</Text>
-          <Text style={s.cPrice}>단가</Text>
-          <Text style={s.cAmount}>{inclusive ? "금액(부가세 포함)" : "공급가액"}</Text>
-        </View>
-        {doc.items.map((it) => (
-          <View key={it.position} style={s.row} wrap={false}>
-            <Text style={s.cNo}>{it.position + 1}</Text>
-            <Text style={s.cName}>{it.name}</Text>
-            <Text style={s.cSpec}>{it.description ?? ""}</Text>
-            <Text style={s.cQty}>{formatQuantity(it.quantityHundredths)}</Text>
-            <Text style={s.cPrice}>{formatWon(it.unitPriceWon)}</Text>
-            <Text style={s.cAmount}>{formatWon(it.lineAmountWon)}</Text>
+        {/* 품목 표: 머리는 품목이 이어지는 쪽에만 반복한다(특기사항만 있는 쪽에는 나오지 않게 표 안에 둔다) */}
+        <View>
+          <View style={s.tableHead} fixed>
+            <Text style={s.cNo}>No</Text>
+            <Text style={s.cName}>품명</Text>
+            <Text style={s.cSpec}>규격·설명</Text>
+            <Text style={s.cQty}>수량</Text>
+            <Text style={s.cPrice}>단가</Text>
+            <Text style={s.cAmount}>{inclusive ? "금액(부가세 포함)" : "공급가액"}</Text>
           </View>
-        ))}
+          {doc.items.map((it) => (
+            <View key={it.position} style={s.row} wrap={false}>
+              <Text style={s.cNo}>{it.position + 1}</Text>
+              <Text style={s.cName}>{it.name}</Text>
+              <Text style={s.cSpec}>{it.description ?? ""}</Text>
+              <Text style={s.cQty}>{formatQuantity(it.quantityHundredths)}</Text>
+              <Text style={s.cPrice}>{formatWon(it.unitPriceWon)}</Text>
+              <Text style={s.cAmount}>{formatWon(it.lineAmountWon)}</Text>
+            </View>
+          ))}
+        </View>
 
         <View style={s.sums} wrap={false}>
           <View style={s.sumRow}>
@@ -230,14 +234,22 @@ export function QuotePdf({ doc }: { doc: QuoteDocument }) {
         </View>
 
         {notes.length > 0 && (
-          <View style={s.notes} wrap={false}>
-            <Text style={s.notesHead}>특기사항</Text>
-            {notes.map(([label, value]) => (
-              <View key={label} style={s.noteRow}>
-                <Text style={s.noteLabel}>{label}</Text>
-                <Text style={s.noteValue}>{value}</Text>
-              </View>
-            ))}
+          // CR09: 특기사항이 길면 다음 쪽으로 이어진다(잘리거나 겹치지 않게). 줄마다 한 행으로 나눠
+          // 쪽 경계에서 줄 단위로 넘어간다. 제목은 이어지는 쪽마다 반복하고, 첫 줄과 함께 놓일 공간이 없으면 다음 쪽에서 시작한다.
+          <View style={s.notes}>
+            <Text style={s.notesHead} minPresenceAhead={36} fixed>
+              특기사항
+            </Text>
+            {notes.flatMap(([label, value]) =>
+              value.split(/\r?\n/).map((line, i) => (
+                <View key={`${label}-${i}`} style={i === 0 ? s.noteRow : s.noteRowNext}>
+                  <Text style={s.noteLabel}>{i === 0 ? label : ""}</Text>
+                  <Text style={s.noteValue} orphans={2} widows={2}>
+                    {line || " "}
+                  </Text>
+                </View>
+              )),
+            )}
           </View>
         )}
       </Page>

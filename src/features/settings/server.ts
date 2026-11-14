@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { requireWorkspace } from "@/server/auth/session";
-import { CONFLICT_MESSAGE, fail, fromDbError, ok, type Result } from "@/server/result";
+import { fail, fromDbError, ok, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import type { Json } from "@/server/supabase/database.types";
 
@@ -71,32 +71,39 @@ export async function getSupplier(): Promise<Supplier | null> {
   return data ? { ...data, extra: (data.extra ?? {}) as SupplierExtra } : null;
 }
 
-/** 새 버전으로 저장. 동시에 두 번 저장되면 버전 번호 유일 제약이 막고 한 번 더 시도한다. */
-export async function saveSupplierVersion(input: SupplierInput): Promise<Result<{ version: number }>> {
+/** 다른 화면에서 먼저 저장한 경우 안내 문구(CR10) */
+export const SUPPLIER_CONFLICT_MESSAGE =
+  "다른 화면에서 공급자 정보가 먼저 저장되었습니다. 덮어쓰지 않았습니다. 화면을 새로 고쳐 최신 내용을 확인한 뒤 다시 저장해 주세요.";
+
+/**
+ * 새 버전으로 저장한다.
+ * baseVersion = 이 화면이 읽어 온 버전(없으면 0). 그사이 다른 화면에서 저장했으면 덮어쓰지 않고 CONFLICT(CR10).
+ * 거의 동시에 저장해도 (업무실, 버전) 유일 제약이 하나만 받아들이고 나머지는 CONFLICT — 다시 시도하지 않는다.
+ */
+export async function saveSupplierVersion(input: SupplierInput, baseVersion: number): Promise<Result<{ version: number }>> {
   const { workspace } = await requireWorkspace();
   const sb = await createSupabaseServerClient();
+  const current = await getSupplier();
+  if ((current?.version ?? 0) !== baseVersion) return fail("CONFLICT", SUPPLIER_CONFLICT_MESSAGE);
+  const version = baseVersion + 1;
   const extra: SupplierExtra = {
     business_type: input.businessType,
     business_item: input.businessItem,
     contact_person: input.contactPerson,
     bank_account: input.bankAccount,
   };
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const current = await getSupplier();
-    const version = (current?.version ?? 0) + 1;
-    const { error } = await sb.from("supplier_profiles").insert({
-      workspace_id: workspace.id,
-      version,
-      legal_name: input.legalName,
-      representative: input.representative,
-      business_number: input.businessNumber,
-      phone: input.phone,
-      email: input.email,
-      address: input.address,
-      extra: extra as unknown as NonNullable<Json>,
-    });
-    if (!error) return ok({ version });
-    if (error.code !== "23505") return fromDbError("saveSupplierVersion", error);
-  }
-  return fail("CONFLICT", CONFLICT_MESSAGE);
+  const { error } = await sb.from("supplier_profiles").insert({
+    workspace_id: workspace.id,
+    version,
+    legal_name: input.legalName,
+    representative: input.representative,
+    business_number: input.businessNumber,
+    phone: input.phone,
+    email: input.email,
+    address: input.address,
+    extra: extra as unknown as NonNullable<Json>,
+  });
+  if (!error) return ok({ version });
+  if (error.code === "23505") return fail("CONFLICT", SUPPLIER_CONFLICT_MESSAGE);
+  return fromDbError("saveSupplierVersion", error);
 }

@@ -186,7 +186,9 @@ test("모바일 새 작업 시트: 키보드 닫기·포커스 복귀·작업 �
   await opener.click();
   await sheet.getByLabel("새 작업", { exact: true }).selectOption("quote");
   await sheet.getByRole("button", { name: "작업 시작" }).click();
-  await expect(page.getByRole("form", { name: "견적 작성" })).toBeVisible();
+  // 작업을 만든 뒤 개발 서버가 작업 화면을 처음 만드는 데 시간이 걸린다. 주소가 바뀐 것을 먼저 확인한다(Codex M13 검수: 5초 대기 실패).
+  await expect(page).toHaveURL(/\/tasks\//,{ timeout: 30_000 });
+  await expect(page.getByRole("form", { name: "견적 작성" })).toBeVisible({ timeout: 15_000 });
   await noHorizontalScroll(page);
   await axe(page, "모바일 견적");
   await page.screenshot({ path: testInfo.outputPath("quote-mobile-light.png") });

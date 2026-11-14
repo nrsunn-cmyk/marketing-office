@@ -44,6 +44,8 @@ async function SupplierForm() {
       </h2>
       <p className={styles.muted}>저장하면 새 버전이 생깁니다. 이미 확정한 견적서는 확정할 때의 정보를 그대로 유지합니다.</p>
       <ActionForm action={saveSupplierAction} submitLabel="새 버전으로 저장">
+        {/* 이 화면이 읽어 온 버전. 그사이 다른 화면에서 저장했으면 덮어쓰지 않는다(CR10). */}
+        <input type="hidden" name="baseVersion" value={supplier?.version ?? 0} />
         {FIELDS.map((f) => (
           <div className={styles.field} key={f.name}>
             <label htmlFor={`s-${f.name}`}>{f.label}</label>
