@@ -41,11 +41,12 @@ test("탭 아이콘·홈 화면 아이콘·링크 미리보기 그림이 걸려 
   }
 });
 
-test("머리글과 로그인 화면에 심볼이 보이고, 밝은·어두운 화면 모두 접근성 위반이 없다", async ({ page }) => {
+test("머리글에 심볼, 로그인 화면에 슬레이트 엠블럼이 보이고, 밝은·어두운 화면 모두 접근성 위반이 없다", async ({ page }) => {
   await page.goto("/login");
-  const mark = page.locator('main img[src*="logo-symbol"]');
-  await expect(mark).toBeVisible();
-  await expect(mark).toHaveAttribute("alt", "");
+  // 1안 모던 슬레이트: 로그인 화면은 AGY 심볼 대신 딥 슬레이트 엠블럼(꾸밈 그림, 화면 읽기에서 숨김)
+  const emblem = page.locator("main h1").locator("xpath=preceding-sibling::span[@aria-hidden='true']");
+  await expect(emblem).toBeVisible();
+  await expect(emblem.locator("svg")).toHaveCount(1);
   await loginWithWorkspace(page);
   const brand = page.getByRole("banner").getByRole("link", { name: "마케팅 업무실" });
   await expect(brand).toBeVisible();
