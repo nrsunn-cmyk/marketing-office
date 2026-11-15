@@ -351,13 +351,11 @@
   cursor: not-allowed;
 }
 
-/* 모바일 검색·필터 폼 내 찾기 버튼 터치 타깃 44px 이상 확보 (UI-POLISH-01) */
+/* 모바일 검색·필터 폼 내 찾기 버튼 터치 타깃 44px 이상 확보 (UI-POLISH-01 보완) */
 @media (max-width: 640px) {
-  .row > .secondaryButton,
   form[role="search"] .secondaryButton {
     min-height: 44px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    padding: 10px 14px;
   }
 }
 
