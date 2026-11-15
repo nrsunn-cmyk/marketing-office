@@ -45,7 +45,52 @@ export function run(cmd: string, args: string[], input?: string): string {
   return r.stdout;
 }
 
-const isLocalApi = () => /^http:\/\/(127\.0\.0\.1|localhost):/.test(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+/**
+ * 백업 대상 하나 정하기 (BACKUP-OPS-01, Codex 검수).
+ * DB 내보내기(dump)와 파일·API 조회가 반드시 같은 Supabase를 보게 한다. 섞이거나 애매하면 시작 전에 멈춘다.
+ * - 로컬: API 주소가 127.0.0.1·localhost 이고 원격 설정(BACKUP_DB_URL·BACKUP_REMOTE)이 없을 때.
+ * - 운영: API 주소가 https://<ref>.supabase.co 이고, BACKUP_DB_URL(DB 연결 주소)이 같은 <ref> 를 가리킬 때.
+ *   DB 연결 주소는 직접 연결(db.<ref>.supabase.co) 또는 공유 연결(사용자 이름 postgres.<ref>) 모양을 받는다.
+ * 돌려주는 값에는 비밀값을 넣지 않는다(목록에 기록용 ref 만). dump 인자에만 연결 주소가 들어간다.
+ */
+export type BackupTarget =
+  | { kind: "local"; label: "local"; dumpArgs: string[] }
+  | { kind: "remote"; label: string; dumpArgs: string[] };
+
+export function resolveBackupTarget(env: Record<string, string | undefined> = process.env): BackupTarget {
+  const api = env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const dbUrl = env.BACKUP_DB_URL ?? "";
+  const remoteFlag = env.BACKUP_REMOTE === "1";
+
+  if (/^http:\/\/(127\.0\.0\.1|localhost):\d+\/?$/.test(api)) {
+    if (dbUrl || remoteFlag) {
+      throw new Error("API 주소는 로컬인데 원격 설정(BACKUP_DB_URL 또는 BACKUP_REMOTE)이 있습니다. 서로 다른 DB가 섞이지 않도록 멈춥니다.");
+    }
+    return { kind: "local", label: "local", dumpArgs: [] };
+  }
+
+  const apiRef = /^https:\/\/([a-z0-9]{20})\.supabase\.co\/?$/.exec(api)?.[1];
+  if (!apiRef) throw new Error(`알 수 없는 Supabase API 주소입니다(${api ? "형식 불일치" : "비어 있음"}). 멈춥니다.`);
+  if (!dbUrl) {
+    throw new Error("운영 백업에는 BACKUP_DB_URL(DB 연결 주소)이 필요합니다. 없으면 DB를 다른 곳에서 받을 수 있어 멈춥니다.");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(dbUrl);
+  } catch {
+    throw new Error("BACKUP_DB_URL 형식이 올바르지 않습니다(postgresql://… 모양이어야 함).");
+  }
+  if (!/^postgres(ql)?:$/.test(parsed.protocol)) throw new Error("BACKUP_DB_URL은 postgresql:// 주소여야 합니다.");
+  const hostRef = /^db\.([a-z0-9]{20})\.supabase\.co$/.exec(parsed.hostname)?.[1];
+  const userRef = /^postgres\.([a-z0-9]{20})$/.exec(decodeURIComponent(parsed.username))?.[1];
+  const dbRef = hostRef ?? userRef;
+  if (!dbRef) throw new Error("BACKUP_DB_URL에서 Supabase 프로젝트를 알 수 없습니다(db.<ref>.supabase.co 또는 사용자 postgres.<ref>).");
+  if (dbRef !== apiRef) {
+    throw new Error(`API 주소의 프로젝트(${apiRef})와 BACKUP_DB_URL의 프로젝트(${dbRef})가 다릅니다. 서로 다른 DB가 섞이지 않도록 멈춥니다.`);
+  }
+  return { kind: "remote", label: apiRef, dumpArgs: [`--remote=${dbUrl}`] };
+}
 
 /**
  * 검증용 SQL 실행 (관리자 권한).
@@ -55,15 +100,11 @@ const isLocalApi = () => /^http:\/\/(127\.0\.0\.1|localhost):/.test(process.env.
  *   psql 프로그램은 로컬 DB 컨테이너 안의 것을 빌려 쓴다.
  */
 export function psql(sql: string): string {
-  const remote = process.env.BACKUP_DB_URL;
-  if (!isLocalApi() && !remote) {
-    throw new Error("원격 Supabase를 검증하려면 BACKUP_DB_URL(DB 연결 주소)을 함께 지정해야 합니다. 서로 다른 DB를 검사하지 않기 위해 중단합니다.");
-  }
-  if (isLocalApi() && remote) {
-    throw new Error("로컬 API 주소와 원격 BACKUP_DB_URL이 함께 지정됐습니다. 검사 대상을 하나로 맞춰 주세요.");
-  }
-  const target = remote ? [remote] : ["-U", "postgres", "-d", "postgres"];
-  return run("docker", ["exec", "-i", DB_CONTAINER, "psql", ...target, "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
+  // 백업과 같은 규칙으로 대상을 정한다(로컬/운영 섞임·프로젝트 불일치면 여기서 멈춤)
+  const backupTarget = resolveBackupTarget();
+  const remote = backupTarget.kind === "remote" ? process.env.BACKUP_DB_URL : undefined;
+  const connection = remote ? [remote] : ["-U", "postgres", "-d", "postgres"];
+  return run("docker", ["exec", "-i", DB_CONTAINER, "psql", ...connection, "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
 }
 
 export async function tableCounts(sb: SupabaseClient): Promise<Record<string, number>> {
@@ -85,6 +126,8 @@ export interface StoredFile {
 
 export interface Manifest {
   createdAt: string;
+  /** 백업한 곳: "local" 또는 운영 프로젝트 ref (비밀값 아님). 예전 백업에는 없을 수 있다 */
+  target?: string;
   counts: Record<string, number>;
   files: StoredFile[];
   quoteTotalWon: number;

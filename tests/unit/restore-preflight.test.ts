@@ -42,6 +42,12 @@ describe("복원 초기화 전 대상 설정 확인", () => {
     expect(commands.run).not.toHaveBeenCalled();
   });
 
+  it("로컬 API에 BACKUP_REMOTE=1이 남아 있으면 초기화 명령을 실행하지 않는다(ENG-BKP-02)", async () => {
+    vi.stubEnv("BACKUP_REMOTE", "1");
+    await expect(import("../../scripts/backup/restore-drill.mts")).rejects.toThrow("검사 중단");
+    expect(commands.run).not.toHaveBeenCalled();
+  });
+
   it("운영 API이면 확인 문자열이 있어도 초기화하지 않는다", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
     await expect(import("../../scripts/backup/restore-drill.mts")).rejects.toThrow("검사 중단");

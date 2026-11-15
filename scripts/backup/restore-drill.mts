@@ -9,7 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { admin, BUCKET, psql, run, type Manifest } from "./common.mts";
+import { admin, BUCKET, psql, resolveBackupTarget, run, type Manifest } from "./common.mts";
 import { verify } from "./verify.mts";
 
 const dir = process.argv[2];
@@ -25,6 +25,14 @@ if (process.env.RESTORE_DRILL_CONFIRM !== "local" || !/^http:\/\/(127\.0\.0\.1|l
 // SQL 대상 확인이 초기화 뒤에서 실패하면 로컬 자료만 지워질 수 있으므로 먼저 차단한다.
 if (process.env.BACKUP_DB_URL) {
   console.error("로컬 복원 훈련에는 BACKUP_DB_URL을 지정할 수 없습니다. 원격 DB 설정을 제거한 별도 로컬 환경에서 실행하세요. DB는 초기화하지 않았습니다.");
+  process.exit(1);
+}
+// 백업·검증과 같은 규칙으로 대상을 한 번 더 정한다(BACKUP_REMOTE 같은 원격 설정이 남아 있으면 여기서 멈춤).
+// 이 검사를 초기화 뒤의 psql()에 맡기면 로컬 DB만 비고 복원은 안 된 채 끝난다(ENG-BKP-02).
+try {
+  if (resolveBackupTarget().kind !== "local") throw new Error("로컬 대상이 아닙니다.");
+} catch (e) {
+  console.error(`복원 훈련을 시작하지 않았습니다: ${(e as Error).message} DB는 초기화하지 않았습니다.`);
   process.exit(1);
 }
 const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as Manifest;
