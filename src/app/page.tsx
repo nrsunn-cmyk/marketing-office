@@ -5,6 +5,7 @@ import { getDashboard, type DashboardData } from "@/features/dashboard/server";
 import { todayIn } from "@/features/quotes/server";
 import { requireWorkspace } from "@/server/auth/session";
 import { AppNav } from "./_components/app-nav";
+import { formatDateTimeIn } from "./_components/format-time";
 import styles from "./ui.module.css";
 
 export default function HomePage() {
@@ -38,13 +39,13 @@ async function Home() {
           {result.message}
         </p>
       ) : (
-        <Dashboard data={result.data} today={today} />
+        <Dashboard data={result.data} today={today} timeZone={workspace.timezone} />
       )}
     </>
   );
 }
 
-function Dashboard({ data, today }: { data: DashboardData; today: string }) {
+function Dashboard({ data, today, timeZone }: { data: DashboardData; today: string; timeZone: string }) {
   // 숫자 색은 AGY S02 시안(진행 파랑·검토 주황·자료 회색·납기 빨강). 색만으로 뜻을 전하지 않도록 이름을 함께 쓴다.
   const tiles: Array<[string, number, string, string]> = [
     ["진행 중 프로젝트", data.counts.openProjects, "접수·자료 대기·진행·검토 중인 프로젝트", styles.toneInfo],
@@ -54,7 +55,7 @@ function Dashboard({ data, today }: { data: DashboardData; today: string }) {
   ];
   return (
     <>
-      <p className={styles.muted}>기준 시각: {new Date(data.asOf).toLocaleString("ko-KR")} · 실제 저장된 값만 집계합니다.</p>
+      <p className={styles.muted}>기준 시각: {formatDateTimeIn(data.asOf, timeZone)} · 실제 저장된 값만 집계합니다.</p>
       <ul className={styles.tiles} aria-label="현황 숫자">
         {tiles.map(([label, n, help, tone]) => (
           <li key={label} className={styles.tile}>
@@ -143,7 +144,7 @@ function Dashboard({ data, today }: { data: DashboardData; today: string }) {
                   <span className={styles.muted}> · {r.projectTitle}</span>
                 </span>
                 <span className={styles.muted}>
-                  {GENERATOR_LABELS[r.generator] ?? r.generator} · {new Date(r.created_at).toLocaleString("ko-KR")}
+                  {GENERATOR_LABELS[r.generator] ?? r.generator} · {formatDateTimeIn(r.created_at, timeZone)}
                 </span>
               </li>
             ))}

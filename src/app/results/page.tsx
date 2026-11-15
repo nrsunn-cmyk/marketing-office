@@ -4,7 +4,9 @@ import { Suspense } from "react";
 import { TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
 import { decodeCursor, parsePage } from "@/domain/paging";
 import { listResults } from "@/features/library/server";
+import { requireWorkspace } from "@/server/auth/session";
 import { AppNav } from "../_components/app-nav";
+import { formatDateTimeIn } from "../_components/format-time";
 import { Pager } from "../_components/pager";
 import styles from "../ui.module.css";
 
@@ -32,7 +34,10 @@ async function Results({ searchParams }: { searchParams: PageProps<"/results">["
   const approvedOnly = params.approved === "1";
   const cursor = decodeCursor(typeof params.cursor === "string" ? params.cursor : null);
   const page = cursor ? parsePage(params.page) : 1;
-  const { items, total, nextCursor } = await listResults({ type, approvedOnly, cursor });
+  const [{ items, total, nextCursor }, { workspace }] = await Promise.all([
+    listResults({ type, approvedOnly, cursor }),
+    requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
+  ]);
 
   return (
     <section className={styles.section} aria-labelledby="results-list">
@@ -67,7 +72,7 @@ async function Results({ searchParams }: { searchParams: PageProps<"/results">["
                   <Link href={`/projects/${r.project_id}`}>{r.project_title}</Link>
                   {r.client_name && ` · ${r.client_name}`}
                   {" · "}
-                  {new Date(r.updated_at).toLocaleString("ko-KR")}
+                  {formatDateTimeIn(r.updated_at, workspace.timezone)}
                 </div>
               </div>
               <div className={styles.row}>

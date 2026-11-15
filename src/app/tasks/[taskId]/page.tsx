@@ -7,9 +7,11 @@ import { z } from "zod";
 import { GENERATOR_LABELS, TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
 import { decideAction, generateLogoAction, saveEditAction } from "@/features/tasks/actions";
 import { getTaskDetail, logoDefaults, type TaskDetail, type VersionInfo } from "@/features/tasks/server";
+import { requireWorkspace } from "@/server/auth/session";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { CopyButton } from "../../_components/copy-button";
+import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveryPanel } from "./delivery-panel";
 import { QuoteSection } from "./quote-section";
@@ -38,7 +40,10 @@ async function TaskView({
 }) {
   const { taskId } = await params;
   if (!z.uuid().safeParse(taskId).success) notFound();
-  const detail = await getTaskDetail(taskId);
+  const [detail, { workspace }] = await Promise.all([
+    getTaskDetail(taskId),
+    requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
+  ]);
   if (!detail) notFound();
   const sp = await searchParams;
   const requested = typeof sp.v === "string" ? Number(sp.v) : null;
@@ -65,14 +70,14 @@ async function TaskView({
         <div className={styles.grid2}>
           <LogoInput detail={detail} />
           <div className={styles.page} style={{ margin: 0, padding: 0, maxWidth: "none" }}>
-            {shown ? <ResultView detail={detail} version={shown} isCurrent={shown.id === current?.id} /> : <EmptyResult />}
+            {shown ? <ResultView detail={detail} version={shown} isCurrent={shown.id === current?.id} timeZone={workspace.timezone} /> : <EmptyResult />}
           </div>
         </div>
       ) : (
         <QuoteSection detail={detail} />
       )}
 
-      <DeliveryPanel detail={detail} />
+      <DeliveryPanel detail={detail} timeZone={workspace.timezone} />
 
       {detail.task.type === "logo_brief" && detail.versions.length > 0 && (
         <VersionHistory detail={detail} shownId={shown?.id ?? null} />
@@ -138,7 +143,17 @@ function Field({ name, label, value, multiline }: { name: string; label: string;
   );
 }
 
-function ResultView({ detail, version, isCurrent }: { detail: TaskDetail; version: VersionInfo; isCurrent: boolean }) {
+function ResultView({
+  detail,
+  version,
+  isCurrent,
+  timeZone,
+}: {
+  detail: TaskDetail;
+  version: VersionInfo;
+  isCurrent: boolean;
+  timeZone: string;
+}) {
   const approved = detail.artifact?.approved_version_id === version.id;
   const c = version.content;
   return (
@@ -153,7 +168,7 @@ function ResultView({ detail, version, isCurrent }: { detail: TaskDetail; versio
         </span>
       </div>
       <p className={styles.muted}>
-        {GENERATOR_LABELS[version.generator] ?? version.generator} · {new Date(version.created_at).toLocaleString("ko-KR")}
+        {GENERATOR_LABELS[version.generator] ?? version.generator} · {formatDateTimeIn(version.created_at, timeZone)}
       </p>
 
       {c.missingInformation.length > 0 && (
