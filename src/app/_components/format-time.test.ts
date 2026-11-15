@@ -42,6 +42,16 @@ describe("업무실 시간대 기준 시각 표시", () => {
     }
   });
 
+  // UI-TIME-02: 고객 프로필 버전·결과물·결과 버전·전달 기록 시각은 DB(PostgREST)가 "+00:00" 꼴로 돌려준다.
+  it.each([
+    ["서울 자정 1초 전", "2026-11-15T14:59:59+00:00", "2026. 11. 15. 오후 11:59:59"],
+    ["서울 자정", "2026-11-15T15:00:00+00:00", "2026. 11. 16. 오전 12:00:00"],
+    ["소수 초가 붙은 값", "2026-11-15T16:19:00.123456+00:00", "2026. 11. 16. 오전 1:19:00"],
+  ])("DB 시각 형식(%s)도 서울 날짜로 보여 준다", (_name, dbValue, shown) => {
+    expect(new Date(dbValue).toLocaleString("ko-KR").startsWith("2026. 11. 15.")).toBe(true); // 고치기 전: UTC 날짜
+    expect(formatDateTimeIn(dbValue, "Asia/Seoul")).toBe(shown);
+  });
+
   it("서버 시간대가 달라도 결과가 같다", () => {
     const iso = "2026-11-15T15:00:00.000Z";
     const inUtc = formatDateTimeIn(iso, "Asia/Seoul");

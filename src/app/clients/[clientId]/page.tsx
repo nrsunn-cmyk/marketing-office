@@ -12,9 +12,11 @@ import {
 } from "@/features/clients/actions";
 import { getClient, listProfileVersions } from "@/features/clients/server";
 import { listProjects } from "@/features/projects/server";
+import { requireWorkspace } from "@/server/auth/session";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
+import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 
 export const metadata: Metadata = { title: "고객 작업실 · 마케팅 업무실" };
@@ -37,7 +39,11 @@ async function ClientWorkspace({ params }: { params: PageProps<"/clients/[client
   if (!z.uuid().safeParse(clientId).success) notFound();
   const client = await getClient(clientId);
   if (!client) notFound();
-  const [versions, projects] = await Promise.all([listProfileVersions(clientId), listProjects({ clientId })]);
+  const [versions, projects, { workspace }] = await Promise.all([
+    listProfileVersions(clientId),
+    listProjects({ clientId }),
+    requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
+  ]);
   const current = versions[0];
 
   return (
@@ -114,7 +120,7 @@ async function ClientWorkspace({ params }: { params: PageProps<"/clients/[client
               {versions.slice(1).map((v) => (
                 <li key={v.id} className={styles.listItem}>
                   <span>{v.version}번 버전</span>
-                  <span className={styles.muted}>{new Date(v.created_at).toLocaleString("ko-KR")}</span>
+                  <span className={styles.muted}>{formatDateTimeIn(v.created_at, workspace.timezone)}</span>
                 </li>
               ))}
             </ul>

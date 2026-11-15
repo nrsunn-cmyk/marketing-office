@@ -2,11 +2,13 @@ import { recordDeliveryAction } from "@/features/delivery/actions";
 import { DELIVERY_METHODS, listDeliveries } from "@/features/delivery/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { ActionForm } from "../../_components/action-form";
+import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveredAtField } from "./delivery-fields";
 
 /** 수동 전달 기록 (T18). 승인본이 있을 때만 보인다. 앱이 고객에게 보내는 기능이 아니다. */
-export async function DeliveryPanel({ detail }: { detail: TaskDetail }) {
+/** timeZone: 업무실 시간대. 서버에서 그리므로 넘겨받지 않으면 서버(UTC) 기준으로 보인다(UI-TIME-02). */
+export async function DeliveryPanel({ detail, timeZone }: { detail: TaskDetail; timeZone: string }) {
   const artifact = detail.artifact;
   if (!artifact?.approved_version_id) return null;
   const approved = detail.versions.find((v) => v.id === artifact.approved_version_id);
@@ -27,7 +29,7 @@ export async function DeliveryPanel({ detail }: { detail: TaskDetail }) {
           {deliveries.map((d) => (
             <li key={d.id} className={styles.listItem}>
               <span>
-                {new Date(d.delivered_at).toLocaleString("ko-KR")} · {DELIVERY_METHODS[d.method]} · {d.version}번 버전
+                {formatDateTimeIn(d.delivered_at, timeZone)} · {DELIVERY_METHODS[d.method]} · {d.version}번 버전
               </span>
               {d.note && <span className={styles.muted}>{d.note}</span>}
             </li>
