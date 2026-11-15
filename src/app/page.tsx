@@ -37,15 +37,6 @@ async function Home() {
         <p className={styles.error} role="alert">
           {result.message}
         </p>
-      ) : !result.data.hasAnyProject ? (
-        <section className={styles.section} aria-labelledby="empty">
-          <h2 id="empty" className={styles.subtitle}>
-            아직 데이터가 없습니다
-          </h2>
-          <p>
-            <Link href="/clients">고객을 등록</Link>하고 프로젝트를 만들면 이곳에 진행 현황이 나타납니다.
-          </p>
-        </section>
       ) : (
         <Dashboard data={result.data} today={today} />
       )}
@@ -74,7 +65,23 @@ function Dashboard({ data, today }: { data: DashboardData; today: string }) {
         ))}
       </ul>
 
-      <section className={styles.section} aria-labelledby="todo">
+      {!data.hasAnyProject ? (
+        <section className={styles.section} aria-labelledby="empty">
+          <h2 id="empty" className={styles.subtitle}>
+            아직 데이터가 없습니다
+          </h2>
+          <p className={styles.muted}>
+            등록된 프로젝트가 없습니다. 첫 고객사를 등록하고 프로젝트를 시작해 보세요.
+          </p>
+          <p style={{ marginTop: "var(--space-3)" }}>
+            <Link href="/clients" className={styles.button}>
+              + 첫 고객 등록하기
+            </Link>
+          </p>
+        </section>
+      ) : (
+        <>
+          <section className={styles.section} aria-labelledby="todo">
         <h2 id="todo" className={styles.subtitle}>
           오늘 처리할 작업
         </h2>
@@ -143,6 +150,8 @@ function Dashboard({ data, today }: { data: DashboardData; today: string }) {
           </ul>
         )}
       </section>
+        </>
+      )}
     </>
   );
 }

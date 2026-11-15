@@ -733,7 +733,14 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-/* 링크를 보조 버튼 모양으로 (머리글의 '설정', 쪽 이동) */
+/* 링크를 기본/보조 버튼 모양으로 (온보딩 버튼, 머리글의 '설정', 쪽 이동) */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text-on-primary) !important;
+}
+
 a.secondaryButton {
   display: inline-flex;
   align-items: center;
