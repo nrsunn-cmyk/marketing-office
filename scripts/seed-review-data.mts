@@ -15,7 +15,9 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../src/server/supabase/database.types.ts";
+import type { LogoBriefFormInput } from "../src/contracts/index.ts";
+import type { Database, Json } from "../src/server/supabase/database.types.ts";
+import { SEED_LOGO_INPUTS, seedLogoContent } from "./seed-logo-content.mts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -153,20 +155,20 @@ async function addTask(projectId: string, type: "logo_brief" | "quote", path: st
   return t.id as string;
 }
 
-// 로고 브리프 결과 버전 (앱의 '입력 조합형' 생성과 같은 함수)
-async function logoResult(taskId: string, title: string) {
-  const content = { brief: `${title} — 로고 방향 3가지(따뜻함·신뢰·간결)`, prompts: ["미니멀 워드마크", "원형 엠블럼", "손글씨 심볼"] };
+// 로고 브리프 결과 버전 — 앱의 '입력 조합형' 생성과 같은 함수(buildLogoBrief)·같은 내용 모양으로 만든다(SEED-01)
+async function logoResult(taskId: string, input: LogoBriefFormInput) {
+  const content = seedLogoContent(input);
   const r = must(
     "결과 기록",
     await sb
       .rpc("record_generation", {
         p_task_id: taskId,
         p_idempotency_key: randomUUID(),
-        p_input_hash: hash({ taskId, content }),
+        p_input_hash: hash({ taskId, input }),
         p_profile_snapshot: {},
-        p_extra_inputs: {},
+        p_extra_inputs: input as unknown as Json,
         p_source_refs: [],
-        p_content: content,
+        p_content: content as unknown as Json,
         p_mode: "template",
       })
       .single(),
@@ -175,14 +177,14 @@ async function logoResult(taskId: string, title: string) {
 }
 
 const tA1logo = await addTask(pA1, "logo_brief");
-await logoResult(tA1logo, "A 로고 리뉴얼"); // → 검토 중(처리할 작업·최근 결과물)
+await logoResult(tA1logo, SEED_LOGO_INPUTS.a); // → 검토 중(처리할 작업·최근 결과물)
 
 const tB2logo = await addTask(pB2, "logo_brief");
-const b2 = await logoResult(tB2logo, "B 연간 관리 계약 제안");
+const b2 = await logoResult(tB2logo, SEED_LOGO_INPUTS.b);
 check("수정 요청", await sb.rpc("decide_version", { p_artifact_id: b2.artifact_id, p_version_id: b2.version_id, p_decision: "changes_requested", p_comment: "색을 더 차분하게" }));
 
 const tInLogo = await addTask(pIn, "logo_brief");
-const inr = await logoResult(tInLogo, "자체 브랜드 블로그 정비");
+const inr = await logoResult(tInLogo, SEED_LOGO_INPUTS.internal);
 check("승인", await sb.rpc("decide_version", { p_artifact_id: inr.artifact_id, p_version_id: inr.version_id, p_decision: "approved", p_comment: "좋아요" }));
 
 await addTask(pB1, "logo_brief", ["ready"]); // 준비됨
