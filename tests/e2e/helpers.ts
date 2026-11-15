@@ -21,7 +21,7 @@ export async function loginWithPassword(page: Page, email: string, password: str
   await page.goto("/login");
   await page.getByLabel("이메일").fill(email);
   await page.getByLabel("비밀번호", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "업무실 접속하기" }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
   await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
 }
 

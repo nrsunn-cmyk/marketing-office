@@ -67,7 +67,7 @@ test("계정 메일(비밀번호 재설정)은 AGY 디자인이고, 유효 시�
   await mailGap(OWNER);
   await page.goto("/forgot-password");
   await page.getByLabel("이메일").fill(OWNER);
-  await page.getByRole("button", { name: "재설정 메일 받기" }).click();
+  await page.getByRole("button", { name: "재설정 링크 받기" }).click();
   await expect(page.getByRole("status")).toContainText("재설정 메일을 보냈습니다");
   const { subject, html } = await waitForMail(OWNER);
   expect(subject).toBe("[마케팅 업무실] 비밀번호 재설정");

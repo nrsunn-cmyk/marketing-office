@@ -1,177 +1,266 @@
 /*
- * 1안 모던 슬레이트 인증 화면 (AGY: Plan/AGY-Auth-UI-Modern-Slate-20261115, 2026-11-15 사용자 채택)
- * AGY 시안은 Tailwind 클래스였고, 이 앱은 CSS 모듈 + 디자인 토큰(src/styles/tokens.css)을 쓴다.
- * 색은 가능한 한 토큰을 써서 다크 모드에서도 맞게 바뀐다. 토큰에 없는 색(엠블럼 배경·버튼 변형)만 여기서 정한다.
+ * 인증 화면 — 1안 테크 그리드 & 로열 블루 (사용자 최종 채택, 2026-11-15)
+ * AGY 원본: C:\nadaum\Design\login-concepts\tech-grid-theme.css, 인계 Plan/AGY-Handoff-Login-TechGrid-20261115
+ * 원본 클래스(.tg-*)를 이 앱의 CSS 모듈로 옮겼다. 색은 이 파일의 지역 변수(--tg-*)로 두고 다크 모드에서 바꾼다.
  */
 
 .screen {
+  --tg-canvas: #f8faff;
+  --tg-grid: rgba(224, 231, 255, 0.85);
+  --tg-card: #ffffff;
+  --tg-card-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.08), 0 0 1px rgba(15, 23, 42, 0.12);
+  --tg-heading: #0f172a;
+  --tg-body: #1e293b;
+  --tg-muted: #64748b;
+  --tg-placeholder: #94a3b8;
+  --tg-input-bg: #f8fafc;
+  --tg-input-border: #e2e8f0;
+  --tg-focus: #3b82f6;
+  --tg-pill-bg: #f1f5f9;
+  --tg-pill-active: #ffffff;
+  /* 선택 안 된 탭 글자: 시안 #64748b 는 알약 배경과 대비 4.3:1 이라 AA(4.5:1) 미달 → 한 단계 진하게 */
+  --tg-tab-text: #475569;
+  --tg-primary: #2563eb;
+  --tg-badge-bg: #eff6ff;
+  --tg-badge-border: #dbeafe;
+  --tg-icon-bg: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  --tg-icon-ring: rgba(199, 210, 254, 0.9);
+  --tg-error-bg: #fef2f2;
+  --tg-error-border: #fecaca;
+  --tg-error-text: #b91c1c;
+  --tg-ok-bg: #f0fdf4;
+  --tg-ok-border: #bbf7d0;
+  --tg-ok-text: #15803d;
+
   min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background-color: var(--tg-canvas);
+  background-image:
+    linear-gradient(to right, var(--tg-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--tg-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.container {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 위쪽 둥근 사각 아이콘 상자 (로켓·자물쇠) */
+.iconBox {
+  width: 66px;
+  height: 66px;
+  border-radius: 20px;
   display: grid;
   place-items: center;
-  padding: var(--space-8) var(--space-4);
-  background: var(--bg-app);
-}
-
-.card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  padding: var(--space-8);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 25px -5px rgba(15, 23, 42, 0.06);
-}
-
-.wide {
-  max-width: 440px;
-}
-
-.head {
-  text-align: center;
-  margin-bottom: var(--space-6);
-}
-
-/* 딥 슬레이트 엠블럼(화면마다 아이콘이 다르다) */
-.emblem {
-  display: inline-grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #0f172a;
-  color: #3b82f6;
-  margin-bottom: var(--space-3);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
-}
-
-.emblemSignup {
-  color: #34d399;
-}
-
-.emblemReset {
-  color: #fbbf24;
-}
-
-.title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--text-main);
-}
-
-.subtitle {
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-  line-height: 1.5;
+  color: var(--tg-primary);
+  background: var(--tg-icon-bg);
+  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.22), 0 0 0 1px var(--tg-icon-ring);
+  margin-bottom: 16px;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: var(--space-3);
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  background: var(--primary-50);
-  color: var(--primary-700);
-  font-size: 12px;
-  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: var(--tg-badge-bg);
+  border: 1px solid var(--tg-badge-border);
+  color: var(--tg-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--tg-heading);
+  text-align: center;
+}
+
+.subtitle {
+  margin: 0 0 28px;
+  font-size: 14px;
+  color: var(--tg-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.card {
+  width: 100%;
+  background: var(--tg-card);
+  border-radius: 24px;
+  padding: 30px 32px;
+  box-shadow: var(--tg-card-shadow);
+}
+
+/* 알약형 탭 (로그인 / 회원가입) — 화면 이동 링크 */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--tg-pill-bg);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+/* globals.css 의 다크 모드 링크 색(:root:not(...) a)보다 우선하도록 선택자를 구체적으로 쓴다 */
+.screen .tabs a.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 0;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tg-tab-text);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.screen .tabs a.tab:hover {
+  color: var(--tg-body);
+}
+
+.screen .tabs a.tab[aria-current="page"] {
+  background: var(--tg-pill-active);
+  color: var(--tg-primary);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.screen .tabs a.tab:focus-visible {
+  outline: 2px solid var(--tg-focus);
+  outline-offset: 2px;
 }
 
 /* 폼 */
 .form {
   display: grid;
-  gap: var(--space-4);
-  text-align: left;
+  gap: 18px;
 }
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 7px;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text-main);
+  font-weight: 700;
+  color: var(--tg-body);
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.iconLeft {
+  position: absolute;
+  left: 14px;
+  display: flex;
+  color: var(--tg-placeholder);
+  pointer-events: none;
 }
 
 .input {
   width: 100%;
-  height: 42px;
-  padding: 0 12px;
+  height: 48px;
+  padding: 0 16px 0 42px;
   font: inherit;
   font-size: 15px;
-  color: var(--text-main);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+  color: var(--tg-heading);
+  background: var(--tg-input-bg);
+  border: 1px solid var(--tg-input-border);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.input::placeholder {
+  color: var(--tg-placeholder);
 }
 
 .input:focus-visible {
   outline: none;
-  border-color: var(--primary-600);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-600) 18%, transparent);
-}
-
-.input[aria-invalid="true"] {
-  border-color: var(--danger-text);
-}
-
-.withToggle {
-  position: relative;
+  background: var(--tg-card);
+  border-color: var(--tg-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
 
 .withToggle .input {
-  padding-right: 44px;
+  padding-right: 48px;
 }
 
 /* 비밀번호 보기/숨기기 (눈 아이콘) */
 .toggle {
   position: absolute;
-  top: 50%;
-  right: 4px;
-  transform: translateY(-50%);
+  right: 6px;
   width: 36px;
   height: 36px;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--tg-placeholder);
   cursor: pointer;
 }
 
 .toggle:hover {
-  color: var(--text-main);
+  color: var(--tg-muted);
 }
 
 .toggle:focus-visible {
-  outline: 2px solid var(--primary-600);
+  outline: 2px solid var(--tg-focus);
   outline-offset: 1px;
 }
 
 .help {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--tg-muted);
   line-height: 1.5;
+}
+
+.link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tg-primary);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
 }
 
 /* 비밀번호 강도 막대 */
 .meter {
   height: 4px;
   border-radius: 2px;
-  background: var(--bg-hover);
+  background: var(--tg-pill-bg);
   overflow: hidden;
 }
 
 .meterFill {
   height: 100%;
   border-radius: 2px;
-  transition: width var(--transition-fast), background-color var(--transition-fast);
+  transition: width 0.2s, background-color 0.2s;
 }
 
 .strength0 {
@@ -187,154 +276,173 @@
 }
 .strength3 {
   width: 100%;
-  background: #059669;
+  background: #16a34a;
 }
 
 .matchOk {
-  color: var(--success-text);
+  color: var(--tg-ok-text);
   font-weight: 600;
 }
 
 .matchBad {
-  color: var(--danger-text);
+  color: var(--tg-error-text);
   font-weight: 600;
 }
 
-/* 링크 줄(비밀번호 찾기) */
-.row {
-  display: flex;
-  justify-content: flex-end;
-  font-size: 13px;
-}
-
-.link {
-  color: var(--primary-600);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
-/* 제출 버튼: 화면마다 색이 다르다(로그인 파랑 / 가입 초록 / 재설정 네이비) */
+/* 로열 블루 그라데이션 버튼 */
 .submit {
   width: 100%;
-  height: 44px;
+  height: 50px;
+  margin-top: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border: 0;
+  border-radius: 12px;
   font: inherit;
   font-size: 15px;
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: #ffffff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 16px -2px rgba(37, 99, 235, 0.35);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -2px rgba(37, 99, 235, 0.45);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
 }
 
 .submit:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: progress;
 }
 
 .submit:focus-visible {
-  outline: 2px solid var(--primary-600);
-  outline-offset: 2px;
+  outline: 2px solid var(--tg-focus);
+  outline-offset: 3px;
 }
 
-.submitPrimary {
-  background: #2563eb;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
-}
-.submitPrimary:hover {
-  background: #1d4ed8;
-}
-
-/* AGY 시안의 #10b981 은 흰 글자와 대비가 약해(약 2.5:1) WCAG AA(4.5:1)를 넘는 짙은 초록으로 바꿨다 */
-.submitSuccess {
-  background: #047857;
-}
-.submitSuccess:hover {
-  background: #065f46;
+@media (prefers-reduced-motion: reduce) {
+  .submit,
+  .submit:hover:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
 }
 
-.submitDark {
-  background: #0f172a;
-}
-.submitDark:hover {
-  background: #1e293b;
-}
-
-.foot {
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--border-subtle);
-  text-align: center;
-  font-size: 13px;
-  color: var(--text-muted);
-  display: grid;
-  gap: var(--space-2);
+/* 안내·오류 */
+.notice,
+.error {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  list-style: none;
 }
 
-/* 안내·오류 (폼 결과) */
 .notice {
-  margin: 0 0 var(--space-4);
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  background: var(--success-bg);
-  color: var(--success-text);
-  border: 1px solid var(--success-border);
-  font-size: 14px;
-  line-height: 1.55;
+  background: var(--tg-ok-bg);
+  border: 1px solid var(--tg-ok-border);
+  color: var(--tg-ok-text);
 }
 
 .error {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: var(--danger-bg);
-  color: var(--danger-text);
-  border: 1px solid var(--danger-border);
-  font-size: 13px;
-  line-height: 1.5;
-  list-style: none;
+  background: var(--tg-error-bg);
+  border: 1px solid var(--tg-error-border);
+  color: var(--tg-error-text);
 }
 
 .error li + li {
   margin-top: 4px;
 }
 
-/* 다크 모드: 네이비 엠블럼·버튼이 어두운 카드와 섞이지 않도록 밝은 슬레이트와 테두리를 쓴다 (tokens.css 와 같은 조건) */
-:global(:root[data-theme="dark"]) .emblem {
-  background: #1e293b;
-  box-shadow: inset 0 0 0 1px #334155;
+.statusArea {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
 }
-:global(:root[data-theme="dark"]) .submitDark {
-  background: #334155;
-  border-color: #475569;
+
+.statusArea:empty {
+  display: none;
 }
-:global(:root[data-theme="dark"]) .submitDark:hover {
-  background: #475569;
+
+.foot {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--tg-muted);
+  text-align: center;
+  line-height: 1.5;
 }
+
+/* 다크 모드 (tokens.css 와 같은 조건): 어두운 캔버스·카드, 같은 로열 블루 */
+:global(:root[data-theme="dark"]) .screen {
+  --tg-canvas: #0b1120;
+  --tg-grid: rgba(51, 65, 85, 0.45);
+  --tg-card: #111827;
+  --tg-card-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px #1f2937;
+  --tg-heading: #f1f5f9;
+  --tg-body: #e2e8f0;
+  --tg-muted: #94a3b8;
+  --tg-placeholder: #64748b;
+  --tg-input-bg: #0f172a;
+  --tg-input-border: #334155;
+  --tg-pill-bg: #1e293b;
+  --tg-pill-active: #0f172a;
+  --tg-tab-text: #cbd5e1;
+  --tg-primary: #60a5fa;
+  --tg-badge-bg: rgba(37, 99, 235, 0.15);
+  --tg-badge-border: rgba(96, 165, 250, 0.35);
+  --tg-icon-bg: linear-gradient(135deg, #1e293b 0%, #172554 100%);
+  --tg-icon-ring: #334155;
+  --tg-error-bg: rgba(220, 38, 38, 0.12);
+  --tg-error-border: rgba(248, 113, 113, 0.4);
+  --tg-error-text: #fca5a5;
+  --tg-ok-bg: rgba(22, 163, 74, 0.12);
+  --tg-ok-border: rgba(74, 222, 128, 0.35);
+  --tg-ok-text: #86efac;
+}
+
 @media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme="light"])) .emblem {
-    background: #1e293b;
-    box-shadow: inset 0 0 0 1px #334155;
-  }
-  :global(:root:not([data-theme="light"])) .submitDark {
-    background: #334155;
-    border-color: #475569;
-  }
-  :global(:root:not([data-theme="light"])) .submitDark:hover {
-    background: #475569;
+  :global(:root:not([data-theme="light"])) .screen {
+    --tg-canvas: #0b1120;
+    --tg-grid: rgba(51, 65, 85, 0.45);
+    --tg-card: #111827;
+    --tg-card-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px #1f2937;
+    --tg-heading: #f1f5f9;
+    --tg-body: #e2e8f0;
+    --tg-muted: #94a3b8;
+    --tg-placeholder: #64748b;
+    --tg-input-bg: #0f172a;
+    --tg-input-border: #334155;
+    --tg-pill-bg: #1e293b;
+    --tg-pill-active: #0f172a;
+    --tg-tab-text: #cbd5e1;
+    --tg-primary: #60a5fa;
+    --tg-badge-bg: rgba(37, 99, 235, 0.15);
+    --tg-badge-border: rgba(96, 165, 250, 0.35);
+    --tg-icon-bg: linear-gradient(135deg, #1e293b 0%, #172554 100%);
+    --tg-icon-ring: #334155;
+    --tg-error-bg: rgba(220, 38, 38, 0.12);
+    --tg-error-border: rgba(248, 113, 113, 0.4);
+    --tg-error-text: #fca5a5;
+    --tg-ok-bg: rgba(22, 163, 74, 0.12);
+    --tg-ok-border: rgba(74, 222, 128, 0.35);
+    --tg-ok-text: #86efac;
   }
 }
 
 @media (max-width: 480px) {
   .card {
-    padding: var(--space-6) var(--space-5);
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+  .title {
+    font-size: 23px;
   }
 }

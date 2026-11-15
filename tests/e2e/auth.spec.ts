@@ -25,7 +25,7 @@ async function fillSignup(page: Page, email: string, password: string, confirm =
   await page.getByLabel("이메일").fill(email);
   await page.getByLabel("비밀번호", { exact: true }).fill(password);
   await page.getByLabel("비밀번호 확인", { exact: true }).fill(confirm);
-  await page.getByRole("button", { name: "계정 만들기" }).click();
+  await page.getByRole("button", { name: "회원가입" }).click();
 }
 
 test("비로그인: 업무 화면은 로그인으로, 가입·비밀번호 찾기는 열린다", async ({ page }) => {
@@ -34,15 +34,19 @@ test("비로그인: 업무 화면은 로그인으로, 가입·비밀번호 찾�
     await expect(page).toHaveURL(/\/login$/);
   }
   await page.getByRole("link", { name: "회원가입" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "회원가입" })).toBeVisible();
+  await expect(page).toHaveURL(/\/signup$/);
+  await expect(page.getByRole("navigation", { name: "로그인·회원가입 전환" }).getByRole("link", { name: "회원가입" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await page.goto("/login");
-  await page.getByRole("link", { name: "비밀번호를 잊으셨나요?" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "비밀번호 찾기" })).toBeVisible();
+  await page.getByRole("link", { name: "비밀번호 찾기?" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "비밀번호 재설정" })).toBeVisible();
 });
 
 test("로그인 실패: 틀린 비밀번호·없는 계정·허용 안 된 이메일은 같은 안내, 입력 오류는 칸별 안내", async ({ page }) => {
   await page.goto("/login");
-  await page.getByRole("button", { name: "업무실 접속하기" }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
   await expect(alert(page, "이메일 형식이 올바르지 않습니다.")).toBeVisible();
   await expect(alert(page, "비밀번호를 입력해 주세요.")).toBeVisible();
 
@@ -54,7 +58,7 @@ test("로그인 실패: 틀린 비밀번호·없는 계정·허용 안 된 이�
     await page.goto("/login");
     await page.getByLabel("이메일").fill(email);
     await page.getByLabel("비밀번호", { exact: true }).fill(pw);
-    await page.getByRole("button", { name: "업무실 접속하기" }).click();
+    await page.getByRole("button", { name: "로그인" }).click();
     await expect(alert(page, LOGIN_FAILED)).toBeVisible();
     // 실패해도 입력한 이메일은 남는다
     await expect(page.getByLabel("이메일")).toHaveValue(email);
@@ -141,7 +145,7 @@ test("회원가입 → 메일 인증 전에는 로그인 불가 → 한국어 �
   await page.goto("/login");
   await page.getByLabel("이메일").fill(NEWBIE);
   await page.getByLabel("비밀번호", { exact: true }).fill(NEWBIE_PASSWORD);
-  await page.getByRole("button", { name: "업무실 접속하기" }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
   await expect(alert(page, "메일 인증이 아직 끝나지 않았습니다")).toBeVisible();
 
   const mail = await waitForMail(NEWBIE);
@@ -177,7 +181,7 @@ test("비밀번호 찾기 → 한국어 재설정 메일 → 새 비밀번호 �
     await mailGap(email);
     await page.goto("/forgot-password");
     await page.getByLabel("이메일").fill(email);
-    await page.getByRole("button", { name: "재설정 메일 받기" }).click();
+    await page.getByRole("button", { name: "재설정 링크 받기" }).click();
     await expect(page.getByRole("status")).toContainText("가입된 이메일이면 비밀번호 재설정 메일을 보냈습니다");
   }
   const mail = await waitForMail(NEWBIE);
@@ -204,7 +208,7 @@ test("비밀번호 찾기 → 한국어 재설정 메일 → 새 비밀번호 �
   await page.goto("/login");
   await page.getByLabel("이메일").fill(NEWBIE);
   await page.getByLabel("비밀번호", { exact: true }).fill(NEWBIE_PASSWORD);
-  await page.getByRole("button", { name: "업무실 접속하기" }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
   await expect(alert(page, LOGIN_FAILED)).toBeVisible();
   await loginWithPassword(page, NEWBIE, NEWBIE_NEW_PASSWORD);
 });
@@ -228,7 +232,7 @@ test("T01 앱 허용 목록에 없는 계정은 Supabase 계정이 있어도 들
   await page.goto("/login");
   await page.getByLabel("이메일").fill(STRANGER);
   await page.getByLabel("비밀번호", { exact: true }).fill(NEWBIE_PASSWORD);
-  await page.getByRole("button", { name: "업무실 접속하기" }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
   await expect(alert(page, LOGIN_FAILED)).toBeVisible();
 
   // 관리자 링크로 세션을 받아도 앱이 다시 확인해 내보낸다

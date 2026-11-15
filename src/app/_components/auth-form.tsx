@@ -1,27 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import s from "./auth.module.css";
 import { EMPTY_FORM_STATE, type FormState } from "./form-state";
 
 /**
- * 인증 화면 폼 (1안 모던 슬레이트). 동작은 ActionForm 과 같다:
+ * 인증 화면 폼 (1안 테크 그리드). 동작은 ActionForm 과 같다:
  * 오류 때 입력을 남기고, 칸별 오류·결과 안내를 보여 주며, 성공하면 폼을 비운다.
  */
 export function AuthForm({
   action,
   submitLabel,
   pendingLabel,
-  tone,
-  icon,
+  arrow = true,
   children,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
   pendingLabel: string;
-  /** 버튼 색: primary 로그인(파랑) / success 가입(초록) / dark 재설정(네이비) */
-  tone: "primary" | "success" | "dark";
-  icon?: ReactNode;
+  /** 버튼 글자 뒤 화살표(꾸밈) */
+  arrow?: boolean;
   children: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY_FORM_STATE);
@@ -38,7 +37,6 @@ export function AuthForm({
   }
 
   const errors = Object.entries(state.errors ?? {});
-  const toneClass = tone === "success" ? s.submitSuccess : tone === "dark" ? s.submitDark : s.submitPrimary;
   return (
     <form ref={formRef} action={formAction} onSubmit={submitKeepingValues} className={s.form} noValidate>
       {children}
@@ -54,33 +52,38 @@ export function AuthForm({
           {state.message}
         </p>
       )}
-      <button type="submit" className={`${s.submit} ${toneClass}`} disabled={pending}>
+      <button type="submit" className={s.submit} disabled={pending}>
         {pending ? pendingLabel : submitLabel}
-        {!pending && icon && <span aria-hidden="true">{icon}</span>}
+        {!pending && arrow && <ArrowIcon />}
       </button>
     </form>
   );
 }
 
-/** 이메일 입력 칸 */
-export function EmailField({ label = "이메일", help, placeholder = "name@company.com" }: { label?: string; help?: string; placeholder?: string }) {
+/** 이메일 입력 칸 (왼쪽 편지 아이콘) */
+export function EmailField({ label = "이메일 주소", help, placeholder = "name@company.com" }: { label?: string; help?: string; placeholder?: string }) {
   const id = useId();
   return (
     <div className={s.field}>
       <label className={s.label} htmlFor={id}>
         {label}
       </label>
-      <input
-        id={id}
-        className={s.input}
-        name="email"
-        type="email"
-        autoComplete="email"
-        inputMode="email"
-        placeholder={placeholder}
-        required
-        aria-describedby={help ? `${id}-help` : undefined}
-      />
+      <div className={s.inputWrap}>
+        <span className={s.iconLeft}>
+          <MailIcon />
+        </span>
+        <input
+          id={id}
+          className={s.input}
+          name="email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder={placeholder}
+          required
+          aria-describedby={help ? `${id}-help` : undefined}
+        />
+      </div>
       {help && (
         <span id={`${id}-help`} className={s.help}>
           {help}
@@ -90,7 +93,7 @@ export function EmailField({ label = "이메일", help, placeholder = "name@comp
   );
 }
 
-/** 비밀번호 입력 + 보기/숨기기 단추 */
+/** 비밀번호 입력 (왼쪽 자물쇠 아이콘, 오른쪽 보기/숨기기 단추, 이름 옆 링크 선택) */
 export function PasswordField({
   name,
   label,
@@ -100,6 +103,7 @@ export function PasswordField({
   value,
   onChange,
   describedBy,
+  labelLink,
 }: {
   name: string;
   label: string;
@@ -109,16 +113,27 @@ export function PasswordField({
   value?: string;
   onChange?: (v: string) => void;
   describedBy?: string;
+  labelLink?: { href: string; text: string };
 }) {
   const id = useId();
   const [shown, setShown] = useState(false);
   const helpId = help ? `${id}-help` : undefined;
   return (
     <div className={s.field}>
-      <label className={s.label} htmlFor={id}>
-        {label}
-      </label>
-      <div className={s.withToggle}>
+      <div className={s.labelRow}>
+        <label className={s.label} htmlFor={id}>
+          {label}
+        </label>
+        {labelLink && (
+          <Link href={labelLink.href} className={s.link}>
+            {labelLink.text}
+          </Link>
+        )}
+      </div>
+      <div className={`${s.inputWrap} ${s.withToggle}`}>
+        <span className={s.iconLeft}>
+          <LockIcon />
+        </span>
         <input
           id={id}
           className={s.input}
@@ -192,7 +207,7 @@ export function NewPasswordFields({ label = "비밀번호", help }: { label?: st
         name="passwordConfirm"
         label={`${label} 확인`}
         autoComplete="new-password"
-        placeholder="한 번 더 입력"
+        placeholder="비밀번호를 한 번 더 입력하세요"
         value={confirm}
         onChange={setConfirm}
         describedBy={matchId}
@@ -204,12 +219,40 @@ export function NewPasswordFields({ label = "비밀번호", help }: { label?: st
   );
 }
 
+const icon = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+
+function MailIcon() {
+  return (
+    <svg {...icon}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg {...icon}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
 function EyeIcon({ off }: { off: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg {...icon}>
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
       <circle cx="12" cy="12" r="3" />
       {off && <path d="M3 3l18 18" />}
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg {...icon}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
 }

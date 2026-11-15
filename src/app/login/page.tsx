@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getSessionUser } from "@/server/auth/session";
@@ -18,31 +17,19 @@ const ERRORS: Record<string, string> = {
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <AuthShell
-      icon="login"
-      title="마케팅 업무실 로그인"
-      subtitle="1인 운영 워크스페이스에 접속합니다."
-      badge="허용된 이메일 전용"
-      footer={
-        <p>
-          아직 계정이 없으신가요?{" "}
-          <Link href="/signup" className={s.link}>
-            회원가입
-          </Link>
-        </p>
-      }
-    >
+    <AuthShell icon="rocket" title="AI 마케팅 업무실" subtitle="업무실 계정(이메일·비밀번호)으로 로그인하세요." tab="login">
       <Suspense fallback={null}>
         <LoginStatus searchParams={searchParams} />
       </Suspense>
-      <AuthForm action={loginAction} submitLabel="업무실 접속하기" pendingLabel="접속 중…" tone="primary" icon="→">
-        <EmailField label="이메일 주소" />
-        <PasswordField name="password" label="비밀번호" autoComplete="current-password" placeholder="비밀번호" />
-        <div className={s.row}>
-          <Link href="/forgot-password" className={s.link}>
-            비밀번호를 잊으셨나요?
-          </Link>
-        </div>
+      <AuthForm action={loginAction} submitLabel="로그인" pendingLabel="로그인 중…">
+        <EmailField />
+        <PasswordField
+          name="password"
+          label="비밀번호"
+          autoComplete="current-password"
+          placeholder="비밀번호"
+          labelLink={{ href: "/forgot-password", text: "비밀번호 찾기?" }}
+        />
       </AuthForm>
     </AuthShell>
   );
@@ -54,17 +41,17 @@ async function LoginStatus({ searchParams }: { searchParams: PageProps<"/login">
   const params = await searchParams;
   const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
   return (
-    <>
+    <div className={s.statusArea}>
       {params.confirmed === "1" && (
         <p className={s.notice} role="status">
           메일 인증이 끝났습니다. 로그인해 주세요.
         </p>
       )}
       {error && (
-        <p className={s.error} role="alert" style={{ marginBottom: "var(--space-4)" }}>
+        <p className={s.error} role="alert">
           {error}
         </p>
       )}
-    </>
+    </div>
   );
 }

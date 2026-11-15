@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "새 비밀번호 · 마케팅 업무
 export default function ResetPasswordPage() {
   return (
     <AuthShell
-      icon="reset"
+      icon="lock"
       title="새 비밀번호 정하기"
       footer={
         <Link href="/" className={s.link}>
@@ -31,13 +31,13 @@ export default function ResetPasswordPage() {
 async function ResetBody() {
   const user = await requireUser();
   return (
-    <>
-      <p className={s.subtitle} style={{ textAlign: "center", marginTop: 0, marginBottom: "var(--space-4)" }}>
+    <div className={s.form}>
+      <p className={s.help} style={{ margin: 0, textAlign: "center", fontSize: 14 }}>
         {user.email} 계정의 새 비밀번호를 정해 주세요.
       </p>
-      <AuthForm action={resetPasswordAction} submitLabel="비밀번호 바꾸기" pendingLabel="바꾸는 중…" tone="dark">
+      <AuthForm action={resetPasswordAction} submitLabel="비밀번호 바꾸기" pendingLabel="바꾸는 중…" arrow={false}>
         <NewPasswordFields label="새 비밀번호" help={PASSWORD_HELP} />
       </AuthForm>
-    </>
+    </div>
   );
 }

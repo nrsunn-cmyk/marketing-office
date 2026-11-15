@@ -10,9 +10,9 @@ export const metadata: Metadata = { title: "비밀번호 찾기 · 마케팅 업
 export default function ForgotPasswordPage({ searchParams }: PageProps<"/forgot-password">) {
   return (
     <AuthShell
-      icon="reset"
-      title="비밀번호 찾기"
-      subtitle="가입한 이메일을 입력하시면 비밀번호를 다시 정할 수 있는 링크를 보내 드립니다."
+      icon="lock"
+      title="비밀번호 재설정"
+      subtitle="가입된 이메일로 비밀번호 재설정 링크를 보내 드립니다."
       footer={
         <Link href="/login" className={s.link}>
           ← 로그인 화면으로 돌아가기
@@ -37,7 +37,7 @@ async function ForgotBody({ searchParams }: { searchParams: PageProps<"/forgot-p
     );
   }
   return (
-    <AuthForm action={forgotPasswordAction} submitLabel="재설정 메일 받기" pendingLabel="보내는 중…" tone="dark" icon="➜">
+    <AuthForm action={forgotPasswordAction} submitLabel="재설정 링크 받기" pendingLabel="재설정 링크 전송 중…">
       <EmailField label="가입한 이메일 주소" />
     </AuthForm>
   );

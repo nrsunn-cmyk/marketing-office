@@ -95,11 +95,17 @@ test("T19 키보드만으로 로그인할 수 있다", async ({ browser }) => {
   const page = await ctx.newPage();
   await page.goto("/login");
   await page.waitForLoadState("networkidle");
-  await page.keyboard.press("Tab");
-  await expect(page.getByLabel("이메일")).toBeFocused();
+  // 순서: 로그인 탭 → 회원가입 탭 → 이메일 → 비밀번호 찾기? 링크 → 비밀번호 → 보기 단추 → 로그인 버튼
+  const tabTo = async (target: ReturnType<typeof page.getByLabel>) => {
+    for (let i = 0; i < 6; i += 1) {
+      await page.keyboard.press("Tab");
+      if (await target.evaluate((el) => el === document.activeElement)) return;
+    }
+    await expect(target).toBeFocused();
+  };
+  await tabTo(page.getByLabel("이메일"));
   await page.keyboard.type(OWNER);
-  await page.keyboard.press("Tab");
-  await expect(page.getByLabel("비밀번호", { exact: true })).toBeFocused();
+  await tabTo(page.getByLabel("비밀번호", { exact: true }));
   await page.keyboard.type(OWNER_PASSWORD);
   await page.keyboard.press("Enter");
   await expect(page.getByText(/^기준 시각:/)).toBeVisible({ timeout: 30_000 });

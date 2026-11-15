@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PASSWORD_HELP } from "@/contracts";
@@ -13,19 +12,10 @@ export const metadata: Metadata = { title: "회원가입 · 마케팅 업무실"
 export default function SignupPage({ searchParams }: PageProps<"/signup">) {
   return (
     <AuthShell
-      icon="signup"
-      title="회원가입"
-      subtitle="허용 목록에 등록된 이메일로만 가입할 수 있습니다."
-      badge="허용 계정 전용 등록"
-      wide
-      footer={
-        <p>
-          이미 계정이 있으신가요?{" "}
-          <Link href="/login" className={s.link}>
-            로그인으로 돌아가기
-          </Link>
-        </p>
-      }
+      icon="rocket"
+      title="AI 마케팅 업무실"
+      subtitle="새로운 워크스페이스 계정을 만드세요. 허용된 이메일만 가입할 수 있습니다."
+      tab="signup"
     >
       <Suspense fallback={null}>
         <SignupBody searchParams={searchParams} />
@@ -46,8 +36,8 @@ async function SignupBody({ searchParams }: { searchParams: PageProps<"/signup">
     );
   }
   return (
-    <AuthForm action={signupAction} submitLabel="계정 만들기" pendingLabel="가입 중…" tone="success" icon="✓">
-      <EmailField label="이메일 주소" help="업무실 관리자가 허용한 이메일이어야 합니다." />
+    <AuthForm action={signupAction} submitLabel="회원가입" pendingLabel="가입 처리 중…">
+      <EmailField help="업무실 관리자가 허용한 이메일이어야 합니다." />
       <NewPasswordFields help={PASSWORD_HELP} />
     </AuthForm>
   );
