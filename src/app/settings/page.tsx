@@ -8,8 +8,8 @@ import styles from "../ui.module.css";
 
 export const metadata: Metadata = { title: "업무실 설정 · 마케팅 업무실" };
 
-const FIELDS: Array<{ name: string; label: string; key: (s: NonNullable<Awaited<ReturnType<typeof getSupplier>>>) => string | null | undefined; type?: string; help?: string }> = [
-  { name: "legalName", label: "상호 (필수)", key: (s) => s.legal_name },
+const FIELDS: Array<{ name: string; label: string; key: (s: NonNullable<Awaited<ReturnType<typeof getSupplier>>>) => string | null | undefined; type?: string; help?: string; required?: boolean }> = [
+  { name: "legalName", label: "상호 (필수)", key: (s) => s.legal_name, required: true },
   { name: "representative", label: "대표자", key: (s) => s.representative },
   { name: "businessNumber", label: "사업자등록번호", key: (s) => s.business_number, help: "예: 123-45-67890" },
   { name: "businessType", label: "업태", key: (s) => s.extra.business_type, help: "예: 서비스" },
@@ -54,6 +54,8 @@ async function SupplierForm() {
               name={f.name}
               type={f.type ?? "text"}
               defaultValue={(supplier && f.key(supplier)) ?? ""}
+              required={f.required}
+              aria-required={f.required ? "true" : undefined}
               aria-describedby={f.help ? `s-${f.name}-help` : undefined}
             />
             {f.help && (
