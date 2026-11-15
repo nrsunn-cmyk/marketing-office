@@ -50,3 +50,5 @@ next-env.d.ts
 
 # 운영 비밀 값 (절대 커밋하지 않음)
 .env.production.local
+
+.vercel
