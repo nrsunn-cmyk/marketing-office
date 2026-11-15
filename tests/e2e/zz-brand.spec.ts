@@ -77,3 +77,42 @@ test("계정 메일(비밀번호 재설정)은 AGY 디자인이고, 유효 시�
   expect(html).not.toContain("{{");
   expect(html.match(/\/auth\/callback\?token_hash=/g)?.length).toBe(3); // 버튼 링크 + 아래 주소 링크 + 그 주소 글자
 });
+
+test("AUTH-UI-01 OS가 다크 모드여도 밝게 고정한 인증 화면의 링크·탭은 밝은 화면 기준 색과 대비를 지킨다", async ({ browser }) => {
+  // Codex 재현: 다크 OS에서 '비밀번호 찾기?'·'로그인 화면으로 돌아가기'가 #38bdf8(흰 배경 대비 2.14:1)로 바뀜
+  const ctx = await browser.newContext({ channel: "chrome", colorScheme: "dark", viewport: { width: 390, height: 844 } } as never);
+  const page = await ctx.newPage();
+  for (const [path, linkName] of [
+    ["/login", "비밀번호 찾기?"],
+    ["/forgot-password", "← 로그인 화면으로 돌아가기"],
+  ] as const) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    const link = page.getByRole("link", { name: linkName });
+    // 색 값은 디자인(AGY)이 바꿀 수 있으므로 정확한 색 대신 실제 대비(흰 카드 배경 기준)가 4.5:1 이상인지 본다
+    const ratio = await link.evaluate((el) => {
+      const rgb = (c: string) => (c.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
+      const lum = (c: number[]) => {
+        const [r, g, b] = c.map((v) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+      };
+      let bgEl: Element | null = el;
+      let bg = "rgba(0, 0, 0, 0)";
+      while (bgEl && /rgba\(0, 0, 0, 0\)|transparent/.test(bg)) {
+        bg = getComputedStyle(bgEl).backgroundColor;
+        bgEl = bgEl.parentElement;
+      }
+      const a = lum(rgb(getComputedStyle(el).color));
+      const b = lum(rgb(bg));
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    });
+    expect(ratio, `${path} ${linkName} 대비`).toBeGreaterThanOrEqual(4.5);
+    await expect(link).not.toHaveCSS("color", "rgb(56, 189, 248)"); // Codex 재현 색 #38bdf8 이 아니어야 함
+    const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`), path).toEqual([]);
+  }
+  await ctx.close();
+});
