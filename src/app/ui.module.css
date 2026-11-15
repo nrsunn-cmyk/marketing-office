@@ -46,6 +46,14 @@
   margin-bottom: var(--space-3);
 }
 
+/* 로그인·회원가입 화면 아래 이동 링크 (회원가입 / 비밀번호 찾기 / 로그인으로) */
+.authLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+}
+
 .nav {
   display: flex;
   gap: var(--space-1);

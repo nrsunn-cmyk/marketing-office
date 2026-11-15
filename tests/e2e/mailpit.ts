@@ -1,9 +1,10 @@
-/** 로컬 Supabase에 들어 있는 Mailpit(가짜 메일함)에서 로그인 메일을 읽는다. 테스트 전용. */
+/** 로컬 Supabase에 들어 있는 Mailpit(가짜 메일함)에서 메일을 읽는다. 시험 전용. */
 const MAILPIT = process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:54324/api/v1";
 
 interface MessageSummary {
   ID: string;
   Created: string;
+  Subject: string;
   To: Array<{ Address: string }>;
 }
 
@@ -17,19 +18,26 @@ export async function countMessagesTo(email: string): Promise<number> {
   return body.messages.length;
 }
 
-/** 해당 주소로 온 가장 최근 메일에서 로그인 링크를 꺼낸다. 메일이 올 때까지 잠시 기다린다. */
-export async function waitForLoginLink(email: string, timeoutMs = 15_000): Promise<string> {
+/** 해당 주소로 온 가장 최근 메일(제목·본문). 올 때까지 잠시 기다린다. */
+export async function waitForMail(email: string, timeoutMs = 15_000): Promise<{ subject: string; html: string }> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const r = await fetch(`${MAILPIT}/search?query=${encodeURIComponent(`to:"${email}"`)}`);
     const body = (await r.json()) as { messages: MessageSummary[] };
     if (body.messages.length > 0) {
-      const latest = body.messages.sort((a, b) => b.Created.localeCompare(a.Created))[0];
+      const latest = body.messages.sort((a, b) => b.Created.localeCompare(a.Created))[0]!;
       const msg = (await (await fetch(`${MAILPIT}/message/${latest.ID}`)).json()) as { HTML: string; Text: string };
-      const m = /https?:\/\/[^\s"'<>)]+\/auth\/v1\/verify[^\s"'<>)]+/.exec(msg.HTML || msg.Text);
-      if (m) return m[0].replace(/&amp;/g, "&");
+      return { subject: latest.Subject, html: msg.HTML || msg.Text };
     }
     await new Promise((res) => setTimeout(res, 300));
   }
-  throw new Error(`${email} 로 로그인 메일이 오지 않았습니다`);
+  throw new Error(`${email} 로 메일이 오지 않았습니다`);
+}
+
+/** 가장 최근 메일 안의 인증 링크(우리 양식: /auth/callback?token_hash=… / 기본 양식: /auth/v1/verify…) */
+export async function waitForMailLink(email: string, timeoutMs = 15_000): Promise<string> {
+  const { html } = await waitForMail(email, timeoutMs);
+  const m = /https?:\/\/[^\s"'<>)]+\/auth\/(?:callback\?token_hash|v1\/verify)[^\s"'<>)]+/.exec(html);
+  if (!m) throw new Error(`${email} 메일에 인증 링크가 없습니다`);
+  return m[0].replace(/&amp;/g, "&");
 }

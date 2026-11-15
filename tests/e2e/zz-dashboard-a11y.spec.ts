@@ -1,7 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { loginWithWorkspace, OWNER, unique } from "./helpers";
-import { clearMailbox, waitForLoginLink } from "./mailpit";
+import { loginWithWorkspace, OWNER, OWNER_PASSWORD, unique } from "./helpers";
 
 /**
  * M7 기능: 현황(T17)·수동 전달 기록(T18)·접근성(T19).
@@ -94,15 +93,16 @@ test("T18 수동 전달 기록: 승인 전에는 없고, 승인 후 기록하면
 test("T19 키보드만으로 로그인할 수 있다", async ({ browser }) => {
   const ctx = await browser.newContext({ channel: "chrome" } as never);
   const page = await ctx.newPage();
-  await clearMailbox();
   await page.goto("/login");
+  await page.waitForLoadState("networkidle");
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("이메일")).toBeFocused();
   await page.keyboard.type(OWNER);
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("비밀번호", { exact: true })).toBeFocused();
+  await page.keyboard.type(OWNER_PASSWORD);
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("status")).toContainText("로그인 링크를 보냈습니다");
-  await page.goto(await waitForLoginLink(OWNER));
-  await expect(page.getByText(/^기준 시각:/)).toBeVisible();
+  await expect(page.getByText(/^기준 시각:/)).toBeVisible({ timeout: 30_000 });
   await ctx.close();
 });
 
@@ -110,6 +110,10 @@ test("T19 자동 접근성 검사 (WCAG 2.1 AA): 주요 화면에 위반 없음"
   const anon = await (await browser.newContext({ channel: "chrome" } as never)).newPage();
   await anon.goto("/login");
   await axe(anon, "로그인");
+  await anon.goto("/signup");
+  await axe(anon, "회원가입");
+  await anon.goto("/forgot-password");
+  await axe(anon, "비밀번호 찾기");
   await anon.context().close();
 
   await loginWithWorkspace(page);

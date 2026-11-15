@@ -41,6 +41,8 @@ export async function one<T = Record<string, unknown>>(q: Queryable, sql: string
 }
 
 export async function createUser(db: Db, email: string): Promise<string> {
+  // 가입 허용 목록에 있어야 계정을 만들 수 있다(20261115001000_signup_allowlist)
+  await db.query("insert into public.signup_allowlist (email) values (lower($1)) on conflict do nothing", [email]);
   return (await one<{ id: string }>(db, "insert into auth.users (email) values ($1) returning id", [email])).id;
 }
 

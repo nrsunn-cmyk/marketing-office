@@ -8,7 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * 허용 이메일 확인·데이터 권한은 서버의 src/server/auth/session.ts 와 DB RLS가 다시 확인한다.
  */
 
-const PUBLIC_PATHS = ["/login", "/auth/"];
+// 로그인 없이 열 수 있는 화면. /reset-password 는 재설정 메일 링크로 로그인된 뒤에만 연다.
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p));

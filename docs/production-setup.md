@@ -14,14 +14,19 @@
    - 지역(Region): **Seoul (Northeast Asia)** 권장
    - DB 비밀번호: 강하게 만들고 비밀번호 관리자에 보관
    - 요금제: 무료 플랜은 오래 쓰지 않으면 프로젝트가 멈추고 자동 백업 조건이 제한적이다. 실제 고객 업무에 쓰려면 유료 플랜을 검토한다.
-2. **공개 가입 끄기:** Authentication → Sign In / Providers → "Allow new users to sign up" 끄기
+2. **회원가입·비밀번호 설정 (2026-11-15 로그인 방식 변경):** Authentication → Sign In / Providers
+   - "Allow new users to sign up" **켜기**, "Confirm email" **켜기** (가입하면 확인 메일 링크를 눌러야 로그인)
+   - Email 공급자 → 비밀번호 최소 길이 **8**, 비밀번호 조건은 **영문과 숫자 포함**(Letters and digits) — 앱 규칙과 같게
+   - 가입은 **허용한 이메일만** 된다: 앱 환경 변수 `ALLOWED_USER_EMAILS` + DB 표 `public.signup_allowlist`(DB가 직접 막음). 두 곳 모두에 넣어야 한다
+   - **순서 주의:** DB 구조(가입 허용 목록 트리거)를 먼저 적용한 뒤 가입을 켠다. 그래야 켜는 순간부터 허용 안 된 가입이 막힌다
 3. **주소 설정:** Authentication → URL Configuration
    - Site URL: 운영 주소 (예: `https://업무실도메인`)
    - Redirect URLs: `https://업무실도메인/auth/callback`
-4. **한국어 로그인 메일:** Authentication → Emails → Magic Link
-   - 제목: `[마케팅 업무실] 로그인 링크`
-   - 내용: 저장소 `supabase/templates/magic_link.html` 내용을 그대로 붙여 넣기 (AGY 디자인 적용본)
-   - 메일에 "1시간 동안 한 번만"이라고 적혀 있다. Authentication → Sign In / Providers → Email의 **Email OTP Expiration이 3600초(1시간)**인지 확인한다. 바꾸면 메일 문구도 함께 고친다.
+4. **한국어 계정 메일 (SMTP 연결 후에만 바꿀 수 있음):** Authentication → Emails → Templates
+   - Confirm sign up: 제목 `[마케팅 업무실] 회원가입 메일 인증`, 내용 `supabase/templates/confirmation.html`
+   - Reset password: 제목 `[마케팅 업무실] 비밀번호 재설정`, 내용 `supabase/templates/recovery.html`
+   - 두 메일 모두 링크가 `{{ .SiteURL }}/auth/callback?token_hash=…` 형식이라 다른 기기에서 열어도 된다. SMTP 전 기본 메일 링크는 **요청한 브라우저에서 열어야** 한다
+   - 메일에 "1시간 동안 한 번만"이라고 적혀 있다. Email의 **Email OTP Expiration이 3600초(1시간)**인지 확인한다
 5. Claude에게 알려 줄 것: **프로젝트 주소의 ref**(예: `abcd1234...`)만. 키는 알려 주지 않는다.
 
 ## 2단계. 로그인 메일 발송 서비스 (사용자)
@@ -57,7 +62,9 @@ Supabase 기본 메일은 시험용이라 보낼 수 있는 양이 매우 적다
    SUPABASE_SECRET_KEY=<운영 Secret key>
    ALLOWED_USER_EMAILS=<본인 이메일>
    ```
-2. Claude가 실행: `node --env-file=.env.production.local scripts/create-owner.mts <본인 이메일>`
+2. Claude가 실행: `node --env-file=.env.production.local scripts/create-owner.mts <본인 이메일> --allow-only` — DB 가입 허용 목록에만 넣는다. 그다음 본인이 화면의 **회원가입**으로 가입한다
+   - 관리자 키 없이 할 때: Supabase SQL Editor에서 `insert into public.signup_allowlist (email) values ('<본인 이메일 소문자>');`
+   - 이미 계정이 있는데(이전 메일 링크 방식에서 만든 계정) 비밀번호가 없으면: 로그인 화면의 **비밀번호를 잊으셨나요?** 로 비밀번호를 정한다
 3. 끝나면 `.env.production.local`의 `SUPABASE_SECRET_KEY` 줄은 지워도 된다 (백업할 때 다시 넣는다).
 
 ## 5단계. Vercel Pro 배포 (사용자 + Claude)

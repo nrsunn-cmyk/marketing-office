@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!--
+  회원가입 메일 인증 — AGY 로그인 메일 디자인(Plan/AGY-Visual-Assets-20261114)을 바탕으로 함. 2026-11-15 회원가입·비밀번호 방식 전환.
+  링크는 {{ .SiteURL }}/auth/callback?token_hash=…&type=… 형식(다른 기기에서 열어도 동작). 운영에서는 SMTP를 연결해야 이 양식을 쓸 수 있다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마케팅 업무실 회원가입 인증</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container (Max 520px) -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 24px 32px; border-bottom: 2px solid #2563eb;">
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background-color: #2563eb; width: 32px; height: 32px; border-radius: 6px; text-align: center; vertical-align: middle;">
+                    <span style="color: #ffffff; font-weight: 800; font-size: 16px; line-height: 32px; display: inline-block;">M</span>
+                  </td>
+                  <td style="padding-left: 12px;">
+                    <span style="color: #ffffff; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;">마케팅 업무실</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content Body -->
+          <tr>
+            <td style="padding: 36px 32px 28px 32px;">
+              <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #0f172a; line-height: 1.4;">
+                회원가입을 마무리해 주세요
+              </h1>
+              <p style="margin: 0 0 24px 0; font-size: 14px; color: #475569; line-height: 1.6;">
+                안녕하세요.<br>
+                마케팅 업무실에 가입해 주셔서 감사합니다. 아래의 <strong>[메일 인증하고 시작하기]</strong> 버튼을 누르면 가입이 끝나고 바로 업무실로 들어갑니다.
+              </p>
+
+              <!-- Call to Action Button -->
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 28px 0;">
+                <tr>
+                  <td align="center" style="border-radius: 8px; background-color: #2563eb;">
+                    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&amp;type=signup&amp;next=/" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; letter-spacing: -0.2px;">
+                      메일 인증하고 시작하기 &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Notice Box -->
+              <div style="background-color: #f1f5f9; border-radius: 8px; padding: 14px 16px; margin-top: 24px; border: 1px solid #cbd5e1;">
+                <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
+                  ⏱️ <strong>보안 유의사항:</strong><br>
+                  • 이 인증 링크는 발송 시점으로부터 <strong>1시간 동안 한 번만</strong> 쓸 수 있습니다.<br>
+                  • 링크를 다른 사람에게 전달하지 마세요. 본인이 가입하지 않은 경우 이 메일을 안전하게 무시하시기 바랍니다.
+                </p>
+              </div>
+
+              <!-- Fallback Plain URL -->
+              <p style="margin: 24px 0 0 0; font-size: 11px; color: #94a3b8; word-break: break-all; line-height: 1.4;">
+                버튼이 클릭되지 않는 경우 아래 주소를 브라우저 주소창에 복사해 입력하세요:<br>
+                <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&amp;type=signup&amp;next=/" style="color: #2563eb; text-decoration: underline;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&amp;type=signup&amp;next=/</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+                마케팅 업무실 (Marketing Office)<br>
+                로그인 요청에 따라 자동으로 발송된 메일입니다.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

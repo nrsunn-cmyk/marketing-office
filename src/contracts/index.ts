@@ -39,6 +39,32 @@ export type WorkspaceSetupInput = z.infer<typeof workspaceSetupSchema>;
 
 export const loginEmailSchema = z.email("이메일 형식이 올바르지 않습니다.").max(320);
 
+/**
+ * 비밀번호 규칙(D03 변경, 2026-11-15): 8자 이상, 영문과 숫자를 모두 포함, 72바이트 이하.
+ * Supabase 설정(minimum_password_length = 8, password_requirements = "letters_digits")과 같다.
+ * 72바이트는 비밀번호 저장 방식(bcrypt)이 읽는 최대 길이다.
+ */
+export const PASSWORD_HELP = "8자 이상, 영문과 숫자를 모두 넣어 주세요.";
+export const newPasswordSchema = z
+  .string()
+  .min(8, "비밀번호는 8자 이상이어야 합니다.")
+  .refine((v) => new TextEncoder().encode(v).length <= 72, "비밀번호가 너무 깁니다(영문 기준 72자 이하).")
+  .refine((v) => /[A-Za-z]/.test(v) && /\d/.test(v), "비밀번호에 영문과 숫자를 모두 넣어 주세요.");
+
+/** 새 비밀번호와 확인 칸이 같은지까지 검사 (가입·비밀번호 재설정) */
+export const passwordPairSchema = z
+  .object({ password: newPasswordSchema, passwordConfirm: z.string() })
+  .refine((v) => v.password === v.passwordConfirm, { path: ["passwordConfirm"], message: "비밀번호 확인이 일치하지 않습니다." });
+
+export const signupInputSchema = z
+  .object({ email: loginEmailSchema, password: newPasswordSchema, passwordConfirm: z.string() })
+  .refine((v) => v.password === v.passwordConfirm, { path: ["passwordConfirm"], message: "비밀번호 확인이 일치하지 않습니다." });
+
+export const loginInputSchema = z.object({
+  email: loginEmailSchema,
+  password: z.string().min(1, "비밀번호를 입력해 주세요.").max(1000),
+});
+
 export const clientInputSchema = z.object({
   name: requiredText(200, "고객명을 입력해 주세요."),
   industry: optionalText(100),

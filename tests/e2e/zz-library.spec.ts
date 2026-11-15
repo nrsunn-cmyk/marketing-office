@@ -129,7 +129,7 @@ test("CR08 제목 없는 메모·링크도 화면에 보이는 이름으로 찾�
   const memo = `${marker} 제목 없는 통화 메모, (괄호${marker})와 쉼표 포함`;
   const url = `https://example.com/${marker}`;
   const titled = `${marker}-%_\\자료`;
-  // 화면 로그인을 먼저 한다. 시험 자료용 로그인 링크를 바로 이어 만들면 같은 사람 메일 1초 제한에 걸린다.
+  // 화면으로 로그인한 뒤, 시험 자료는 같은 계정의 Supabase 연결로 빠르게 넣는다.
   await loginWithWorkspace(page);
   const sb = await ownerSupabase();
   const { data: client } = await sb.from("clients").select("id, workspace_id").limit(1).single();

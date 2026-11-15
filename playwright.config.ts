@@ -35,5 +35,13 @@ export default defineConfig({
     url: `${baseURL}/login`,
     reuseExistingServer: false,
     timeout: 120_000,
+    // 회원가입 시험용 이메일을 앱 허용 목록에 더한다(.env.local 은 그대로). 실제 가입 가능 여부는 DB 허용 목록이 다시 정한다.
+    env: {
+      ALLOWED_USER_EMAILS: [
+        "owner@marketing-office.test",
+        "newbie@marketing-office.test",
+        "dbblocked@marketing-office.test",
+      ].join(","),
+    },
   },
 });

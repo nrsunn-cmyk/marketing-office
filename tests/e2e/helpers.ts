@@ -1,31 +1,32 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, type Page } from "@playwright/test";
-import { clearMailbox, waitForLoginLink } from "./mailpit";
 
 export const OWNER = "owner@marketing-office.test";
+/** 시험용 본인 비밀번호. npm run e2e:reset 이 이 비밀번호로 계정을 만든다(로컬 시험 DB 전용 값). */
+export const OWNER_PASSWORD = "Owner-test-1234";
 
 /**
- * 같은 주소로 로그인 메일을 1초 안에 두 번 요청하면 Supabase가 429로 거절하고 메일이 오지 않는다
- * (supabase/config.toml [auth.email] max_frequency = "1s"). 시험이 이어서 로그인할 때 부딪히지 않도록,
- * 같은 주소의 직전 요청에서 1.2초가 지나지 않았으면 남은 시간만 기다린다.
+ * 같은 주소로 메일(가입 확인·비밀번호 재설정)을 1초 안에 두 번 요청하면 Supabase가 429로 거절한다
+ * (supabase/config.toml [auth.email] max_frequency = "1s"). 직전 요청에서 1.2초가 지나지 않았으면 남은 시간만 기다린다.
  */
-const lastRequestAt = new Map<string, number>();
-const EMAIL_GAP_MS = 1_200;
-
-export async function requestLink(page: Page, email: string) {
-  const wait = (lastRequestAt.get(email) ?? 0) + EMAIL_GAP_MS - Date.now();
+const lastMailAt = new Map<string, number>();
+export async function mailGap(email: string) {
+  const wait = (lastMailAt.get(email) ?? 0) + 1_200 - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastRequestAt.set(email, Date.now());
+  lastMailAt.set(email, Date.now());
+}
+
+/** 이메일+비밀번호로 로그인한다. 성공하면 로그인 화면을 벗어난다. */
+export async function loginWithPassword(page: Page, email: string, password: string) {
   await page.goto("/login");
   await page.getByLabel("이메일").fill(email);
-  await page.getByRole("button", { name: "로그인 링크 받기" }).click();
-  await expect(page.getByRole("status")).toContainText("등록된 이메일이면 로그인 링크를 보냈습니다");
+  await page.getByLabel("비밀번호", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "로그인" }).click();
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
 }
 
 export async function loginAsOwner(page: Page) {
-  await clearMailbox();
-  await requestLink(page, OWNER);
-  await page.goto(await waitForLoginLink(OWNER));
+  await loginWithPassword(page, OWNER, OWNER_PASSWORD);
 }
 
 /** 로그인하고, 업무실이 없으면 만든다. */
@@ -56,15 +57,13 @@ export const unique = (label: string) => `${label}-${Date.now().toString(36)}`;
 
 /**
  * 본인 계정 권한(RLS 적용)의 Supabase 연결. 많은 시험 자료를 화면 없이 빠르게 만들 때 쓴다.
- * 관리자 키로 일회용 로그인 링크를 만들어 본인으로 로그인한다(로컬 시험 DB 전용).
+ * 시험용 비밀번호로 본인으로 로그인한다(로컬 시험 DB 전용).
  */
 export async function ownerSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(url)) throw new Error("로컬 시험 DB에서만 쓴다");
-  const { data, error } = await adminClient().auth.admin.generateLink({ type: "magiclink", email: OWNER });
-  if (error) throw error;
   const sb = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
-  const auth = await sb.auth.verifyOtp({ token_hash: data.properties.hashed_token, type: "magiclink" });
+  const auth = await sb.auth.signInWithPassword({ email: OWNER, password: OWNER_PASSWORD });
   if (auth.error) throw auth.error;
   return sb;
 }

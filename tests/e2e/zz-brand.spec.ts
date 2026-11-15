@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { loginWithWorkspace, OWNER, requestLink } from "./helpers";
-import { clearMailbox } from "./mailpit";
+import { loginWithWorkspace, mailGap, OWNER } from "./helpers";
+import { clearMailbox, waitForMail } from "./mailpit";
 
 /**
  * AGY 브랜드 에셋 적용: 탭 아이콘·아이폰 아이콘·링크 미리보기 그림·머리글/로그인 심볼·로그인 메일.
@@ -60,20 +60,19 @@ test("머리글과 로그인 화면에 심볼이 보이고, 밝은·어두운 �
   }
 });
 
-test("로그인 메일은 AGY 디자인이고, 유효 시간은 실제 설정(1시간)과 같다", async ({ page }) => {
+test("계정 메일(비밀번호 재설정)은 AGY 디자인이고, 유효 시간은 실제 설정(1시간)과 같다", async ({ page }) => {
   await clearMailbox();
-  // 메일 발송 간격(1초 제한)을 지키는 공용 도우미로 요청한다. 다음 시험의 로그인과 부딪히지 않게 한다.
-  await requestLink(page, OWNER);
-  const MAILPIT = process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:54324/api/v1";
-  let html = "";
-  for (let i = 0; i < 50 && !html; i += 1) {
-    const list = (await (await fetch(`${MAILPIT}/search?query=${encodeURIComponent(`to:"${OWNER}"`)}`)).json()) as { messages: Array<{ ID: string }> };
-    if (list.messages[0]) html = ((await (await fetch(`${MAILPIT}/message/${list.messages[0].ID}`)).json()) as { HTML: string }).HTML;
-    else await new Promise((r) => setTimeout(r, 300));
-  }
-  expect(html).toContain("업무실 바로 접속하기");
+  // 메일 발송 간격(1초 제한)을 지킨다. 재설정 메일을 받기만 하고 링크는 열지 않으므로 비밀번호는 그대로다.
+  await mailGap(OWNER);
+  await page.goto("/forgot-password");
+  await page.getByLabel("이메일").fill(OWNER);
+  await page.getByRole("button", { name: "재설정 메일 받기" }).click();
+  await expect(page.getByRole("status")).toContainText("재설정 메일을 보냈습니다");
+  const { subject, html } = await waitForMail(OWNER);
+  expect(subject).toBe("[마케팅 업무실] 비밀번호 재설정");
+  expect(html).toContain("새 비밀번호 정하기");
   expect(html).toContain("1시간 동안");
   expect(html).not.toContain("15분");
   expect(html).not.toContain("{{");
-  expect(html.match(/\/auth\/v1\/verify/g)?.length).toBe(3); // 버튼 링크 + 아래 주소 링크 + 그 주소 글자
+  expect(html.match(/\/auth\/callback\?token_hash=/g)?.length).toBe(3); // 버튼 링크 + 아래 주소 링크 + 그 주소 글자
 });

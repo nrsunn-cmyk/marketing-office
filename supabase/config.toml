@@ -175,16 +175,17 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project. Existing users can still sign in.
-enable_signup = false
+# 회원가입 허용(D03 변경). 허용 이메일만 가입: 앱 ALLOWED_USER_EMAILS + DB signup_allowlist 트리거
+enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+password_requirements = "letters_digits"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -226,7 +227,8 @@ enabled = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# 가입하면 확인 메일의 링크를 눌러야 로그인할 수 있다
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # If enabled, users will need to provide their current password to change their password, unless
@@ -255,9 +257,13 @@ otp_expiry = 3600
 # content_path = "./supabase/templates/invite.html"
 
 # 한국어 로그인 메일 (운영 Supabase 대시보드에도 같은 내용을 넣는다: docs/production-setup.md)
-[auth.email.template.magic_link]
-subject = "[마케팅 업무실] 로그인 링크"
-content_path = "./supabase/templates/magic_link.html"
+[auth.email.template.confirmation]
+subject = "[마케팅 업무실] 회원가입 메일 인증"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "[마케팅 업무실] 비밀번호 재설정"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

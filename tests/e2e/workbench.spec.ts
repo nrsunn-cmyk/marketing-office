@@ -194,7 +194,9 @@ test("T01 다른 계정은 저장소의 본인 파일을 내려받을 수 없다
 
   const email = `${unique("stranger")}@marketing-office.test`;
   const password = `pw-${crypto.randomUUID()}`;
-  await admin.auth.admin.createUser({ email, password, email_confirm: true });
+  // 가입 허용 목록에 있어야 계정을 만들 수 있다(20261115001000_signup_allowlist)
+  expect((await admin.from("signup_allowlist").upsert({ email })).error).toBeNull();
+  expect((await admin.auth.admin.createUser({ email, password, email_confirm: true })).error).toBeNull();
   const stranger = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   });
