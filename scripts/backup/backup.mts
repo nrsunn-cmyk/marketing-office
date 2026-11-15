@@ -3,26 +3,35 @@
  * Supabase DB 백업에는 저장소 파일이 들어 있지 않으므로 파일을 따로 받는다 (Codex 04 §7).
  *
  * 실행: node --env-file=.env.local scripts/backup/backup.mts <백업 폴더>
- * 운영 DB: BACKUP_REMOTE=1 로 실행하면 supabase db dump --remote (연결된 프로젝트)를 쓴다.
+ * 운영 DB: node --env-file=.env.production.local scripts/backup/backup.mts <폴더> 에 BACKUP_DB_URL(DB 연결 주소)을 함께 준다.
+ *   DB 내보내기와 파일·API가 같은 프로젝트를 보는지 시작 전에 확인하고, 다르면 아무것도 받지 않고 멈춘다(BACKUP-OPS-01).
  * 주의: 백업에는 고객 자료가 들어 있다. 안전한 곳에 보관하고 공유하지 않는다.
  */
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { admin, BUCKET, run, tableCounts, type Manifest, type StoredFile } from "./common.mts";
+import { admin, BUCKET, resolveBackupTarget, run, tableCounts, type Manifest, type StoredFile } from "./common.mts";
 
 const out = process.argv[2];
 if (!out) {
   console.error("사용법: node --env-file=.env.local scripts/backup/backup.mts <백업 폴더>");
   process.exit(1);
 }
+// 대상부터 정한다. 섞이거나 애매하면 폴더도 만들지 않고 멈춘다.
+let target;
+try {
+  target = resolveBackupTarget();
+} catch (e) {
+  console.error(`백업을 시작하지 않았습니다: ${(e as Error).message}`);
+  process.exit(1);
+}
+console.log(`백업 대상: ${target.kind === "local" ? "로컬 시험 DB" : `운영 프로젝트 ${target.label}`}`);
 mkdirSync(join(out, "files"), { recursive: true });
 
 const sb = admin();
 
 // 1) DB 데이터 (업무 데이터 + 로그인 계정)
-const dumpArgs = ["db", "dump", "--data-only", "--schema", "public,auth", "-f", join(out, "data.sql")];
-if (process.env.BACKUP_REMOTE === "1") dumpArgs.push("--remote");
+const dumpArgs = ["db", "dump", "--data-only", "--schema", "public,auth", "-f", join(out, "data.sql"), ...target.dumpArgs];
 run("supabase", dumpArgs);
 
 // 2) 자료 파일 (DB에 기록된 체크섬과 맞는지 확인하며 받는다)
@@ -50,6 +59,7 @@ for (const a of assets ?? []) {
 const { data: quotes } = await sb.from("quote_versions").select("total_won");
 const manifest: Manifest = {
   createdAt: new Date().toISOString(),
+  target: target.label,
   counts: await tableCounts(sb),
   files,
   quoteTotalWon: (quotes ?? []).reduce((s, q) => s + Number(q.total_won), 0),

@@ -37,8 +37,13 @@ RESTORE_DRILL_CONFIRM=local npm run backup:restore-drill -- <백업 폴더>   # 
 - 백업 폴더에는 고객 자료가 들어 있다. 암호가 걸린 저장 장치 등 안전한 곳에 두고 공유하지 않는다.
 - 복원 훈련은 **로컬 DB를 비우고** 다시 넣은 뒤 검증한다(행 수·외래키 고아 행·파일 체크섬·견적 금액 재계산). 운영 DB에는 쓰지 않는다.
 - 로컬 복원 훈련 환경에는 `BACKUP_DB_URL`을 넣지 않는다. 원격 DB 주소가 함께 있으면 초기화 전에 중단한다.
-- 운영 백업: `BACKUP_REMOTE=1 npm run backup -- <폴더>` (연결된 Supabase 프로젝트, `supabase link` 필요).
-- 운영 검증: `.env.production.local`로 실행하고 `BACKUP_DB_URL`(DB 연결 주소)을 함께 지정한다. 없으면 검증 스크립트가 멈춘다(API와 SQL이 서로 다른 DB를 보는 것을 막음).
+- 운영 백업 (BACKUP-OPS-01): `.env.production.local`(운영 API 주소·관리자 키)에 `BACKUP_DB_URL`(운영 DB 연결 주소)을 **함께** 넣고 `node --env-file=.env.production.local scripts/backup/backup.mts <폴더>`.
+  - 시작 전에 API 주소의 프로젝트와 DB 연결 주소의 프로젝트(ref)가 같은지 확인하고, 다르거나 하나라도 빠지면 **폴더도 만들지 않고 멈춘다**. DB 내보내기는 그 연결 주소로만 한다(`--remote=<주소>`, `supabase link` 불필요).
+  - 로컬 API 주소에 `BACKUP_DB_URL`·`BACKUP_REMOTE`가 섞여 있어도 멈춘다. `BACKUP_REMOTE`는 더 쓰지 않는다.
+  - 백업 목록(`manifest.json`)의 `target`에 백업한 곳(`local` 또는 운영 프로젝트 ref)이 남는다(비밀값 없음).
+  - DB 연결 주소에는 DB 비밀번호가 들어 있다. 채팅·문서·git에 남기지 말고, 사용자가 환경 파일에 직접 넣는다.
+  - '도구 준비'와 '실제 운영 백업 완료'는 다르다. 실제로 `data.sql`·`manifest.json`이 만들어지고 검증까지 통과한 뒤에만 완료로 적는다.
+- 운영 검증: 백업과 같은 환경(운영 API + 같은 프로젝트의 `BACKUP_DB_URL`)으로 실행한다. 검증 SQL도 같은 대상 규칙을 거치므로, 프로젝트가 다르거나 주소가 없으면 멈춘다(API와 SQL이 서로 다른 DB를 보는 것을 막음).
 - 운영 복원: 새 Supabase 프로젝트 → 마이그레이션 적용(`supabase db push`) → `public.templates` 비우고 `data.sql` 적용(트리거 끈 상태) → 파일 업로드 → `backup:verify`. 원래 프로젝트를 덮어쓰지 않는다.
 - 복원 후 앱 확인: `RESTORE_CHECK=1 npx playwright test tests/e2e/restore-check.spec.ts` (훈련 데이터 기준).
 

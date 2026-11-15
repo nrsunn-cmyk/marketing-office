@@ -96,7 +96,7 @@ Supabase 기본 메일은 시험용이라 보낼 수 있는 양이 매우 적다
 | 고객 등록·파일 올리기·내려받기 | 정상 |
 | 견적 확정·PDF | 한글 PDF, 금액 일치 |
 | 로그아웃 후 `/` 접근 | 로그인 화면으로 |
-| 첫 백업 | `BACKUP_REMOTE=1 npm run backup -- <폴더>` 성공, 안전한 곳에 보관 |
+| 첫 백업 | `.env.production.local`에 같은 프로젝트의 `BACKUP_DB_URL`을 넣고 `node --env-file=.env.production.local scripts/backup/backup.mts <폴더>` 성공(목록의 target이 운영 ref), `backup:verify` 통과, 안전한 곳에 보관 |
 
 시험으로 만든 고객·견적은 운영 DB에 남는다(삭제 기능 없음). 시험은 "시험용" 이름의 고객 하나로만 하고 보관 처리한다.
 
