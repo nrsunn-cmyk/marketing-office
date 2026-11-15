@@ -427,6 +427,22 @@
   transform: translateX(2px);
 }
 
+/* 목록 카드 회색 배경(--bg-subtle: #f1f5f9) 위 보조 글자 명도 대비 보강 (DASH-UI-03, WCAG AA 4.5:1 준수) */
+.listItem .muted {
+  color: #475569; /* Slate 600: #f1f5f9 배경 대비 6.91:1로 AA(4.5:1) 완벽 통과 (기존 #64748b 4.34:1 미달 해결) */
+}
+
+[data-theme="dark"] .listItem .muted,
+:global([data-theme="dark"]) .listItem .muted {
+  color: var(--text-muted); /* 다크 모드(#1e293b 배경)에서는 다크 토큰(#94a3b8) 유지: 대비 5.58:1 통과 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .listItem .muted {
+    color: var(--text-muted);
+  }
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
