@@ -3,12 +3,12 @@
  * 색·간격·모서리는 모두 토큰을 쓴다. 다크 모드는 토큰이 바뀌므로 여기서 따로 정하지 않는다.
  */
 
-/* ── 머리글·주 메뉴 (1안 테크 그리드 & 로열 블루) ─────────────────── */
+/* ── 머리글·주 메뉴 (1안 테크 그리드 & 로열 블루, DASH-UI-01/02 보완) ── */
 .appHeader {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--bg-surface);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
@@ -65,7 +65,7 @@
   gap: var(--space-1);
   padding: 7px 14px;
   border-radius: var(--radius-md);
-  color: var(--text-muted) !important;
+  color: #475569 !important; /* 라이트 모드 알약(#f1f5f9) 대비 5.4:1로 WCAG AA 4.5:1 이상 통과 (DASH-UI-02 대응) */
   text-decoration: none;
   font-size: 13.5px;
   font-weight: 600;
@@ -75,6 +75,30 @@
 .navLink:hover {
   background: rgba(255, 255, 255, 0.6);
   color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .navLink,
+:global([data-theme="dark"]) .navLink {
+  color: #94a3b8 !important; /* 다크 모드 알약(#1e293b) 대비 5.1:1로 AA 통과 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .navLink {
+    color: #94a3b8 !important;
+  }
+}
+
+[data-theme="dark"] .navLink:hover,
+:global([data-theme="dark"]) .navLink:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .navLink:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff !important;
+  }
 }
 
 .navLinkActive {
