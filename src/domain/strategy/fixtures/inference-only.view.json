@@ -1,0 +1,149 @@
+{
+  "kind": "draft",
+  "templateVersion": "strategy-template@1",
+  "profileLabel": "회사 프로필 4번 버전 기준",
+  "sections": [
+    {
+      "key": "goals",
+      "label": "목표",
+      "required": true,
+      "status": "inference_only",
+      "badge": {
+        "label": "추정만 있음",
+        "tone": "warning"
+      },
+      "facts": [],
+      "inferences": [
+        {
+          "id": "goals-inference-1",
+          "text": "구독자를 늘리는 것이 목표일 것이다",
+          "rationale": "개인 채널이라서"
+        }
+      ]
+    },
+    {
+      "key": "offers",
+      "label": "상품·제안",
+      "required": true,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "offers-fact-1",
+          "text": "합성 상품: 온라인 강의 1종",
+          "sources": [
+            {
+              "kind": "profile",
+              "label": "회사 프로필 4번 버전",
+              "ref": "00000000-0000-4000-8000-00000000b003"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    },
+    {
+      "key": "audiences",
+      "label": "타깃 고객",
+      "required": true,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "audiences-fact-1",
+          "text": "합성 고객: 취업 준비생",
+          "sources": [
+            {
+              "kind": "profile",
+              "label": "회사 프로필 4번 버전",
+              "ref": "00000000-0000-4000-8000-00000000b003"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    },
+    {
+      "key": "positioning",
+      "label": "포지셔닝",
+      "required": true,
+      "status": "inference_only",
+      "badge": {
+        "label": "추정만 있음",
+        "tone": "warning"
+      },
+      "facts": [],
+      "inferences": [
+        {
+          "id": "positioning-inference-1",
+          "text": "실무자 관점의 쉬운 설명으로 기억될 것이다"
+        }
+      ]
+    },
+    {
+      "key": "problems",
+      "label": "고객 문제",
+      "required": false,
+      "status": "missing",
+      "badge": {
+        "label": "비어 있음",
+        "tone": "neutral"
+      },
+      "facts": [],
+      "inferences": []
+    },
+    {
+      "key": "opportunities",
+      "label": "기회",
+      "required": false,
+      "status": "missing",
+      "badge": {
+        "label": "비어 있음",
+        "tone": "neutral"
+      },
+      "facts": [],
+      "inferences": []
+    },
+    {
+      "key": "priorities",
+      "label": "우선순위",
+      "required": false,
+      "status": "missing",
+      "badge": {
+        "label": "비어 있음",
+        "tone": "neutral"
+      },
+      "facts": [],
+      "inferences": []
+    }
+  ],
+  "questions": [
+    {
+      "id": "question-goals-evidence",
+      "section": "goals",
+      "sectionLabel": "목표",
+      "reason": "inference_only",
+      "text": "추정만 있습니다. 확인할 수 있는 근거(출처)가 있나요?"
+    },
+    {
+      "id": "question-positioning-evidence",
+      "section": "positioning",
+      "sectionLabel": "포지셔닝",
+      "reason": "inference_only",
+      "text": "추정만 있습니다. 확인할 수 있는 근거(출처)가 있나요?"
+    }
+  ],
+  "userUnknowns": [
+    {
+      "id": "unknown-1",
+      "topic": "강의 가격",
+      "question": "강의 가격은 정했나요?"
+    }
+  ]
+}

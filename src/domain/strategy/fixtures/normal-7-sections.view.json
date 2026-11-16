@@ -1,0 +1,186 @@
+{
+  "kind": "draft",
+  "templateVersion": "strategy-template@1",
+  "profileLabel": "회사 프로필 2번 버전 기준",
+  "sections": [
+    {
+      "key": "goals",
+      "label": "목표",
+      "required": true,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "goals-fact-1",
+          "text": "합성 목표: 3개월 안에 상담 문의를 늘린다",
+          "sources": [
+            {
+              "kind": "profile",
+              "label": "회사 프로필 2번 버전",
+              "ref": "00000000-0000-4000-8000-00000000b001"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    },
+    {
+      "key": "offers",
+      "label": "상품·제안",
+      "required": true,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "offers-fact-1",
+          "text": "합성 상품: 무료 진단 체크리스트와 유료 세팅 상담",
+          "sources": [
+            {
+              "kind": "asset",
+              "label": "프로젝트 자료",
+              "ref": "00000000-0000-4000-8000-00000000d001"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    },
+    {
+      "key": "audiences",
+      "label": "타깃 고객",
+      "required": true,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "audiences-fact-1",
+          "text": "합성 고객: 1인 학원 원장",
+          "sources": [
+            {
+              "kind": "profile",
+              "label": "회사 프로필 2번 버전",
+              "ref": "00000000-0000-4000-8000-00000000b001"
+            }
+          ]
+        }
+      ],
+      "inferences": [
+        {
+          "id": "audiences-inference-1",
+          "text": "저녁 시간에 자료를 볼 가능성이 높다",
+          "rationale": "수업이 낮에 몰려 있어서"
+        }
+      ]
+    },
+    {
+      "key": "positioning",
+      "label": "포지셔닝",
+      "required": true,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "positioning-fact-1",
+          "text": "합성 포지셔닝: 자료만 넣으면 이어서 처리되는 업무실",
+          "sources": [
+            {
+              "kind": "url",
+              "label": "외부 주소",
+              "ref": "https://example.com/synthetic-about"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    },
+    {
+      "key": "problems",
+      "label": "고객 문제",
+      "required": false,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "problems-fact-1",
+          "text": "합성 문제: 고객 자료가 여러 곳에 흩어져 있다",
+          "sources": [
+            {
+              "kind": "profile",
+              "label": "회사 프로필 2번 버전",
+              "ref": "00000000-0000-4000-8000-00000000b001"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    },
+    {
+      "key": "opportunities",
+      "label": "기회",
+      "required": false,
+      "status": "inference_only",
+      "badge": {
+        "label": "추정만 있음",
+        "tone": "warning"
+      },
+      "facts": [],
+      "inferences": [
+        {
+          "id": "opportunities-inference-1",
+          "text": "지역 기반 소규모 업체의 디지털 전환 수요가 있을 것이다"
+        }
+      ]
+    },
+    {
+      "key": "priorities",
+      "label": "우선순위",
+      "required": false,
+      "status": "filled",
+      "badge": {
+        "label": "근거 있음",
+        "tone": "success"
+      },
+      "facts": [
+        {
+          "id": "priorities-fact-1",
+          "text": "합성 우선순위: 무료 진단 자료부터 만든다",
+          "sources": [
+            {
+              "kind": "asset",
+              "label": "프로젝트 자료",
+              "ref": "00000000-0000-4000-8000-00000000d001"
+            }
+          ]
+        }
+      ],
+      "inferences": []
+    }
+  ],
+  "questions": [],
+  "userUnknowns": [
+    {
+      "id": "unknown-1",
+      "topic": "경쟁 업체 가격대",
+      "question": "비슷한 서비스의 가격은 어느 정도인가요?"
+    },
+    {
+      "id": "unknown-2",
+      "topic": "상담 가능 시간"
+    }
+  ]
+}
