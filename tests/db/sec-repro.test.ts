@@ -1,12 +1,13 @@
 /**
- * SEC-REPRO-01: 무결성 우회 가능성 재현(관찰용).
+ * SEC-REPRO-01 → SEC-FIX-01: 직접 쓰기 무결성 우회의 재현과 차단 확인.
  *
- * 이 파일의 시험은 "현재 DB가 실제로 어떻게 동작하는지"를 기록한다.
- * - [관찰·취약] 이름의 시험이 통과한다는 것은 **우회가 지금 허용된다**는 뜻이다. 보안 통과가 아니다.
+ * 수정 전(커밋 83e4d60, 마이그레이션 20261116001000 이전)에는 아래 [수정 후 거절] 7가지가 모두 **허용**됐다.
+ * 그 재현 근거는 83e4d60 의 이 파일과 Plan/Claude-Plan-Audit-20261116/SEC-REPRO-01.md 에 남아 있다.
+ * SEC-FIX-01 이후 같은 시도가 실제로 거절되는지(SQLSTATE·메시지) 확인한다.
  * - [대조] 이름의 시험은 다른 업무실·비로그인·RPC 경로가 거절되는지 확인한다.
  * 공격 동작은 모두 asUser(실제 authenticated/anon 역할, auth.uid() 설정)로만 실행한다.
  * 준비 데이터만 관리자(superuser) 트랜잭션 또는 기존 seedOwner(본인 권한)로 만든다.
- * 수정(제약·트리거·정의자 함수)이 들어오면 [관찰·취약] 시험의 기대를 "거절"로 바꿔야 한다.
+ * [잔여위험] 시험은 고치지 않은 남은 위험을 관찰한다(통과 = 아직 허용됨, 보안 통과 아님).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -92,10 +93,11 @@ describe("1) 현재 초안이 아닌 버전 직접 승인 + 승인본 포인터 
     expect(o.code).toBe("42501");
   });
 
-  it("[대조] 다른 업무실 주인 B의 A 결과물 포인터 변경은 0행(RLS로 보이지 않음)", async () => {
+  it("[대조] 다른 업무실 주인 B의 A 결과물 포인터 변경은 거절된다(수정 전: 0행, 수정 후: 열 권한 없음)", async () => {
     const o = record("1-대조 B → A artifacts update", await attempt(db, b.userId, "update artifacts set approved_version_id = $1 where id = $2", [v1, artifactId]));
-    expect(o.allowed).toBe(true);
-    expect(o.rowCount).toBe(0);
+    expect(o.allowed).toBe(false);
+    expect(o.code).toBe("42501");
+    expect(o.message).toMatch(/permission denied for table artifacts/);
   });
 
   it("[대조] 비로그인(anon)은 승인 기록을 넣지 못한다", async () => {
@@ -107,24 +109,29 @@ describe("1) 현재 초안이 아닌 버전 직접 승인 + 승인본 포인터 
     expect(o.code).toBe("42501");
   });
 
-  it("[관찰·취약] 본인은 RPC 없이 v1 승인 기록 insert + approved_version_id = v1 변경이 허용된다", async () => {
+  it("[수정 후 거절] 본인도 RPC 없이 v1 승인 기록 insert 와 approved_version_id 직접 변경을 할 수 없다", async () => {
     const before = await taskStatus();
     const ins = record(
       "1-관찰 A approvals insert(v1, 비현재)",
       await attempt(db, a.userId, "insert into approvals (workspace_id, artifact_id, artifact_version_id, actor_id, decision) values ($1, $2, $3, $4, 'approved')", [a.workspaceId, artifactId, v1, a.userId]),
     );
     const upd = record("1-관찰 A artifacts.approved_version_id = v1", await attempt(db, a.userId, "update artifacts set approved_version_id = $1 where id = $2", [v1, artifactId]));
-    expect(ins.allowed).toBe(true);
-    expect(upd.allowed).toBe(true);
-    expect(upd.rowCount).toBe(1);
-    const art = await one<{ approved_version_id: string; current_draft_version_id: string }>(
+    expect(ins.allowed).toBe(false);
+    expect(ins.code).toBe("42501");
+    expect(ins.message).toMatch(/row-level security policy for table "approvals"/);
+    expect(upd.allowed).toBe(false);
+    expect(upd.code).toBe("42501");
+    expect(upd.message).toMatch(/permission denied for table artifacts/);
+    const art = await one<{ approved_version_id: string | null; current_draft_version_id: string }>(
       db,
       "select approved_version_id, current_draft_version_id from artifacts where id = $1",
       [artifactId],
     );
-    expect(art.approved_version_id).toBe(v1); // 현재 초안(v2)이 아닌 옛 버전이 승인본이 됨
+    expect(art.approved_version_id).toBeNull(); // 옛 버전이 승인본이 되지 않음
     expect(art.current_draft_version_id).toBe(v2);
-    expect(await taskStatus()).toBe(before); // 작업 상태 이동(review→completed)도 일어나지 않음
+    expect(await taskStatus()).toBe(before);
+    const n = await one<{ n: number }>(db, "select count(*)::int as n from approvals where artifact_version_id = $1", [v1]);
+    expect(n.n).toBe(0);
   });
 });
 
@@ -153,20 +160,24 @@ describe("2) 미승인·다른 프로젝트 버전으로 전달 기록", () => {
     expect(o.code).toBe("42501");
   });
 
-  it("[관찰·취약] 본인은 승인되지 않은 버전(v2)을 전달 기록으로 직접 넣을 수 있다", async () => {
+  it("[수정 후 거절] 본인도 승인되지 않은 버전(v2)을 전달 기록으로 직접 넣을 수 없다", async () => {
     const o = record(
       "2-관찰 A delivery insert(미승인 v2)",
       await attempt(db, a.userId, "insert into delivery_records (workspace_id, project_id, artifact_version_id, delivered_at, method) values ($1, $2, $3, now(), 'other')", [a.workspaceId, a.projectA, v2]),
     );
-    expect(o.allowed).toBe(true);
+    expect(o.allowed).toBe(false);
+    expect(o.code).toBe("42501");
+    expect(o.message).toMatch(/row-level security policy for table "delivery_records"/);
   });
 
-  it("[관찰·취약] 본인은 프로젝트 B(고객 B)의 버전을 프로젝트 A(고객 A) 전달 기록으로 넣을 수 있다", async () => {
+  it("[수정 후 거절] 본인도 프로젝트 B(고객 B)의 버전을 프로젝트 A(고객 A) 전달 기록으로 넣을 수 없다", async () => {
     const o = record(
       "2-관찰 A delivery insert(프로젝트A ← B 버전)",
       await attempt(db, a.userId, "insert into delivery_records (workspace_id, project_id, artifact_version_id, delivered_at, method) values ($1, $2, $3, now(), 'other')", [a.workspaceId, a.projectA, vB1]),
     );
-    expect(o.allowed).toBe(true);
+    expect(o.allowed).toBe(false);
+    expect(o.code).toBe("42501");
+    expect(o.message).toMatch(/row-level security policy for table "delivery_records"/);
   });
 });
 
@@ -188,18 +199,30 @@ describe("3) 승인·감사 기록의 행위자(actor_id) 위조", () => {
     expect(o.code).toBe("42501");
   });
 
-  it("[관찰·취약] 본인은 승인 기록의 actor_id 를 다른 사용자(B)로 넣을 수 있다", async () => {
+  it("[수정 후 거절] 본인도 승인 기록의 actor_id 를 다른 사용자(B)로 넣을 수 없다", async () => {
     const o = record(
       "3-관찰 A approvals insert(actor = B)",
       await attempt(db, a.userId, "insert into approvals (workspace_id, artifact_id, artifact_version_id, actor_id, decision) values ($1, $2, $3, $4, 'changes_requested')", [a.workspaceId, artifactId, v2, b.userId]),
     );
-    expect(o.allowed).toBe(true);
+    expect(o.allowed).toBe(false);
+    expect(o.code).toBe("42501");
+    expect(o.message).toMatch(/ACTOR_MISMATCH/);
   });
 
-  it("[관찰·취약] 본인은 감사 기록의 actor_id 를 다른 사용자(B)로 넣을 수 있다", async () => {
+  it("[수정 후 거절] 본인도 감사 기록의 actor_id 를 다른 사용자(B)로 넣을 수 없다", async () => {
     const o = record(
       "3-관찰 A audit insert(actor = B)",
       await attempt(db, a.userId, "insert into audit_events (workspace_id, entity_type, entity_id, actor_id, action) values ($1, 'artifact', $2, $3, 'approve')", [a.workspaceId, artifactId, b.userId]),
+    );
+    expect(o.allowed).toBe(false);
+    expect(o.code).toBe("42501");
+    expect(o.message).toMatch(/ACTOR_MISMATCH/);
+  });
+
+  it("[잔여위험] 본인은 자기 이름(actor = 본인)으로 감사 기록을 직접 추가할 수 있다 — 아직 허용됨(보안 통과 아님)", async () => {
+    const o = record(
+      "3-잔여 A audit insert(actor = A)",
+      await attempt(db, a.userId, "insert into audit_events (workspace_id, entity_type, entity_id, actor_id, action) values ($1, 'artifact', $2, $3, 'approve')", [a.workspaceId, artifactId, a.userId]),
     );
     expect(o.allowed).toBe(true);
   });

@@ -26,6 +26,11 @@ beforeAll(async () => {
 }, 60_000);
 
 const asOwner = <T>(fn: Parameters<typeof asUser<T>>[2]) => asUser(db, f.userId, fn);
+/**
+ * 관리자(superuser) 트랜잭션. SEC-FIX-01 이후 로그인 사용자는 승인 기록을 직접 넣거나 승인본 포인터를 직접 바꿀 수 없다
+ * (decide_version 한 경로). 승인 트리거·불변 트리거 자체를 시험할 때만 준비·조작을 이 권한으로 한다. 트리거는 관리자에게도 적용된다.
+ */
+const asAdmin = <T>(fn: Parameters<typeof asUser<T>>[2]) => db.transaction(fn);
 
 describe("마이그레이션과 도메인 코드의 일치", () => {
   it("DB 상태 전이표가 src/domain/state 와 같다", async () => {
@@ -254,7 +259,7 @@ describe("C04 추가 전용 기록은 수정·삭제 불가", () => {
       return createArtifactWithVersion(tx, f, f.projectA, task);
     });
     await expectImmutable("artifact_versions", "update artifact_versions set content = '{}' where id = $1", [versionId]);
-    await asOwner((tx) =>
+    await asAdmin((tx) =>
       tx.query(
         "insert into approvals (workspace_id, artifact_id, artifact_version_id, actor_id, decision) values ($1, $2, $3, $4, 'approved')",
         [f.workspaceId, artifactId, versionId, f.userId],
@@ -287,7 +292,7 @@ describe("C04 추가 전용 기록은 수정·삭제 불가", () => {
 describe("T14·C02 승인본과 새 초안", () => {
   it("승인 기록 없이 승인본 포인터를 지정할 수 없다", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const task = await createTask(tx, f, f.projectA);
         const { artifactId, versionId } = await createArtifactWithVersion(tx, f, f.projectA, task);
         await tx.query("update artifacts set approved_version_id = $1 where id = $2", [versionId, artifactId]);
@@ -298,7 +303,7 @@ describe("T14·C02 승인본과 새 초안", () => {
 
   it("마지막 결정이 수정 요청이면 승인본으로 지정할 수 없다", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const task = await createTask(tx, f, f.projectA);
         const { artifactId, versionId } = await createArtifactWithVersion(tx, f, f.projectA, task);
         const approve = (d: string) =>
@@ -317,7 +322,7 @@ describe("T14·C02 승인본과 새 초안", () => {
   it("같은 순간에 여러 결정이 들어와도 항상 마지막 결정 기준 (순서 고정 회귀 테스트)", async () => {
     for (let round = 0; round < 10; round += 1) {
       const lastIsApproved = round % 2 === 0;
-      const attempt = asOwner(async (tx) => {
+      const attempt = asAdmin(async (tx) => {
         const task = await createTask(tx, f, f.projectA);
         const { artifactId, versionId } = await createArtifactWithVersion(tx, f, f.projectA, task);
         const decisions = lastIsApproved
@@ -337,7 +342,7 @@ describe("T14·C02 승인본과 새 초안", () => {
   });
 
   it("승인 후 재생성은 새 초안 버전이 되고 승인본은 그대로 남는다", async () => {
-    const result = await asOwner(async (tx) => {
+    const result = await asAdmin(async (tx) => {
       const task = await createTask(tx, f, f.projectA);
       const { artifactId, versionId: v1 } = await createArtifactWithVersion(tx, f, f.projectA, task);
       await tx.query(
