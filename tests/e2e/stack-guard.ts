@@ -23,16 +23,19 @@ export interface StackConfig {
   projectId: string;
   apiPort: number;
   inbucketPort: number;
+  /** [db].port (로컬 Postgres). e2e:reset 이 초기화하는 DB 포트 */
+  dbPort: number;
   /** [auth].site_url (앱 주소). 메일 링크가 이 주소로 돌아온다. */
   siteUrl: string;
 }
 
-/** supabase/config.toml 에서 필요한 네 값만 읽는다(단순 해석). */
+/** supabase/config.toml 에서 필요한 다섯 값만 읽는다(단순 해석). */
 export function parseStackConfig(toml: string): StackConfig {
   let section = "";
   let projectId = "";
   let apiPort = NaN;
   let inbucketPort = NaN;
+  let dbPort = NaN;
   let siteUrl = "";
   for (const raw of toml.split(/\r?\n/)) {
     const line = raw.replace(/\s+#.*$/, "").replace(/^#.*$/, "").trim();
@@ -48,14 +51,15 @@ export function parseStackConfig(toml: string): StackConfig {
     const str = value!.replace(/^"|"$/g, "");
     if (section === "" && key === "project_id") projectId = str;
     if (section === "api" && key === "port") apiPort = Number(value);
+    if (section === "db" && key === "port") dbPort = Number(value);
     // 메일함(Mailpit) 웹 포트: 현재 CLI 는 [local_smtp], 예전 CLI 는 [inbucket]
     if ((section === "local_smtp" || section === "inbucket") && key === "port") inbucketPort = Number(value);
     if (section === "auth" && key === "site_url") siteUrl = str;
   }
-  if (!projectId || !Number.isInteger(apiPort) || !Number.isInteger(inbucketPort) || !siteUrl) {
-    throw new Error("시험 스택 설정(supabase/config.toml)에서 project_id·[api].port·[local_smtp](또는 [inbucket]).port·[auth].site_url 을 읽지 못했습니다.");
+  if (!projectId || !Number.isInteger(apiPort) || !Number.isInteger(dbPort) || !Number.isInteger(inbucketPort) || !siteUrl) {
+    throw new Error("시험 스택 설정(supabase/config.toml)에서 project_id·[api].port·[db].port·[local_smtp](또는 [inbucket]).port·[auth].site_url 을 읽지 못했습니다.");
   }
-  return { projectId, apiPort, inbucketPort, siteUrl };
+  return { projectId, apiPort, dbPort, inbucketPort, siteUrl };
 }
 
 export function readStackConfig(cwd = process.cwd()): StackConfig {
@@ -159,4 +163,36 @@ export function preflight(env: Env = process.env, cwd = process.cwd(), lookup: P
   const mailpitBase = resolveMailpitBase(env, config);
   checkContainers(config, lookup);
   return { config, baseURL, mailpitBase };
+}
+
+/**
+ * RESET-SAFETY-01: e2e:reset(로컬 DB 초기화) 전용 확인.
+ * 초기화는 메일·앱 주소를 쓰지 않으므로 E2E_MAILPIT_URL·E2E_BASE_URL 은 요구하지 않는다.
+ * 대신 무엇을 지우는지가 핵심이다: 명시한 project_id = 설정 project_id(공유 아님),
+ * [db]·[api]·메일 포트가 공유 543xx 가 아님, create-owner 가 쓸 API 주소(로컬)가 [api].port 와 같음.
+ */
+export function checkResetEnv(env: Env, cfg: StackConfig): void {
+  const id = env.E2E_SUPABASE_PROJECT_ID;
+  if (!id) throw new Error("E2E_SUPABASE_PROJECT_ID 가 없습니다. 초기화할 자기 전용 시험 스택의 project_id 를 명시해야 합니다.");
+  if (SHARED_PROJECT_IDS.includes(id) || SHARED_PROJECT_IDS.includes(cfg.projectId)) {
+    throw new Error(`공유 스택(project_id ${SHARED_PROJECT_IDS.join(",")})은 초기화하지 않습니다.`);
+  }
+  if (id !== cfg.projectId) throw new Error(`E2E_SUPABASE_PROJECT_ID(${id})가 시험 스택 설정(${cfg.projectId})과 다릅니다.`);
+  for (const [name, port] of [["[db].port", cfg.dbPort], ["[api].port", cfg.apiPort], ["메일 포트", cfg.inbucketPort]] as const) {
+    if (SHARED_PORTS.includes(port)) throw new Error(`시험 스택 설정의 ${name}(${port})가 공유 543xx 범위입니다. 초기화하지 않습니다.`);
+  }
+  checkLocalUrl("NEXT_PUBLIC_SUPABASE_URL", env.NEXT_PUBLIC_SUPABASE_URL, cfg.apiPort);
+}
+
+/** 그 project_id 의 실제 DB·API 컨테이너가 설정 포트를 열고 있는지(설정만 맞고 다른 스택이 그 포트를 쓰는 경우를 거른다). */
+export function checkResetContainers(cfg: StackConfig, lookup: PortLookup): void {
+  const pairs: Array<[string, string, number]> = [
+    [`supabase_db_${cfg.projectId}`, "5432/tcp", cfg.dbPort],
+    [`supabase_kong_${cfg.projectId}`, "8000/tcp", cfg.apiPort],
+  ];
+  for (const [container, inner, expected] of pairs) {
+    const actual = lookup(container, inner);
+    if (actual === null) throw new Error(`시험 스택 컨테이너 ${container} 를 찾지 못했습니다(스택이 꺼져 있거나 다른 스택). 초기화하지 않습니다.`);
+    if (actual !== expected) throw new Error(`${container} 가 연 포트(${actual})가 설정(${expected})과 다릅니다. 초기화하지 않습니다.`);
+  }
 }

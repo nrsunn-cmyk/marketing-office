@@ -20,7 +20,7 @@ import {
  * 실제 네트워크는 쓰지 않는다. 가드가 막아야 하는 경우에는 fetch 가 한 번도 불리지 않아야 한다.
  */
 
-const CFG: StackConfig = { projectId: "claude-qa-test", apiPort: 57321, inbucketPort: 57324, siteUrl: "http://127.0.0.1:4500" };
+const CFG: StackConfig = { projectId: "claude-qa-test", apiPort: 57321, dbPort: 57322, inbucketPort: 57324, siteUrl: "http://127.0.0.1:4500" };
 const GOOD = {
   E2E_SUPABASE_PROJECT_ID: "claude-qa-test",
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:57321",
@@ -76,7 +76,7 @@ describe("설정 읽기", () => {
   });
 
   it("실제 저장소 설정 파일을 읽는다(공유 정의: marketing-office·54321·54324·3000)", () => {
-    expect(readStackConfig()).toEqual({ projectId: "marketing-office", apiPort: 54321, inbucketPort: 54324, siteUrl: "http://127.0.0.1:3000" });
+    expect(readStackConfig()).toEqual({ projectId: "marketing-office", apiPort: 54321, dbPort: 54322, inbucketPort: 54324, siteUrl: "http://127.0.0.1:3000" });
   });
 
   it("값이 빠지면 실패", () => {
