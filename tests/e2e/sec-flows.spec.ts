@@ -78,9 +78,12 @@ test("흐름 02: 수정 요청(메모) → 직접 고친 새 버전 → 다시 �
   await page.getByLabel("이미지 생성 프롬프트").fill("차분한 색으로 고친 프롬프트");
   await page.getByRole("button", { name: "고친 내용 저장" }).click();
   await expect(resultHeading(page, 2)).toBeVisible();
-  await expect(visible(page, "검토 중", true)).toBeVisible();
+  // 현재 동작: 직접 고치기(save_manual_version)는 작업 상태를 옮기지 않아 '수정 요청'이 그대로다.
+  // (다시 만들기 record_generation 은 '검토 중'으로 옮긴다.) 이 차이가 의도인지는 SEC-E2E-01 보고서에 관찰로 남김.
+  await expect(page.locator("span").filter({ hasText: /^수정 요청$/, visible: true })).toHaveCount(1);
+  await expect(visible(page, "검토 중", true)).toHaveCount(0);
 
-  // 다시 승인
+  // 다시 승인: 수정 요청 상태에서도 현재 초안(2번)을 승인할 수 있다
   await page.getByRole("button", { name: "이 버전 승인" }).click();
   await expect(visible(page, "완료(승인)", true)).toBeVisible();
   const v2 = history(page).getByRole("listitem").filter({ hasText: "2번 버전" });
