@@ -38,12 +38,97 @@ export function admin(): SupabaseClient {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-export function run(cmd: string, args: string[], input?: string): string {
+export type EnvMap = Record<string, string | undefined>;
+
+export interface RunOptions {
+  /** 자식 프로세스 환경. 주지 않으면 현재 환경을 그대로 물려준다 */
+  env?: EnvMap;
+  /** 실패 메시지에서 가릴 비밀값(BACKUP-SECRET-01) */
+  secrets?: string[];
+}
+
+const redact = (text: string, secrets: string[] = []) =>
+  secrets.filter((s) => s.length > 0).reduce((t, s) => t.split(s).join("<비밀값 가림>"), text);
+
+export function run(cmd: string, args: string[], input?: string, options: RunOptions = {}): string {
   // 셸을 거치지 않고 실행한다(인자 문자열이 명령으로 해석되지 않게)
-  const r = spawnSync(cmd, args, { input, encoding: "utf8", maxBuffer: 512 * 1024 * 1024 });
-  if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} 실패: ${r.stderr || r.stdout}`);
+  const r = spawnSync(cmd, args, { input, encoding: "utf8", maxBuffer: 512 * 1024 * 1024, env: options.env as NodeJS.ProcessEnv | undefined });
+  if (r.status !== 0) throw new Error(redact(`${cmd} ${args.join(" ")} 실패: ${r.stderr || r.stdout}`, options.secrets));
   return r.stdout;
 }
+
+/**
+ * BACKUP-SECRET-01: 운영 DB 연결 주소를 비밀번호와 나머지로 나눈다.
+ * 명령 인자(argv)에는 비밀번호 없는 값만 쓰고, 비밀번호는 환경 변수(덤프) 또는 표준 입력(psql)으로만 넘긴다.
+ * - redactedUrl: 비밀번호를 뺀 URL(supabase db dump --remote= 용). CLI 3.1 은 이때 PGPASSWORD 환경 변수를 쓴다(dry-run 확인).
+ * - conninfo: 비밀번호 없는 libpq 접속 문자열(psql 인자 용)
+ */
+export interface DbUrlParts {
+  redactedUrl: string;
+  password: string;
+  conninfo: string;
+}
+
+const CONNINFO_PARAMS = new Set(["sslmode", "connect_timeout", "application_name"]);
+const conninfoValue = (v: string) => `'${v.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+
+export function splitDbUrl(dbUrl: string): DbUrlParts {
+  let u: URL;
+  try {
+    u = new URL(dbUrl);
+  } catch {
+    throw new Error("BACKUP_DB_URL 형식이 올바르지 않습니다(postgresql://… 모양이어야 함).");
+  }
+  if (!/^postgres(ql)?:$/.test(u.protocol)) throw new Error("BACKUP_DB_URL은 postgresql:// 주소여야 합니다.");
+  const password = decodeURIComponent(u.password);
+  if (!password) throw new Error("BACKUP_DB_URL에 비밀번호가 없습니다. 대시보드의 연결 문자열에 실제 비밀번호를 넣어야 합니다.");
+  if (/[\r\n\0]/.test(password)) throw new Error("BACKUP_DB_URL 비밀번호에 줄바꿈·NUL 문자가 있어 안전하게 넘길 수 없습니다.");
+  const user = decodeURIComponent(u.username);
+  const dbname = decodeURIComponent(u.pathname.replace(/^\//, "")) || "postgres";
+  const parts: Array<[string, string]> = [
+    ["host", u.hostname],
+    ["port", u.port || "5432"],
+    ["user", user],
+    ["dbname", dbname],
+  ];
+  for (const [k, v] of u.searchParams) {
+    if (!CONNINFO_PARAMS.has(k)) throw new Error(`BACKUP_DB_URL의 '${k}' 설정은 지원하지 않습니다(sslmode·connect_timeout·application_name 만).`);
+    parts.push([k, v]);
+  }
+  const redacted = new URL(u.toString());
+  redacted.password = "";
+  return {
+    redactedUrl: redacted.toString(),
+    password,
+    conninfo: parts.map(([k, v]) => `${k}=${conninfoValue(v)}`).join(" "),
+  };
+}
+
+/** 자식 프로세스에 넘길 환경: 비밀을 담은 BACKUP_DB_URL·SUPABASE_SECRET_KEY 는 빼고, 필요한 값만 더한다 */
+export function childEnv(extra: Record<string, string> = {}, base: EnvMap = process.env): EnvMap {
+  const env: EnvMap = { ...base };
+  delete env.BACKUP_DB_URL;
+  delete env.SUPABASE_SECRET_KEY;
+  delete env.PGPASSWORD;
+  return { ...env, ...extra };
+}
+
+/**
+ * DB 데이터 내보내기(supabase db dump). 원격이면 인자에는 비밀번호 없는 URL(target.dumpArgs)만 두고,
+ * 비밀번호는 자식 환경의 PGPASSWORD 로만 넘긴다(CLI 3.1 dry-run 으로 PGPASSWORD 사용 확인, BACKUP-SECRET-01).
+ */
+export function runDump(file: string, target: BackupTarget, env: EnvMap = process.env): void {
+  const args = ["db", "dump", "--data-only", "--schema", "public,auth", "-f", file, ...target.dumpArgs];
+  if (target.kind === "local") {
+    run("supabase", args);
+    return;
+  }
+  const { password } = splitDbUrl(env.BACKUP_DB_URL ?? "");
+  run("supabase", args, undefined, { env: childEnv({ PGPASSWORD: password }, env), secrets: [password] });
+}
+
+/** psql 을 컨테이너 안에서 실행: 표준 입력 첫 줄을 PGPASSWORD 로 읽고, 나머지 입력은 psql 이 SQL 로 읽는다 */
+export const PSQL_STDIN_PASSWORD_SCRIPT = 'IFS= read -r PGPASSWORD || exit 2; export PGPASSWORD; exec psql "$@"';
 
 /**
  * 백업 대상 하나 정하기 (BACKUP-OPS-01, Codex 검수).
@@ -75,13 +160,8 @@ export function resolveBackupTarget(env: Record<string, string | undefined> = pr
     throw new Error("운영 백업에는 BACKUP_DB_URL(DB 연결 주소)이 필요합니다. 없으면 DB를 다른 곳에서 받을 수 있어 멈춥니다.");
   }
 
-  let parsed: URL;
-  try {
-    parsed = new URL(dbUrl);
-  } catch {
-    throw new Error("BACKUP_DB_URL 형식이 올바르지 않습니다(postgresql://… 모양이어야 함).");
-  }
-  if (!/^postgres(ql)?:$/.test(parsed.protocol)) throw new Error("BACKUP_DB_URL은 postgresql:// 주소여야 합니다.");
+  const split = splitDbUrl(dbUrl); // 형식·비밀번호 확인(비밀번호는 여기서 돌려주지 않는다)
+  const parsed = new URL(split.redactedUrl);
   const hostRef = /^db\.([a-z0-9]{20})\.supabase\.co$/.exec(parsed.hostname)?.[1];
   const userRef = /^postgres\.([a-z0-9]{20})$/.exec(decodeURIComponent(parsed.username))?.[1];
   const dbRef = hostRef ?? userRef;
@@ -89,7 +169,8 @@ export function resolveBackupTarget(env: Record<string, string | undefined> = pr
   if (dbRef !== apiRef) {
     throw new Error(`API 주소의 프로젝트(${apiRef})와 BACKUP_DB_URL의 프로젝트(${dbRef})가 다릅니다. 서로 다른 DB가 섞이지 않도록 멈춥니다.`);
   }
-  return { kind: "remote", label: apiRef, dumpArgs: [`--remote=${dbUrl}`] };
+  // BACKUP-SECRET-01: 명령 인자에는 비밀번호 없는 URL만. 비밀번호는 덤프 때 PGPASSWORD 환경 변수로 넘긴다(backup.mts)
+  return { kind: "remote", label: apiRef, dumpArgs: [`--remote=${split.redactedUrl}`] };
 }
 
 /**
@@ -97,14 +178,23 @@ export function resolveBackupTarget(env: Record<string, string | undefined> = pr
  * - 로컬: 로컬 DB 컨테이너
  * - 원격: BACKUP_DB_URL(운영 DB 연결 주소)이 꼭 있어야 한다. 없으면 실행하지 않는다.
  *   (API는 원격을 보는데 SQL만 로컬을 보면 서로 다른 DB를 검사하게 된다 — Codex 검수 지적)
- *   psql 프로그램은 로컬 DB 컨테이너 안의 것을 빌려 쓴다.
+ *   psql 프로그램은 컨테이너(SUPABASE_DB_CONTAINER, 운영 때는 본인 전용 클라이언트) 안의 것을 빌려 쓴다.
  */
 export function psql(sql: string): string {
   // 백업과 같은 규칙으로 대상을 정한다(로컬/운영 섞임·프로젝트 불일치면 여기서 멈춤)
   const backupTarget = resolveBackupTarget();
-  const remote = backupTarget.kind === "remote" ? process.env.BACKUP_DB_URL : undefined;
-  const connection = remote ? [remote] : ["-U", "postgres", "-d", "postgres"];
-  return run("docker", ["exec", "-i", DB_CONTAINER, "psql", ...connection, "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
+  if (backupTarget.kind === "local") {
+    return run("docker", ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
+  }
+  // BACKUP-SECRET-01: 비밀번호는 docker·psql 명령 인자에 넣지 않고 표준 입력 첫 줄로 넘긴다(컨테이너 안 sh 가 읽어 PGPASSWORD 로).
+  // docker exec -e NAME=값 도 인자에 값이 보이므로 쓰지 않는다.
+  const { conninfo, password } = splitDbUrl(process.env.BACKUP_DB_URL ?? "");
+  return run(
+    "docker",
+    ["exec", "-i", DB_CONTAINER, "sh", "-c", PSQL_STDIN_PASSWORD_SCRIPT, "sh", conninfo, "-v", "ON_ERROR_STOP=1", "-At", "-q"],
+    `${password}\n${sql}`,
+    { env: childEnv(), secrets: [password] },
+  );
 }
 
 export async function tableCounts(sb: SupabaseClient): Promise<Record<string, number>> {

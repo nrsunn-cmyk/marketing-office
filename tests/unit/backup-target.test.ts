@@ -29,11 +29,13 @@ describe("백업 대상 하나 정하기", () => {
   it.each([
     ["직접 연결", `postgresql://postgres:secret@db.${REF}.supabase.co:5432/postgres`],
     ["공유 연결(pooler)", `postgresql://postgres.${REF}:secret@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres`],
-  ])("운영 API와 DB 연결 주소(%s)가 같은 프로젝트면 그 주소로 내보낸다", (_name, dbUrl) => {
+  ])("운영 API와 DB 연결 주소(%s)가 같은 프로젝트면 비밀번호를 뺀 그 주소로 내보낸다", (_name, dbUrl) => {
     const t = resolveBackupTarget({ NEXT_PUBLIC_SUPABASE_URL: API, BACKUP_DB_URL: dbUrl });
     expect(t.kind).toBe("remote");
     expect(t.label).toBe(REF);
-    expect(t.dumpArgs).toEqual([`--remote=${dbUrl}`]);
+    // BACKUP-SECRET-01: 명령 인자에는 비밀번호가 없다(비밀번호는 덤프 때 PGPASSWORD 환경 변수로만)
+    expect(t.dumpArgs).toEqual([`--remote=${dbUrl.replace(":secret@", "@")}`]);
+    expect(t.dumpArgs.join(" ")).not.toContain("secret");
     // 기록용 이름(label)에는 비밀값이 들어가지 않는다
     expect(t.label).not.toContain("secret");
   });

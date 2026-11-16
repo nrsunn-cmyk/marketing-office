@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { admin, BUCKET, resolveBackupTarget, run, tableCounts, type Manifest, type StoredFile } from "./common.mts";
+import { admin, BUCKET, resolveBackupTarget, runDump, tableCounts, type Manifest, type StoredFile } from "./common.mts";
 
 const out = process.argv[2];
 if (!out) {
@@ -31,8 +31,7 @@ mkdirSync(join(out, "files"), { recursive: true });
 const sb = admin();
 
 // 1) DB 데이터 (업무 데이터 + 로그인 계정)
-const dumpArgs = ["db", "dump", "--data-only", "--schema", "public,auth", "-f", join(out, "data.sql"), ...target.dumpArgs];
-run("supabase", dumpArgs);
+runDump(join(out, "data.sql"), target);
 
 // 2) 자료 파일 (DB에 기록된 체크섬과 맞는지 확인하며 받는다)
 const { data: assets, error } = await sb
