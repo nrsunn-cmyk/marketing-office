@@ -256,3 +256,35 @@ describe("함수 속성·정책·권한 (수정 후 상태)", () => {
     expect(cols).toEqual(["current_draft_version_id"]);
   });
 });
+
+describe("SEC-FIX-01-R1 정의자 함수의 조회·잠금은 본인 업무실 행으로 한정", () => {
+  const src = async (fn: string) => (await one<{ src: string }>(db, "select prosrc as src from pg_proc where oid = $1::regprocedure", [fn])).src.replace(/\s+/g, " ");
+  const OWNED = "and exists (select 1 from public.workspaces w where w.id = x.workspace_id and w.owner_user_id = uid)";
+
+  it("decide_version: 잠금 조회의 WHERE 에 소유 조건이 있고, 소유 조건 없는 for update 는 없다", async () => {
+    const s = await src("public.decide_version(uuid,uuid,text,text)");
+    expect(s).toContain(`from public.artifacts x where x.id = p_artifact_id ${OWNED} for update of x;`);
+    expect(s).not.toMatch(/from public\.artifacts where id = p_artifact_id for update/);
+    // 판정은 조회 결과로만(조회 뒤 별도 소유 확인 없음)
+    expect(s).toMatch(/for update of x; if not found then raise exception 'NOT_FOUND/);
+  });
+
+  it("record_delivery: 같은 소유 조건으로 조회한다", async () => {
+    const s = await src("public.record_delivery(uuid,text,timestamptz,text)");
+    expect(s).toContain(`from public.artifacts x where x.id = p_artifact_id ${OWNED};`);
+  });
+
+  it("실행 계획: 잠금 단계(LockRows)는 소유자 조건을 거친 행만 받는다", async () => {
+    const g = await generated();
+    const plan = (
+      await db.query<{ "QUERY PLAN": string }>(
+        `explain (costs off) select x.* from public.artifacts x
+          where x.id = $1 and exists (select 1 from public.workspaces w where w.id = x.workspace_id and w.owner_user_id = $2)
+          for update of x`,
+        [g.artifactId, b.userId],
+      )
+    ).rows.map((r) => r["QUERY PLAN"]);
+    expect(plan[0]).toMatch(/^LockRows/); // 맨 위가 잠금 단계
+    expect(plan.slice(1).join(" | ")).toMatch(/owner_user_id = /); // 그 아래에서 소유자 조건으로 거른다
+  });
+});
