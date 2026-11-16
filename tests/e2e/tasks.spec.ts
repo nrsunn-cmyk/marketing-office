@@ -39,7 +39,7 @@ test("고객·프로필·프로젝트 준비 후 로고 작업 시작, 입력은
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "C 로고" })).toBeVisible();
 
-  await expect(page.getByLabel("새 작업").locator("option")).toHaveText(["로고 브리프·프롬프트", "견적"]);
+  await expect(page.getByLabel("새 작업").locator("option")).toHaveText(["로고 브리프·프롬프트", "견적", "마케팅 전략"]); // 고객 프로젝트는 P2-c 전략 추가(P2-STRATEGY-APP-01)
   await page.getByRole("button", { name: "작업 시작" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "로고 브리프·프롬프트" })).toBeVisible();
   taskUrl = page.url();
