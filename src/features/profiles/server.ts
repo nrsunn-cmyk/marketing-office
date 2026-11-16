@@ -17,12 +17,12 @@ export async function listProfileDecisions(clientId: string): Promise<ProfileDec
   const sb = await createSupabaseServerClient();
   const { data, error } = await sb
     .from("company_profile_approvals")
-    .select("company_profile_version_id, decision, seq, created_at, actor_id")
+    .select("company_profile_version_id, decision, seq, created_at, actor_id, comment")
     .eq("workspace_id", workspace.id)
     .eq("client_id", clientId)
     .order("seq", { ascending: true });
   if (error) throw new Error(`프로필 승인 기록을 불러오지 못했습니다: ${error.message}`);
-  return (data ?? []).map((d) => ({ versionId: d.company_profile_version_id, decision: d.decision, seq: d.seq, createdAt: d.created_at, actorId: d.actor_id }));
+  return (data ?? []).map((d) => ({ versionId: d.company_profile_version_id, decision: d.decision, seq: d.seq, createdAt: d.created_at, actorId: d.actor_id, comment: d.comment }));
 }
 
 /**

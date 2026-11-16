@@ -216,3 +216,42 @@ test("N2 관찰(기대값 고정 안 함): 기준 프로필 철회 뒤 전략 �
     { type: "N2-관찰", description: `승인 버튼 표시: ${approveVisible ? "예" : "아니오"} — 정책 미정, 기대값으로 고정하지 않음` },
   );
 });
+
+test("BUG-PROFILE-COMMENT-01: 결정 이력에 승인 메모·철회 사유를 구분해 표시(줄바꿈 보존, HTML 은 글자 그대로)", async ({ page }) => {
+  await loginWithWorkspace(page);
+  await page.goto(`/clients/${clientId}`);
+  await saveProfile(page, "합성 원두 v4");
+  await expect(page.getByRole("heading", { name: /현재 4번 버전/ })).toBeVisible();
+  versionIds[4] = await profileId(4);
+  const memo = "첫 줄 메모\n<b>굵게</b> & '따옴표'";
+  await page.goto(`/clients/${clientId}?pv=4`);
+  await review(page).getByLabel("메모 (선택)").fill(memo);
+  await review(page).getByRole("button", { name: "4번 버전 승인" }).click();
+  await expect(review(page).getByText("이 버전을 승인했습니다.")).toBeVisible();
+
+  // 철회 사유는 화면 입력 칸이 없어 실제 RPC 로 남긴다(본인 권한, 현재 순번)
+  const last = (await sb.from("company_profile_approvals").select("seq").eq("company_profile_version_id", versionIds[4]!).order("seq", { ascending: false }).limit(1).single()).data!.seq;
+  const r = await sb.rpc("approve_company_profile_version", { p_profile_version_id: versionIds[4]!, p_decision: "revoked", p_expected_last_seq: last, p_comment: "합성 철회 사유" });
+  expect(r.error).toBeNull();
+
+  await page.goto(`/clients/${clientId}?pv=4`);
+  await review(page).getByText(/이 버전의 결정 기록 2건/).click();
+  const history = review(page).locator("details").filter({ hasText: "이 버전의 결정 기록" });
+  const approveItem = history.getByRole("listitem").filter({ hasText: /^승인(?! 철회)/ });
+  const revokeItem = history.getByRole("listitem").filter({ hasText: "승인 철회" });
+  await expect(approveItem).toContainText("승인 메모: 첫 줄 메모");
+  await expect(revokeItem).toContainText("철회 사유: 합성 철회 사유");
+  await expect(revokeItem).not.toContainText("승인 메모");
+  // 줄바꿈 보존(innerText 에 줄바꿈), HTML 은 요소가 아니라 글자
+  expect(await approveItem.innerText()).toContain("첫 줄 메모\n<b>굵게</b> & '따옴표'");
+  await expect(approveItem.getByText(/^승인 메모:/)).toHaveCSS("white-space", "pre-wrap");
+  await expect(history.locator("b")).toHaveCount(0);
+
+  // 빈 메모: 3번 버전은 메모 없이 승인했다 → 이력에 메모 줄이 없다
+  await page.goto(`/clients/${clientId}?pv=3`);
+  await review(page).getByText(/이 버전의 결정 기록 \d+건/).click();
+  const history3 = review(page).locator("details").filter({ hasText: "이 버전의 결정 기록" });
+  await expect(history3.getByRole("listitem").first()).toBeVisible();
+  await expect(history3).not.toContainText("승인 메모");
+  await expect(history3).not.toContainText("철회 사유");
+});

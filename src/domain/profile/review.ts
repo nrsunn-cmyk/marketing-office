@@ -77,6 +77,8 @@ export interface ProfileDecision {
   seq: number;
   createdAt: string;
   actorId: string;
+  /** 결정할 때 남긴 메모(없으면 null). 텍스트로만 표시한다 */
+  comment: string | null;
 }
 
 /** 버전별 마지막 결정(seq 가 가장 큰 것) */

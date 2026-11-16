@@ -44,7 +44,7 @@ describe("profileHashInput", () => {
 });
 
 describe("결정 상태", () => {
-  const d = (versionId: string, decision: string, seq: number): ProfileDecision => ({ versionId, decision, seq, createdAt: "2026-11-17T00:00:00Z", actorId: "u" });
+  const d = (versionId: string, decision: string, seq: number): ProfileDecision => ({ versionId, decision, seq, createdAt: "2026-11-17T00:00:00Z", actorId: "u", comment: null });
   it("버전별 마지막 결정(seq 최대)으로 상태를 정한다", () => {
     const m = lastDecisions([d("a", "approved", 1), d("b", "approved", 2), d("a", "revoked", 3), d("b", "revoked", 1)]);
     expect(profileStatusOf(m.get("a"))).toBe("revoked");

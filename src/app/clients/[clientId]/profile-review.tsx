@@ -121,7 +121,15 @@ export function ProfileReview({
             <ul className={styles.list}>
               {history.map((d) => (
                 <li key={d.seq} className={styles.listItem}>
-                  <span>{d.decision === "approved" ? "승인" : d.decision === "revoked" ? "승인 철회" : d.decision}</span>
+                  <span>
+                    {d.decision === "approved" ? "승인" : d.decision === "revoked" ? "승인 철회" : d.decision}
+                    {d.comment?.trim() && (
+                      // 결정별로 이름을 나눠 승인 메모와 철회 사유를 섞지 않는다. 줄바꿈은 보존하고 텍스트로만 출력한다.
+                      <span style={{ display: "block", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                        {d.decision === "revoked" ? "철회 사유" : "승인 메모"}: {d.comment.trim()}
+                      </span>
+                    )}
+                  </span>
                   <span className={styles.muted}>
                     {d.actorId === userId ? "본인" : "다른 사용자"} · {formatDateTimeIn(d.createdAt, timeZone)}
                   </span>
