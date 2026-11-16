@@ -1,0 +1,17 @@
+{
+  "ok": false,
+  "issues": [
+    {
+      "path": "sections.audiences.inferences.0",
+      "message": "Unrecognized key: \"rational\""
+    },
+    {
+      "path": "sections",
+      "message": "Unrecognized key: \"positionning\""
+    },
+    {
+      "path": "unknowns.0",
+      "message": "Unrecognized key: \"questions\""
+    }
+  ]
+}

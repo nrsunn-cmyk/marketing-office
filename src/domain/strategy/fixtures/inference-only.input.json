@@ -1,0 +1,24 @@
+{
+  "templateVersion": "strategy-template@1",
+  "projectId": "00000000-0000-4000-8000-00000000a003",
+  "profile": {
+    "id": "00000000-0000-4000-8000-00000000b003",
+    "version": 4,
+    "projectId": "00000000-0000-4000-8000-00000000a003",
+    "clientId": null,
+    "projectKind": "personal"
+  },
+  "sections": {
+    "goals": { "facts": [], "inferences": [{ "text": "구독자를 늘리는 것이 목표일 것이다", "rationale": "개인 채널이라서" }] },
+    "offers": {
+      "facts": [{ "text": "합성 상품: 온라인 강의 1종", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b003", "version": 4 }] }],
+      "inferences": []
+    },
+    "audiences": {
+      "facts": [{ "text": "합성 고객: 취업 준비생", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b003", "version": 4 }] }],
+      "inferences": []
+    },
+    "positioning": { "facts": [], "inferences": [{ "text": "실무자 관점의 쉬운 설명으로 기억될 것이다" }] }
+  },
+  "unknowns": [{ "topic": "강의 가격", "question": "강의 가격은 정했나요?" }]
+}

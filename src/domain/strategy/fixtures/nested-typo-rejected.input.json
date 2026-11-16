@@ -1,0 +1,19 @@
+{
+  "templateVersion": "strategy-template@1",
+  "projectId": "00000000-0000-4000-8000-00000000a005",
+  "profile": {
+    "id": "00000000-0000-4000-8000-00000000b005",
+    "version": 1,
+    "projectId": "00000000-0000-4000-8000-00000000a005",
+    "clientId": null,
+    "projectKind": "personal"
+  },
+  "sections": {
+    "positionning": {
+      "facts": [{ "text": "합성 포지셔닝: 오타 난 영역 이름", "sources": [{ "kind": "url", "url": "https://example.com/synthetic" }] }],
+      "inferences": []
+    },
+    "audiences": { "facts": [], "inferences": [{ "text": "합성 추정", "rational": "필드 이름 오타" }] }
+  },
+  "unknowns": [{ "topic": "합성 주제", "questions": "필드 이름 오타" }]
+}

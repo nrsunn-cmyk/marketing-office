@@ -1,0 +1,13 @@
+{
+  "ok": false,
+  "issues": [
+    {
+      "path": "profile.projectId",
+      "message": "다른 프로젝트의 프로필은 참조할 수 없습니다."
+    },
+    {
+      "path": "sections.offers.facts.0.sources.0.projectId",
+      "message": "다른 프로젝트의 자료는 출처로 쓸 수 없습니다."
+    }
+  ]
+}

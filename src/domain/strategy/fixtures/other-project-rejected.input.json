@@ -1,0 +1,17 @@
+{
+  "templateVersion": "strategy-template@1",
+  "projectId": "00000000-0000-4000-8000-00000000a004",
+  "profile": {
+    "id": "00000000-0000-4000-8000-00000000b004",
+    "version": 1,
+    "projectId": "00000000-0000-4000-8000-00000000a999",
+    "clientId": "00000000-0000-4000-8000-00000000c004",
+    "projectKind": "client"
+  },
+  "sections": {
+    "offers": {
+      "facts": [{ "text": "합성 상품: 다른 프로젝트 자료를 근거로 적음", "sources": [{ "kind": "asset", "assetId": "00000000-0000-4000-8000-00000000d004", "projectId": "00000000-0000-4000-8000-00000000a999" }] }],
+      "inferences": []
+    }
+  }
+}

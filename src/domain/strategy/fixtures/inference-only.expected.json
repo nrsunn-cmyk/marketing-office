@@ -1,0 +1,130 @@
+{
+  "ok": true,
+  "result": {
+    "templateVersion": "strategy-template@1",
+    "projectId": "00000000-0000-4000-8000-00000000a003",
+    "profileRef": {
+      "id": "00000000-0000-4000-8000-00000000b003",
+      "version": 4
+    },
+    "sections": {
+      "goals": {
+        "label": "목표",
+        "status": "inference_only",
+        "factIds": [],
+        "inferenceIds": [
+          "goals-inference-1"
+        ]
+      },
+      "offers": {
+        "label": "상품·제안",
+        "status": "filled",
+        "factIds": [
+          "offers-fact-1"
+        ],
+        "inferenceIds": []
+      },
+      "audiences": {
+        "label": "타깃 고객",
+        "status": "filled",
+        "factIds": [
+          "audiences-fact-1"
+        ],
+        "inferenceIds": []
+      },
+      "positioning": {
+        "label": "포지셔닝",
+        "status": "inference_only",
+        "factIds": [],
+        "inferenceIds": [
+          "positioning-inference-1"
+        ]
+      },
+      "problems": {
+        "label": "고객 문제",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      },
+      "opportunities": {
+        "label": "기회",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      },
+      "priorities": {
+        "label": "우선순위",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      }
+    },
+    "facts": [
+      {
+        "id": "offers-fact-1",
+        "section": "offers",
+        "text": "합성 상품: 온라인 강의 1종",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileId": "00000000-0000-4000-8000-00000000b003",
+            "version": 4
+          }
+        ]
+      },
+      {
+        "id": "audiences-fact-1",
+        "section": "audiences",
+        "text": "합성 고객: 취업 준비생",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileId": "00000000-0000-4000-8000-00000000b003",
+            "version": 4
+          }
+        ]
+      }
+    ],
+    "inferences": [
+      {
+        "id": "goals-inference-1",
+        "section": "goals",
+        "text": "구독자를 늘리는 것이 목표일 것이다",
+        "rationale": "개인 채널이라서"
+      },
+      {
+        "id": "positioning-inference-1",
+        "section": "positioning",
+        "text": "실무자 관점의 쉬운 설명으로 기억될 것이다",
+        "rationale": null
+      }
+    ],
+    "unknowns": [
+      {
+        "id": "unknown-1",
+        "topic": "강의 가격",
+        "question": "강의 가격은 정했나요?",
+        "origin": "input",
+        "section": null
+      }
+    ],
+    "questions": [
+      {
+        "id": "question-goals-evidence",
+        "section": "goals",
+        "reason": "inference_only",
+        "question": "추정만 있습니다. 확인할 수 있는 근거(출처)가 있나요?"
+      },
+      {
+        "id": "question-positioning-evidence",
+        "section": "positioning",
+        "reason": "inference_only",
+        "question": "추정만 있습니다. 확인할 수 있는 근거(출처)가 있나요?"
+      }
+    ],
+    "generator": {
+      "mode": "template",
+      "templateVersion": "strategy-template@1"
+    }
+  }
+}

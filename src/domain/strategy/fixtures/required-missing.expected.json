@@ -1,0 +1,120 @@
+{
+  "ok": true,
+  "result": {
+    "templateVersion": "strategy-template@1",
+    "projectId": "00000000-0000-4000-8000-00000000a002",
+    "profileRef": {
+      "id": "00000000-0000-4000-8000-00000000b002",
+      "version": 1
+    },
+    "sections": {
+      "goals": {
+        "label": "목표",
+        "status": "filled",
+        "factIds": [
+          "goals-fact-1"
+        ],
+        "inferenceIds": []
+      },
+      "offers": {
+        "label": "상품·제안",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      },
+      "audiences": {
+        "label": "타깃 고객",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      },
+      "positioning": {
+        "label": "포지셔닝",
+        "status": "filled",
+        "factIds": [
+          "positioning-fact-1"
+        ],
+        "inferenceIds": []
+      },
+      "problems": {
+        "label": "고객 문제",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      },
+      "opportunities": {
+        "label": "기회",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      },
+      "priorities": {
+        "label": "우선순위",
+        "status": "missing",
+        "factIds": [],
+        "inferenceIds": []
+      }
+    },
+    "facts": [
+      {
+        "id": "goals-fact-1",
+        "section": "goals",
+        "text": "합성 목표: 자체 브랜드 소개 자료를 정리한다",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileId": "00000000-0000-4000-8000-00000000b002",
+            "version": 1
+          }
+        ]
+      },
+      {
+        "id": "positioning-fact-1",
+        "section": "positioning",
+        "text": "합성 포지셔닝: 지역 밀착형 상담",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileId": "00000000-0000-4000-8000-00000000b002",
+            "version": 1
+          }
+        ]
+      }
+    ],
+    "inferences": [],
+    "unknowns": [
+      {
+        "id": "unknown-offers",
+        "topic": "상품·제안",
+        "question": "고객에게 제안할 상품·서비스는 무엇인가요?",
+        "origin": "missing_section",
+        "section": "offers"
+      },
+      {
+        "id": "unknown-audiences",
+        "topic": "타깃 고객",
+        "question": "주로 누구에게 알리려고 하나요?",
+        "origin": "missing_section",
+        "section": "audiences"
+      }
+    ],
+    "questions": [
+      {
+        "id": "question-offers-missing",
+        "section": "offers",
+        "reason": "missing_section",
+        "question": "고객에게 제안할 상품·서비스는 무엇인가요?"
+      },
+      {
+        "id": "question-audiences-missing",
+        "section": "audiences",
+        "reason": "missing_section",
+        "question": "주로 누구에게 알리려고 하나요?"
+      }
+    ],
+    "generator": {
+      "mode": "template",
+      "templateVersion": "strategy-template@1"
+    }
+  }
+}

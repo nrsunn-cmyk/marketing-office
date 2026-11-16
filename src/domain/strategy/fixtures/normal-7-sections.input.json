@@ -1,0 +1,45 @@
+{
+  "templateVersion": "strategy-template@1",
+  "projectId": "00000000-0000-4000-8000-00000000a001",
+  "profile": {
+    "id": "00000000-0000-4000-8000-00000000b001",
+    "version": 2,
+    "projectId": "00000000-0000-4000-8000-00000000a001",
+    "clientId": "00000000-0000-4000-8000-00000000c001",
+    "projectKind": "client"
+  },
+  "sections": {
+    "goals": {
+      "facts": [{ "text": "합성 목표: 3개월 안에 상담 문의를 늘린다", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b001", "version": 2 }] }],
+      "inferences": []
+    },
+    "offers": {
+      "facts": [{ "text": "합성 상품: 무료 진단 체크리스트와 유료 세팅 상담", "sources": [{ "kind": "asset", "assetId": "00000000-0000-4000-8000-00000000d001", "projectId": "00000000-0000-4000-8000-00000000a001" }] }],
+      "inferences": []
+    },
+    "audiences": {
+      "facts": [{ "text": "합성 고객: 1인 학원 원장", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b001", "version": 2 }] }],
+      "inferences": [{ "text": "저녁 시간에 자료를 볼 가능성이 높다", "rationale": "수업이 낮에 몰려 있어서" }]
+    },
+    "positioning": {
+      "facts": [{ "text": "합성 포지셔닝: 자료만 넣으면 이어서 처리되는 업무실", "sources": [{ "kind": "url", "url": "https://example.com/synthetic-about" }] }],
+      "inferences": []
+    },
+    "problems": {
+      "facts": [{ "text": "합성 문제: 고객 자료가 여러 곳에 흩어져 있다", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b001", "version": 2 }] }],
+      "inferences": []
+    },
+    "opportunities": {
+      "facts": [],
+      "inferences": [{ "text": "지역 기반 소규모 업체의 디지털 전환 수요가 있을 것이다" }]
+    },
+    "priorities": {
+      "facts": [{ "text": "합성 우선순위: 무료 진단 자료부터 만든다", "sources": [{ "kind": "asset", "assetId": "00000000-0000-4000-8000-00000000d001", "projectId": "00000000-0000-4000-8000-00000000a001" }] }],
+      "inferences": []
+    }
+  },
+  "unknowns": [
+    { "topic": "경쟁 업체 가격대", "question": "비슷한 서비스의 가격은 어느 정도인가요?" },
+    { "topic": "상담 가능 시간" }
+  ]
+}

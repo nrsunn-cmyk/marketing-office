@@ -1,0 +1,23 @@
+{
+  "templateVersion": "strategy-template@1",
+  "projectId": "00000000-0000-4000-8000-00000000a002",
+  "profile": {
+    "id": "00000000-0000-4000-8000-00000000b002",
+    "version": 1,
+    "projectId": "00000000-0000-4000-8000-00000000a002",
+    "clientId": null,
+    "projectKind": "internal_brand"
+  },
+  "sections": {
+    "goals": {
+      "facts": [{ "text": "합성 목표: 자체 브랜드 소개 자료를 정리한다", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b002", "version": 1 }] }],
+      "inferences": []
+    },
+    "offers": { "facts": [], "inferences": [] },
+    "positioning": {
+      "facts": [{ "text": "합성 포지셔닝: 지역 밀착형 상담", "sources": [{ "kind": "profile", "profileId": "00000000-0000-4000-8000-00000000b002", "version": 1 }] }],
+      "inferences": []
+    }
+  },
+  "unknowns": []
+}
