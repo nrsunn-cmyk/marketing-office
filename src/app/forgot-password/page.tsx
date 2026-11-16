@@ -32,7 +32,7 @@ async function ForgotBody({ searchParams }: { searchParams: PageProps<"/forgot-p
     return (
       <p className={s.notice} role="status">
         가입된 이메일이면 비밀번호 재설정 메일을 보냈습니다. 메일의 링크를 누르면 새 비밀번호를 정할 수 있습니다. 링크는 1시간
-        동안 한 번만 쓸 수 있고, 요청한 브라우저에서 열어야 합니다.
+        동안 한 번만 쓸 수 있습니다. 링크가 열리지 않으면 이 브라우저에서 다시 열어 보거나 새 링크를 받아 주세요.
       </p>
     );
   }
