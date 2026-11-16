@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { MACHINES } from "@/domain/state";
 import { LOGO_TEMPLATE_VERSION } from "@/domain/logo";
 import { QUOTE_TEMPLATE_VERSION } from "@/domain/quote";
+import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
 import {
   addVersion,
   asUser,
@@ -53,7 +54,7 @@ describe("마이그레이션과 도메인 코드의 일치", () => {
 
   it("템플릿 키가 도메인 템플릿 버전 상수와 같다 (C10)", async () => {
     const keys = (await db.query<{ key: string }>("select key from templates order by key")).rows.map((r) => r.key);
-    expect(keys).toEqual([LOGO_TEMPLATE_VERSION, QUOTE_TEMPLATE_VERSION].sort());
+    expect(keys).toEqual([LOGO_TEMPLATE_VERSION, QUOTE_TEMPLATE_VERSION, STRATEGY_TEMPLATE_VERSION].sort());
   });
 });
 
