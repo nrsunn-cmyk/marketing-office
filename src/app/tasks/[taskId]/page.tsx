@@ -234,8 +234,13 @@ function ResultView({
 }
 
 function VersionHistory({ detail, shownId }: { detail: TaskDetail; shownId: string | null }) {
+  // 버전마다 가장 최근 결정(승인 기록은 최신순으로 오므로 뒤집어 차례로 덮어쓴다)
   const decisions = new Map<string, string>();
-  for (const a of [...detail.approvals].reverse()) decisions.set(a.artifact_version_id, a.decision);
+  const latestComment = new Map<string, string>();
+  for (const a of [...detail.approvals].reverse()) {
+    decisions.set(a.artifact_version_id, a.decision);
+    latestComment.set(a.artifact_version_id, a.comment?.trim() ?? "");
+  }
   return (
     <section className={styles.section} aria-labelledby="history">
       <h2 id="history" className={styles.subtitle}>
@@ -248,6 +253,13 @@ function VersionHistory({ detail, shownId }: { detail: TaskDetail; shownId: stri
               {v.id === shownId ? <strong>{v.version}번 버전 (보는 중)</strong> : <Link href={`?v=${v.version}`}>{v.version}번 버전</Link>}
               {" · "}
               <span className={styles.muted}>{GENERATOR_LABELS[v.generator] ?? v.generator}</span>
+              {/* 수정 요청 때 남긴 메모(BUG-CAND-04). 가장 최근 결정이 수정 요청이고 메모가 있을 때만. 텍스트로만 그린다 */}
+              {decisions.get(v.id) === "changes_requested" && latestComment.get(v.id) && (
+                <>
+                  <br />
+                  <span className={styles.muted}>수정할 점: {latestComment.get(v.id)}</span>
+                </>
+              )}
             </span>
             <span className={styles.row}>
               {detail.artifact?.approved_version_id === v.id && <span className={styles.badge}>승인본</span>}
