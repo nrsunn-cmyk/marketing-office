@@ -11,6 +11,7 @@ import {
   updateClientAction,
 } from "@/features/clients/actions";
 import { getClient, listProfileVersions } from "@/features/clients/server";
+import { listProfileDecisions } from "@/features/profiles/server";
 import { listProjects } from "@/features/projects/server";
 import { requireWorkspace } from "@/server/auth/session";
 import { ActionForm } from "../../_components/action-form";
@@ -18,32 +19,42 @@ import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
 import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
+import { ProfileReview } from "./profile-review";
 
 export const metadata: Metadata = { title: "고객 작업실 · 마케팅 업무실" };
 
-export default function ClientPage({ params }: PageProps<"/clients/[clientId]">) {
+export default function ClientPage({ params, searchParams }: PageProps<"/clients/[clientId]">) {
   return (
     <>
       <AppNav />
       <main className={`${styles.page} ${styles.wide}`}>
       <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
-        <ClientWorkspace params={params} />
+        <ClientWorkspace params={params} searchParams={searchParams} />
       </Suspense>
       </main>
     </>
   );
 }
 
-async function ClientWorkspace({ params }: { params: PageProps<"/clients/[clientId]">["params"] }) {
+async function ClientWorkspace({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/clients/[clientId]">["params"];
+  searchParams: PageProps<"/clients/[clientId]">["searchParams"];
+}) {
   const { clientId } = await params;
   if (!z.uuid().safeParse(clientId).success) notFound();
   const client = await getClient(clientId);
   if (!client) notFound();
-  const [versions, projects, { workspace }] = await Promise.all([
+  const [versions, projects, { workspace, user }, decisions, sp] = await Promise.all([
     listProfileVersions(clientId),
     listProjects({ clientId }),
     requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
+    listProfileDecisions(clientId),
+    searchParams,
   ]);
+  const pv = typeof sp.pv === "string" && /^\d{1,6}$/.test(sp.pv) ? Number(sp.pv) : null;
   const current = versions[0];
 
   return (
@@ -127,6 +138,15 @@ async function ClientWorkspace({ params }: { params: PageProps<"/clients/[client
           </details>
         )}
       </section>
+
+      <ProfileReview
+        clientId={client.id}
+        versions={versions}
+        decisions={decisions}
+        selectedVersion={pv}
+        userId={user.userId}
+        timeZone={workspace.timezone}
+      />
 
       <section className={styles.section} aria-labelledby="projects">
         <h2 id="projects" className={styles.subtitle}>
