@@ -131,6 +131,7 @@ test("P2-c: 승인된 프로필만 선택 가능, 같은 키 이중 제출은 �
   await page.getByRole("button", { name: "작업 시작" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "마케팅 전략" })).toBeVisible();
   taskUrl = page.url();
+  await expect(page.getByRole("link", { name: "결과 바로 보기" })).toHaveCount(0); // 결과가 없으면 링크 숨김
 
   const profile = editor(page).getByLabel("기준 회사 프로필 버전 (필수)");
   await expect(profile.locator("option", { hasText: "1번 버전 · 승인됨" })).toBeEnabled();
@@ -268,4 +269,72 @@ test.afterAll(async () => {
   const admin = adminClient();
   const del = await admin.from("signup_allowlist").delete().eq("email", OTHER_EMAIL).select("email");
   test.info().annotations.push({ type: "정리", description: `허용 목록 행 삭제 ${del.data?.length ?? 0}건(${OTHER_EMAIL.replace(/^(.{12}).*@/, "$1…@")})` });
+});
+
+test("UI-GAP: 결과 바로 보기(1280·390·360, 키보드 포커스·하단 메뉴 비겹침)와 전략 JSON 복사(최신·이전 버전, 수동 대안)", async ({ page, context }) => {
+  await loginWithWorkspace(page);
+  // 이전·최신 버전을 만든다: 1번 내용을 바탕으로 사실 문장만 바꿔 직접 고치기 RPC 로 2번 저장(본인 권한)
+  const taskId = taskUrl.split("/tasks/")[1]!;
+  const art = (await sb.from("artifacts").select("id, revision, current_draft_version_id").eq("task_id", taskId).single()).data!;
+  const cur = (await sb.from("artifact_versions").select("version, content").eq("id", art.current_draft_version_id!).single()).data!;
+  const content = structuredClone(cur.content) as { facts: Array<{ text: string }> };
+  const before = content.facts[0]!.text;
+  const edited = `${before} (UI-GAP 수정)`;
+  content.facts[0]!.text = edited;
+  const saved = await sb.rpc("save_strategy_manual_version", { p_artifact_id: art.id, p_expected_revision: art.revision, p_content: content });
+  expect(saved.error).toBeNull();
+  const latest = cur.version + 1;
+
+  // 결과 바로 보기: 폭마다 링크가 입력 폼보다 앞(탭 순서 = 화면 순서), Enter 로 결과 제목에 포커스, 하단 메뉴에 안 가림
+  for (const width of [1280, 390, 360]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(taskUrl);
+    const link = page.getByRole("link", { name: "결과 바로 보기" });
+    await expect(link).toBeVisible();
+    expect(await link.evaluate((a) => !!(a.compareDocumentPosition(document.getElementById("strategy-input")!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+    await link.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#strategy-result")).toBeFocused();
+    const covered = await page.locator("#strategy-result").evaluate((h) => {
+      const r = h.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + r.height / 2);
+      return { inView: r.top >= 0 && r.bottom <= window.innerHeight, hitIsHeading: !!hit && (hit === h || h.contains(hit)) };
+    });
+    expect(covered, `폭 ${width}`).toEqual({ inView: true, hitIsHeading: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `폭 ${width} 가로 넘침`).toBe(true);
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  // JSON 복사: 보고 있는 버전의 전략 데이터(2칸 들여쓰기), DB·감사·사용자 식별 정보 없음
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  const copyOf = async (url: string) => {
+    await page.goto(url);
+    await page.getByRole("button", { name: "전략 데이터(JSON) 복사" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "데이터를 복사했습니다" })).toBeVisible();
+    // 앱은 LF 로 쓴다. Windows 클립보드는 읽을 때 CRLF 로 돌려주므로 줄바꿈만 맞춰 비교한다
+    const text = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n");
+    expect(text).toBe(await page.getByTestId("strategy-json").textContent());
+    expect(text.startsWith('{\n  "')).toBe(true); // 2칸 들여쓰기
+    expect(text).not.toMatch(/workspace_id|created_by|actor_id|artifact|input_snapshot|"seq"|user/i);
+    return JSON.parse(text) as { templateVersion: string; projectId: string; sections: { goals: { facts: Array<{ text: string; sources: unknown[] }> } } };
+  };
+  const newest = await copyOf(taskUrl);
+  expect(newest.templateVersion).toBe("strategy-template@1");
+  expect(newest.sections.goals.facts[0]!.text).toBe(edited);
+  expect(newest.sections.goals.facts[0]!.sources).toEqual([{ kind: "profile", profileId: versionIds[1], version: 1 }]);
+  const older = await copyOf(`${taskUrl}?v=${cur.version}`);
+  expect(older.sections.goals.facts[0]!.text).toBe(before);
+  expect(latest).toBe(cur.version + 1);
+
+  // 클립보드 거부: 수동 복사 안내 + JSON 상자를 펼쳐 글 선택
+  await page.goto(taskUrl);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: () => Promise.reject(new Error("거부")) }, configurable: true });
+  });
+  await page.getByRole("button", { name: "전략 데이터(JSON) 복사" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Ctrl+C" })).toBeVisible();
+  await expect(page.getByTestId("strategy-json")).toBeVisible();
+  // Windows 브라우저는 선택 글을 꺼낼 때 줄바꿈을 CRLF 로 돌려준다. 줄바꿈만 맞춰 비교한다
+  const selected = (await page.evaluate(() => window.getSelection()?.toString() ?? "")).replace(/\r\n/g, "\n");
+  expect(selected).toBe(await page.getByTestId("strategy-json").textContent());
 });

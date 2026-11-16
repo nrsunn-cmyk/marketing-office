@@ -110,3 +110,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* P2-STRATEGY-UI-GAP-01 */
+.copyBox {
+  margin: var(--space-3) 0;
+}
+.skipLink {
+  display: inline-block;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-height: 44px;
+  line-height: 28px;
+}
+/* 결과 제목으로 이동했을 때 상단 메뉴에 가리지 않게 */
+.resultTarget {
+  scroll-margin-top: var(--space-12);
+}
+.resultTarget:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}

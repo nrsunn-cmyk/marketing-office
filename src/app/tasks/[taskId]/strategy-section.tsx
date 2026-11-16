@@ -9,6 +9,7 @@ import type { TaskDetail, VersionInfo } from "@/features/tasks/server";
 import { ActionForm } from "../../_components/action-form";
 import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
+import { SkipToResult, StrategyJsonCopy } from "./strategy-actions";
 import { StrategyEditor } from "./strategy-editor";
 import s from "./strategy.module.css";
 
@@ -36,6 +37,9 @@ export async function StrategySection({
   }
   const firstApproved = ctx.profiles.find((p) => p.status === "approved")?.id ?? "";
   return (
+    <>
+    {/* 결과가 있을 때만: 긴 입력 폼 앞에서 결과로 바로 간다(DOM·탭 순서 = 화면 순서) */}
+    {shown && <SkipToResult />}
     <div className={styles.grid2}>
       <section className={styles.section} aria-labelledby="strategy-input">
         <h2 id="strategy-input" className={styles.subtitle}>
@@ -64,6 +68,7 @@ export async function StrategySection({
         )}
       </div>
     </div>
+    </>
   );
 }
 
@@ -94,7 +99,7 @@ function StrategyResult({
   return (
     <section className={styles.section} aria-labelledby="strategy-result">
       <div className={styles.header}>
-        <h2 id="strategy-result" className={styles.subtitle}>
+        <h2 id="strategy-result" className={`${styles.subtitle} ${s.resultTarget}`} tabIndex={-1}>
           전략 {version.version}번 버전
         </h2>
         <span className={styles.row}>
@@ -113,6 +118,8 @@ function StrategyResult({
           이 경우 전략을 승인해도 되는지는 아직 정하지 않았습니다(관리자 결정 대기).
         </p>
       )}
+
+      {input && <StrategyJsonCopy json={JSON.stringify(input, null, 2)} versionLabel={`전략 ${version.version}번 버전`} />}
 
       <StrategyViewBlock view={view} assets={assets} />
 
