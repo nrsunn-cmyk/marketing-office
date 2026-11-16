@@ -136,6 +136,11 @@
 
 /* 휴대폰: 메뉴를 화면 아래 고정 탭바로 (AGY 04 §2.1) */
 @media (max-width: 640px) {
+  .appHeader {
+    /* backdrop-filter가 fixed 자손(.nav)의 containing block을 형성하여 하단바가 헤더에 갇히는 결함(BUG-CAND02) 방지 */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
   .appHeaderInner {
     justify-content: space-between;
   }
