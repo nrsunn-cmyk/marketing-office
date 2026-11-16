@@ -17,8 +17,9 @@ const ASSET = "55555555-5555-4555-8555-555555555555";
 const profile = { id: PROFILE, version: 3, projectId: PROJECT, clientId: CLIENT, projectKind: "client" as const };
 const fromProfile = { kind: "profile" as const, profileId: PROFILE, version: 3 };
 
+/** 매번 깊은 복사본을 돌려준다(시험끼리 공용 상수 profile·fromProfile 을 오염시키지 않게) */
 function fullInput() {
-  return {
+  return structuredClone({
     templateVersion: STRATEGY_TEMPLATE_VERSION,
     projectId: PROJECT,
     profile,
@@ -35,7 +36,7 @@ function fullInput() {
       priorities: { facts: [], inferences: [] },
     },
     unknowns: [{ topic: "경쟁 꽃집 가격대", question: "주변 꽃집 가격은 얼마인가요?" }, { topic: "배송 가능 지역" }],
-  };
+  });
 }
 const ok = (raw: unknown): StrategyDraft => {
   const r = buildStrategyDraft(raw);
@@ -219,6 +220,33 @@ describe("프로젝트·버전 경계(입력 정합. DB 권한 보장 아님)", 
 
   it("모르는 필드(예: 점수)는 거절한다(strict)", () => {
     expect(issuesOf({ ...fullInput(), score: 87 }).some((i) => /score|인식할 수 없|Unrecognized/i.test(i.message))).toBe(true);
+  });
+});
+
+describe("중첩 위치의 모르는 키·오타는 조용히 버리지 않고 거절한다", () => {
+  type Raw = ReturnType<typeof fullInput>;
+  const put = (o: object, k: string, v: unknown) => ((o as Record<string, unknown>)[k] = v);
+  it.each<[string, string, (r: Raw) => void]>([
+    ["profile", "profile", (r) => put(r.profile, "aproved", true)],
+    ["sections(영역 이름 오타 goal)", "sections", (r) => put(r.sections, "goal", { facts: [], inferences: [] })],
+    ["영역(facts 오타 fact)", "sections.goals", (r) => put(r.sections.goals, "fact", [])],
+    ["사실", "sections.goals.facts.0", (r) => put(r.sections.goals.facts[0]!, "confidence", 0.9)],
+    ["출처(profile)", "sections.goals.facts.0.sources.0", (r) => put(r.sections.goals.facts[0]!.sources[0]!, "note", "x")],
+    ["출처(asset)", "sections.offers.facts.0.sources.0", (r) => put(r.sections.offers.facts[0]!.sources[0]!, "assetID", ASSET)],
+    ["출처(url)", "sections.positioning.facts.0.sources.0", (r) => put(r.sections.positioning.facts[0]!.sources[0]!, "title", "소개")],
+    ["추정(rationale 오타)", "sections.audiences.inferences.0", (r) => put(r.sections.audiences.inferences[0]!, "rational", "이유")],
+    ["미확인(question 오타)", "unknowns.0", (r) => put(r.unknowns[0]!, "questions", "질문")],
+  ])("%s", (_n, path, mutate) => {
+    const raw = fullInput();
+    mutate(raw);
+    expect(issuesOf(raw)).toContainEqual(expect.objectContaining({ path }));
+  });
+
+  it("영역 이름을 오타 내면 내용이 유실되지 않고 입력 전체가 거절된다(원래 영역이 빈 영역으로 바뀌어 통과하지 않음)", () => {
+    const raw = fullInput() as unknown as { sections: Record<string, unknown> };
+    raw.sections.positionning = raw.sections.positioning;
+    delete raw.sections.positioning;
+    expect(buildStrategyDraft(raw).ok).toBe(false);
   });
 });
 

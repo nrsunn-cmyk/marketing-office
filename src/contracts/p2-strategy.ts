@@ -5,7 +5,8 @@
  * - 7개 영역(goals·offers·audiences·positioning·problems·opportunities·priorities)마다
  *   사실(facts: 출처 1개 이상 필수)과 추정(inferences: 가설)을 따로 받는다. 미확인(unknowns)은 별도 목록이다.
  *   (AGY PLAN-P2-UI-02 §3·§4.1 의 사실/미확인/추정 분리와 필드 이름에 맞춤)
- * - 점수·진단 숫자 필드는 없다.
+ * - 점수·진단 숫자 필드는 없다. 모든 입력 객체(맨 위·profile·sections·각 영역·사실·출처·추정·미확인)는
+ *   strictObject 라서 모르는 키(오타 포함)를 조용히 버리지 않고 거절한다. 의도적으로 허용하는 키는 없다.
  * - 이 계약의 경계 검사(같은 프로젝트·같은 프로필 버전)는 "입력이 서로 맞는지"만 본다.
  *   그 프로필·자료가 실제로 이 사용자 업무실의 것인지, 프로필이 승인됐는지는 DB(RLS·RPC)가 따로 확인해야 한다.
  *   이 계약을 통과했다고 DB 권한이 보장되지 않는다.
@@ -36,7 +37,7 @@ const text = (max: number) =>
 
 /** 승인된 회사 프로필 버전 참조. 고객 프로젝트만 고객 ID 가 있다(R07, projectInputSchema 와 같은 규칙) */
 export const approvedProfileRefSchema = z
-  .object({
+  .strictObject({
     id: z.uuid("프로필 ID 형식이 올바르지 않습니다."),
     version: z.number().int("프로필 버전은 정수여야 합니다.").min(1, "프로필 버전은 1 이상이어야 합니다."),
     projectId: z.uuid("프로젝트 ID 형식이 올바르지 않습니다."),
@@ -51,13 +52,13 @@ export type ApprovedProfileRef = z.infer<typeof approvedProfileRefSchema>;
 
 /** 사실의 출처. 외부 수집은 하지 않으며, 사용자가 적은 출처를 그대로 기록만 한다 */
 export const strategySourceSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("profile"), profileId: z.uuid(), version: z.number().int().min(1) }),
-  z.object({ kind: z.literal("asset"), assetId: z.uuid(), projectId: z.uuid() }),
-  z.object({ kind: z.literal("url"), url: z.url({ protocol: /^https?$/ }).max(2000) }),
+  z.strictObject({ kind: z.literal("profile"), profileId: z.uuid(), version: z.number().int().min(1) }),
+  z.strictObject({ kind: z.literal("asset"), assetId: z.uuid(), projectId: z.uuid() }),
+  z.strictObject({ kind: z.literal("url"), url: z.url({ protocol: /^https?$/ }).max(2000) }),
 ]);
 export type StrategySource = z.infer<typeof strategySourceSchema>;
 
-export const strategyFactSchema = z.object({
+export const strategyFactSchema = z.strictObject({
   text: text(STRATEGY_LIMITS.textMax),
   sources: z
     .array(strategySourceSchema)
@@ -65,34 +66,33 @@ export const strategyFactSchema = z.object({
     .max(STRATEGY_LIMITS.sourcesPerFact),
 });
 
-export const strategyInferenceSchema = z.object({
+export const strategyInferenceSchema = z.strictObject({
   text: text(STRATEGY_LIMITS.textMax),
   /** 왜 그렇게 추정했는지(선택). 사실로 바뀌지 않는다 */
   rationale: text(STRATEGY_LIMITS.textMax).optional(),
 });
 
-export const strategyUnknownSchema = z.object({
+export const strategyUnknownSchema = z.strictObject({
   topic: text(STRATEGY_LIMITS.topicMax),
   question: text(STRATEGY_LIMITS.questionMax).optional(),
 });
 
-const sectionSchema = z.object({
+const sectionSchema = z.strictObject({
   facts: z.array(strategyFactSchema).max(STRATEGY_LIMITS.itemsPerKind).default([]),
   inferences: z.array(strategyInferenceSchema).max(STRATEGY_LIMITS.itemsPerKind).default([]),
 });
 const emptySection = () => ({ facts: [], inferences: [] });
 
 export const strategyInputSchema = z
-  .object({
+  .strictObject({
     templateVersion: z.literal(STRATEGY_TEMPLATE_VERSION, { error: `템플릿 버전은 ${STRATEGY_TEMPLATE_VERSION} 이어야 합니다.` }),
     projectId: z.uuid("프로젝트 ID 형식이 올바르지 않습니다."),
     profile: approvedProfileRefSchema,
     sections: z
-      .object(Object.fromEntries(STRATEGY_SECTIONS.map((s) => [s, sectionSchema.default(emptySection)])) as Record<StrategySection, z.ZodDefault<typeof sectionSchema>>)
+      .strictObject(Object.fromEntries(STRATEGY_SECTIONS.map((s) => [s, sectionSchema.default(emptySection)])) as Record<StrategySection, z.ZodDefault<typeof sectionSchema>>)
       .default(() => Object.fromEntries(STRATEGY_SECTIONS.map((s) => [s, emptySection()])) as Record<StrategySection, { facts: []; inferences: [] }>),
     unknowns: z.array(strategyUnknownSchema).max(STRATEGY_LIMITS.unknownsMax).default([]),
   })
-  .strict()
   .superRefine((v, ctx) => {
     // 입력끼리의 경계(같은 프로젝트·같은 프로필 버전). DB 권한 확인을 대신하지 않는다.
     if (v.profile.projectId !== v.projectId) {
