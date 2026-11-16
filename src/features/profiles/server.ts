@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { lastDecisions, profileHashInput, type ProfileDecision, type ProfileFields } from "@/domain/profile/review";
+import { profileHashInput, type ProfileDecision, type ProfileFields } from "@/domain/profile/review";
 import { strategyErrorFromDb } from "@/domain/strategy";
 import { requireWorkspace } from "@/server/auth/session";
 import { fail, ok, type Result } from "@/server/result";
@@ -28,8 +28,8 @@ export async function listProfileDecisions(clientId: string): Promise<ProfileDec
 /**
  * 프로필 버전 승인·철회. 서버에서 다시 확인하는 것:
  * - 버전이 이 업무실·이 고객의 것인지(RLS 조회), 화면에서 본 내용 해시와 DB 내용이 같은지(버전 불변 확인)
- * - 화면을 그릴 때의 마지막 결정(seq)이 지금도 같은지(이중 제출·다른 탭 결정 방지)
- * - 결정이 지금 상태에서 의미 있는지(이미 승인된 버전 재승인, 승인 안 된 버전 철회 금지)
+ * - 화면을 그릴 때의 마지막 결정(seq)을 RPC 에 넘겨, DB 가 잠근 뒤 같을 때만 기록(이중 제출·경쟁 차단, 20261117002000)
+ * - 전이 규칙(재승인·미승인 철회 금지)도 RPC 가 같은 트랜잭션에서 판정
  * 실제 기록은 정의자 RPC approve_company_profile_version 이 남긴다(행위자 = 로그인 본인).
  */
 export async function decideProfileVersion(input: {
@@ -55,22 +55,25 @@ export async function decideProfileVersion(input: {
     return fail("CONFLICT", "화면에서 본 프로필 내용과 저장된 내용이 다릅니다. 화면을 새로 고쳐 주세요.");
   }
 
-  const last = lastDecisions(await listProfileDecisions(input.clientId)).get(pv.id);
-  if ((last?.seq ?? 0) !== input.expectedLastSeq) {
-    return fail("CONFLICT", "그 사이 이 버전에 다른 결정이 기록되었습니다. 화면을 새로 고친 뒤 확인해 주세요.");
-  }
-  if (input.decision === "approved" && last?.decision === "approved") return fail("CONFLICT", "이미 승인된 버전입니다.");
-  if (input.decision === "revoked" && last?.decision !== "approved") return fail("VALIDATION", "승인된 버전만 철회할 수 있습니다.");
-
+  // 순번 확인·전이 규칙의 최종 판정은 RPC 가 같은 트랜잭션에서 행을 잠근 뒤 한다(20261117002000).
+  // 앱은 기대 순번을 그대로 넘기기만 하고, 미리 읽어 비교하지 않는다(앞선 검사로 경쟁을 덮지 않기 위해).
   const { error: rpcError } = await sb.rpc("approve_company_profile_version", {
     p_profile_version_id: pv.id,
     p_decision: input.decision,
+    p_expected_last_seq: input.expectedLastSeq,
     p_comment: input.comment ?? undefined,
   });
-  if (rpcError) {
-    const e = strategyErrorFromDb(rpcError.message);
-    if (e.code === "ERROR") console.error("[decideProfileVersion]", rpcError.code, rpcError.message);
-    return fail(e.code === "NOT_FOUND" ? "NOT_FOUND" : "VALIDATION", e.message);
-  }
+  if (rpcError) return fail(...profileDecisionError(rpcError.message));
   return ok({ status: input.decision });
+}
+
+/** 프로필 승인 RPC 오류 → (코드, 한국어 안내). DB 원문은 보이지 않는다 */
+export function profileDecisionError(message: string | null | undefined): ["CONFLICT" | "NOT_FOUND" | "VALIDATION" | "ERROR", string] {
+  const m = message ?? "";
+  if (/^\s*CONFLICT: 이미 승인된/.test(m)) return ["CONFLICT", "이미 승인된 버전입니다. 화면을 새로 고쳐 주세요."];
+  if (/^\s*CONFLICT:/.test(m)) return ["CONFLICT", "그 사이 이 버전에 다른 결정이 기록되었습니다. 화면을 새로 고친 뒤 확인해 주세요."];
+  if (/^\s*VALIDATION: 승인된 버전만/.test(m)) return ["VALIDATION", "승인된 버전만 철회할 수 있습니다."];
+  const e = strategyErrorFromDb(m);
+  if (e.code === "ERROR") console.error("[decideProfileVersion]", m);
+  return [e.code === "NOT_FOUND" ? "NOT_FOUND" : e.code === "ERROR" ? "ERROR" : "VALIDATION", e.code === "NOT_FOUND" ? "프로필 버전을 찾을 수 없습니다. 권한이 없거나 다른 고객의 프로필입니다." : e.message];
 }

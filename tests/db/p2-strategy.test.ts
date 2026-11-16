@@ -60,7 +60,12 @@ const newStrategyTask = (tx: Tx, f: Fixture = a, projectId = a.projectA) =>
     "insert into tasks (workspace_id, project_id, type, template_id, idempotency_key) values ($1, $2, 'strategy', $3, $4) returning id",
     [f.workspaceId, projectId, strategyTpl, newKey()],
   ).then((r) => r.id);
-const approveProfile = (tx: Tx, id: string, decision = "approved") => tx.query("select approve_company_profile_version($1, $2)", [id, decision]);
+/** 지금 마지막 결정 순번을 기대값으로 넘겨 승인·철회한다(20261117002000 원자 확인) */
+const approveProfile = (tx: Tx, id: string, decision = "approved") =>
+  tx.query(
+    "select approve_company_profile_version($1, $2, coalesce((select max(seq) from company_profile_approvals where company_profile_version_id = $1), 0))",
+    [id, decision],
+  );
 const generate = (tx: Tx, taskId: string, profileId: string, d: { input: unknown; content: unknown }, key = newKey()) =>
   one<{ artifact_id: string; version_id: string; version: number; reused: boolean }>(
     tx,
@@ -400,5 +405,54 @@ describe("R1 검수: 정의자 RPC 직접 호출로 계약 보장을 우회할 �
     const d = draft(strategyInput());
     const forged = { ...d, content: { ...d.content, generator: { mode: "ai", templateVersion: "strategy-template@1" } } };
     await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, forged)), /CONTENT_MISMATCH/);
+  });
+});
+
+describe("R1 프로필 승인 원자 확인(20261117002000)", () => {
+  const lastSeq = async (id: string) => (await one<{ s: number }>(db, "select coalesce(max(seq), 0)::int as s from company_profile_approvals where company_profile_version_id = $1", [id])).s;
+  const rows = async (id: string) => count("select 1 from company_profile_approvals where company_profile_version_id = $1", [id]);
+  const audits = async (id: string) => count("select 1 from audit_events where entity_id = $1 and action like 'profile_%'", [id]);
+  const newVersion = () =>
+    asA(async (tx) => {
+      const v = (await one<{ n: number }>(tx, "select coalesce(max(version), 0)::int + 1 as n from company_profile_versions where client_id = $1", [a.clientA])).n;
+      return (await one<{ id: string }>(tx, "insert into company_profile_versions (workspace_id, client_id, version) values ($1, $2, $3) returning id", [a.workspaceId, a.clientA, v])).id;
+    });
+
+  it("기대 순번이 다르면 CONFLICT, 승인·감사 기록 0건", async () => {
+    const id = await newVersion();
+    await expectDbError(asA((tx) => tx.query("select approve_company_profile_version($1, 'approved', 7)", [id])), /CONFLICT/);
+    expect([await rows(id), await audits(id)]).toEqual([0, 0]);
+  });
+
+  it("같은 기대 순번으로 재전송하면 두 번째는 CONFLICT(기록 1건 유지), 이미 승인된 버전 재승인도 CONFLICT", async () => {
+    const id = await newVersion();
+    const call = (seq: number, decision = "approved") => asA((tx) => tx.query("select approve_company_profile_version($1, $2, $3)", [id, decision, seq]));
+    await call(0);
+    await expectDbError(call(0), /CONFLICT/);
+    await expectDbError(call(await lastSeq(id)), /CONFLICT: 이미 승인된/);
+    expect([await rows(id), await audits(id)]).toEqual([1, 1]);
+  });
+
+  it("승인 안 된 버전 철회 → VALIDATION, 승인 → 철회 → 재승인 순번 전이", async () => {
+    const id = await newVersion();
+    const call = (seq: number, decision: string) => asA((tx) => tx.query("select approve_company_profile_version($1, $2, $3)", [id, decision, seq]));
+    await expectDbError(call(0, "revoked"), /VALIDATION/);
+    await call(0, "approved");
+    await call(await lastSeq(id), "revoked");
+    await call(await lastSeq(id), "approved");
+    expect((await db.query<{ decision: string }>("select decision from company_profile_approvals where company_profile_version_id = $1 order by seq", [id])).rows.map((r) => r.decision)).toEqual(["approved", "revoked", "approved"]);
+  });
+
+  it("예전 3인자 함수는 없고, 새 함수는 authenticated 만 실행 가능", async () => {
+    const sigs = (await db.query<{ sig: string }>("select pg_get_function_identity_arguments(p.oid) as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'approve_company_profile_version'")).rows.map((r) => r.sig);
+    expect(sigs).toEqual(["p_profile_version_id uuid, p_decision text, p_expected_last_seq bigint, p_comment text"]);
+    const can = async (role: string) => (await one<{ ok: boolean }>(db, "select has_function_privilege($1, 'public.approve_company_profile_version(uuid, text, bigint, text)', 'execute') as ok", [role])).ok;
+    expect([await can("anon"), await can("authenticated")]).toEqual([false, true]);
+  });
+
+  it("다른 업무실 사용자는 NOT_FOUND(잠금 대상 아님), 기대 순번 음수·null → VALIDATION", async () => {
+    await expectDbError(asB((tx) => tx.query("select approve_company_profile_version($1, 'approved', 0)", [a.profileA1])), /NOT_FOUND/);
+    await expectDbError(asA((tx) => tx.query("select approve_company_profile_version($1, 'approved', -1)", [a.profileA1])), /VALIDATION/);
+    await expectDbError(asA((tx) => tx.query("select approve_company_profile_version($1, 'approved', null)", [a.profileA1])), /VALIDATION/);
   });
 });

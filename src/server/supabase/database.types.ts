@@ -641,7 +641,7 @@ isOneToOne: false
 { Args: { "p_project_id": string,"p_publisher"?: string,"p_quoted_excerpt"?: string,"p_retrieved_at": string,"p_title": string,"p_url": string }; Returns: string
                            },
 "approve_company_profile_version":
-{ Args: { "p_comment"?: string,"p_decision"?: string,"p_profile_version_id": string }; Returns: number
+{ Args: { "p_comment"?: string,"p_decision": string,"p_expected_last_seq": number,"p_profile_version_id": string }; Returns: number
                            },
 "assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
