@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { adminClient, loginWithWorkspace, ownerSupabase, unique } from "./helpers";
 
@@ -11,8 +12,13 @@ test.describe.configure({ mode: "serial" });
 
 const CLIENT = unique("가상고객P2 카페");
 const PROJECT = unique("P2 전략 프로젝트");
-const OTHER_EMAIL = "newbie@marketing-office.test"; // 앱 허용 목록의 시험 주소(다른 업무실 주인 역할)
-const OTHER_PASSWORD = "Other-test-1234";
+/**
+ * 다른 업무실 주인(합성): 실행마다 고유 주소를 만든다(P2-E2E-ISOLATION-01).
+ * 고정 주소(newbie@…)는 auth.spec 의 가입 시험이 "아직 가입 안 됨"을 전제로 쓰므로 여기서 쓰지 않는다.
+ * 이 계정은 앱 화면에 로그인하지 않으므로 앱 허용 목록(ALLOWED_USER_EMAILS)이 필요 없고, DB 가입 허용 목록에만 올린다.
+ */
+const OTHER_EMAIL = `p2-other-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}@marketing-office.test`;
+const OTHER_PASSWORD = `Other-${randomBytes(9).toString("base64url")}9`;
 
 let sb: SupabaseClient;
 let clientId = "";
@@ -165,9 +171,9 @@ test("P2-c: 승인된 프로필만 선택 가능, 같은 키 이중 제출은 �
 test("P2-c: 화면을 우회한 미승인·다른 업무실 프로필은 서버가 거절", async ({ page }) => {
   // 다른 업무실(두 번째 합성 계정)과 그 업무실의 승인된 프로필
   const admin = adminClient();
-  await admin.from("signup_allowlist").upsert({ email: OTHER_EMAIL, note: "P2-APP-E2E-01" }, { onConflict: "email" });
+  expect((await admin.from("signup_allowlist").insert({ email: OTHER_EMAIL, note: "P2-E2E-ISOLATION-01 실행별 합성 계정" })).error).toBeNull();
   const created = await admin.auth.admin.createUser({ email: OTHER_EMAIL, password: OTHER_PASSWORD, email_confirm: true });
-  if (created.error && !/already/i.test(created.error.message)) throw created.error;
+  if (created.error) throw created.error; // 고유 주소이므로 "이미 있음"은 허용하지 않는다
   const other = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
   const signIn = await other.auth.signInWithPassword({ email: OTHER_EMAIL, password: OTHER_PASSWORD });
   if (signIn.error) throw signIn.error;
@@ -175,7 +181,8 @@ test("P2-c: 화면을 우회한 미승인·다른 업무실 프로필은 서버�
   const wsId = ws.data?.id ?? (await other.rpc("setup_workspace", { p_name: "다른 업무실", p_legal_name: "다른 상호" })).data;
   const oc = await other.from("clients").insert({ workspace_id: wsId, name: unique("다른 고객") }).select("id").single();
   const op = await other.from("company_profile_versions").insert({ workspace_id: wsId, client_id: oc.data!.id, version: 1 }).select("id").single();
-  await other.rpc("approve_company_profile_version", { p_profile_version_id: op.data!.id, p_decision: "approved", p_expected_last_seq: 0 });
+  // 다른 업무실 프로필은 승인하지 않는다: 지울 수 없는(추가 전용) 승인 기록을 남기지 않기 위해서다.
+  // 서버는 "이 프로젝트 고객의 프로필인가"를 승인 여부보다 먼저 보므로 같은 거절 경로를 탄다.
 
   // 다른 업무실 사용자는 이 업무실 프로필을 승인할 수 없다(DB NOT_FOUND)
   const cross = await other.rpc("approve_company_profile_version", { p_profile_version_id: versionIds[1]!, p_decision: "revoked", p_expected_last_seq: 0 });
@@ -254,4 +261,11 @@ test("BUG-PROFILE-COMMENT-01: 결정 이력에 승인 메모·철회 사유를 �
   await expect(history3.getByRole("listitem").first()).toBeVisible();
   await expect(history3).not.toContainText("승인 메모");
   await expect(history3).not.toContainText("철회 사유");
+});
+
+/** 정리: 이번 실행이 만든 가입 허용 목록 행만 지운다. 계정과 그 업무실 행은 추가 전용·FK 규칙 때문에 지우지 않는다(고유 주소라 다음 실행과 겹치지 않음) */
+test.afterAll(async () => {
+  const admin = adminClient();
+  const del = await admin.from("signup_allowlist").delete().eq("email", OTHER_EMAIL).select("email");
+  test.info().annotations.push({ type: "정리", description: `허용 목록 행 삭제 ${del.data?.length ?? 0}건(${OTHER_EMAIL.replace(/^(.{12}).*@/, "$1…@")})` });
 });
