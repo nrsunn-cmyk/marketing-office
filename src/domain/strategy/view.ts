@@ -87,8 +87,9 @@ export const STRATEGY_SAFE_MESSAGES = {
 const HANGUL = /[가-힣]/;
 /** 계약의 한국어 문구는 그대로, Zod 기본(영어) 문구는 안전 문구로 바꾼다 */
 function safeMessage(message: string): string {
+  // 모르는 키 거절 문구에는 사용자가 보낸 키 이름이 들어간다. 키가 한글이어도 원문이 새지 않게 한글 검사보다 먼저 판정한다.
+  if (/^\s*Unrecognized key/i.test(message)) return STRATEGY_SAFE_MESSAGES.unknownKey;
   if (HANGUL.test(message)) return message;
-  if (/^Unrecognized key/i.test(message)) return STRATEGY_SAFE_MESSAGES.unknownKey;
   return STRATEGY_SAFE_MESSAGES.invalid;
 }
 

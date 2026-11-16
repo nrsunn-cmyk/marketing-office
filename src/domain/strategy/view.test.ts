@@ -163,6 +163,50 @@ describe("텍스트만 반환(HTML 조합·escape 없음)", () => {
   });
 });
 
+describe("한국어·혼합·HTML 키 오타도 키 이름과 영어 원문을 내보내지 않는다(R1)", () => {
+  const KEYS = ["포지셔닝", "position포지션", '<b>목표</b><img src=x onerror="alert(1)">'];
+  const leaks = (v: StrategyView, key: string) => strings(v).some((s) => s.includes(key) || /Unrecognized/i.test(s));
+
+  it.each(KEYS)("최상위·sections·영역·사실·출처·추정·미확인·profile 에 키 %s", (key) => {
+    const raw = {
+      ...base(),
+      [key]: 1,
+      profile: { ...base().profile, [key]: 1 },
+      sections: {
+        [key]: { facts: [], inferences: [] },
+        goals: {
+          [key]: [],
+          facts: [{ text: "사실", [key]: 1, sources: [{ ...fromProfile, [key]: 1 }] }],
+          inferences: [{ text: "추정", [key]: 1 }],
+        },
+      },
+      unknowns: [{ topic: "주제", [key]: 1 }],
+    };
+    const outcome = buildStrategyDraft(raw);
+    expect(outcome.ok).toBe(false);
+    // 원문(Zod)에는 실제로 키 이름이 들어 있음을 먼저 확인(시험이 헛돌지 않게)
+    expect(!outcome.ok && outcome.issues.some((i) => i.message.includes(key))).toBe(true);
+    const v = toStrategyView(outcome);
+    if (v.kind !== "invalid") throw new Error("draft");
+    expect(leaks(v, key)).toBe(false);
+    expect(v.fieldErrors).toEqual({ goals: [STRATEGY_SAFE_MESSAGES.unknownKey] });
+    expect(v.summaryErrors).toEqual([STRATEGY_SAFE_MESSAGES.unknownKey]);
+  });
+
+  it("정상 계약의 한국어 오류 문구는 그대로 둔다", () => {
+    const v = invalidView({
+      ...base(),
+      profile: { ...base().profile, projectId: "00000000-0000-4000-8000-00000000a999" },
+      sections: { goals: { facts: [{ text: "  ", sources: [] }], inferences: [] } },
+    });
+    expect(v.summaryErrors).toEqual(["다른 프로젝트의 프로필은 참조할 수 없습니다."]);
+    expect(v.fieldErrors.goals).toEqual([
+      "내용을 입력해 주세요.",
+      "사실에는 출처가 하나 이상 필요합니다. 출처가 없으면 추정으로 적어 주세요.",
+    ]);
+  });
+});
+
 describe("오류 분류", () => {
   it("검증된 7개 영역만 영역 오류이고, projectId·templateVersion·unknowns 는 요약 오류(영어 기본 문구는 안전 문구)", () => {
     const v = invalidView({ ...base(), projectId: "not-uuid", templateVersion: "x", unknowns: [{ topic: "" }] });
