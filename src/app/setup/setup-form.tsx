@@ -3,6 +3,7 @@
 import { startTransition, useActionState, type FormEvent } from "react";
 import styles from "../ui.module.css";
 import { setupWorkspace, type SetupState } from "./actions";
+import { useHydrated } from "../_components/use-hydrated";
 
 const FIELDS: Array<{ name: string; label: string; required?: boolean; type?: string; autoComplete?: string }> = [
   { name: "name", label: "업무실 이름", required: true },
@@ -16,6 +17,7 @@ const FIELDS: Array<{ name: string; label: string; required?: boolean; type?: st
 
 export function SetupForm() {
   const [state, action, pending] = useActionState<SetupState, FormData>(setupWorkspace, {});
+  const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
   // 오류가 나도 입력한 값이 사라지지 않게 직접 보낸다 (ActionForm 과 같은 이유)
   function submitKeepingValues(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +57,7 @@ export function SetupForm() {
           </div>
         );
       })}
-      <button type="submit" className={styles.button} disabled={pending}>
+      <button type="submit" className={styles.button} disabled={pending || !hydrated}>
         {pending ? "저장 중…" : "업무실 만들기"}
       </button>
     </form>

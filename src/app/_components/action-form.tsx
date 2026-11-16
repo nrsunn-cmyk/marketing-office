@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect, useRef, type FormEvent, type ReactNode } from "react";
 import styles from "../ui.module.css";
 import { EMPTY_FORM_STATE, type FormState } from "./form-state";
+import { useHydrated } from "./use-hydrated";
 
 /**
  * 서버 동작을 쓰는 폼. 저장 중 표시, 성공·오류 안내, 칸별 오류를 공통으로 처리한다.
@@ -26,6 +27,7 @@ export function ActionForm({
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY_FORM_STATE);
   const formRef = useRef<HTMLFormElement>(null);
+  const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
 
   // 저장에 성공하면 폼을 서버가 보낸 최신 값(정리된 저장 값)으로 다시 맞춘다.
   // 오류일 때는 그대로 두어 입력한 값이 남는다. 는 이전 호출과의 호환을 위해 남겨 둔다.
@@ -60,7 +62,7 @@ export function ActionForm({
           {state.message}
         </p>
       )}
-      <button type="submit" className={variant === "primary" ? styles.button : styles.secondaryButton} disabled={pending}>
+      <button type="submit" className={variant === "primary" ? styles.button : styles.secondaryButton} disabled={pending || !hydrated}>
         {pending ? pendingLabel : submitLabel}
       </button>
     </form>

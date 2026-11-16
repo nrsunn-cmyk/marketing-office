@@ -7,6 +7,7 @@ import { QUOTE_LIMITS } from "@/domain/quote/limits";
 import { saveQuoteDraftAction } from "@/features/quotes/actions";
 import { EMPTY_FORM_STATE } from "../../_components/form-state";
 import styles from "../../ui.module.css";
+import { useHydrated } from "../../_components/use-hydrated";
 
 let seq = 0;
 const newRowId = () => `r${Date.now().toString(36)}${(seq += 1)}`;
@@ -28,6 +29,7 @@ const blankRow = (): QuoteRowText => ({
 export function QuoteEditor({ taskId, revision, initial }: { taskId: string; revision: number | null; initial: QuoteFormText }) {
   const [form, setForm] = useState<QuoteFormText>(initial);
   const [state, action, pending] = useActionState(saveQuoteDraftAction, EMPTY_FORM_STATE);
+  const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
 
   const parsed = useMemo(() => parseQuoteForm(form), [form]);
   const calc = parsed.ok ? calculateDraft(parsed.draft) : null;
@@ -218,7 +220,7 @@ export function QuoteEditor({ taskId, revision, initial }: { taskId: string; rev
           {state.message}
         </p>
       )}
-      <button type="submit" className={styles.button} disabled={pending || !parsed.ok}>
+      <button type="submit" className={styles.button} disabled={pending || !parsed.ok || !hydrated}>
         {pending ? "저장 중…" : "초안 저장"}
       </button>
     </form>

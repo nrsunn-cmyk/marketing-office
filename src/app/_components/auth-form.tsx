@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import s from "./auth.module.css";
 import { EMPTY_FORM_STATE, type FormState } from "./form-state";
+import { useHydrated } from "./use-hydrated";
 
 /**
  * 인증 화면 폼 (1안 테크 그리드). 동작은 ActionForm 과 같다:
@@ -24,6 +25,7 @@ export function AuthForm({
   children: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY_FORM_STATE);
+  const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function AuthForm({
           {state.message}
         </p>
       )}
-      <button type="submit" className={s.submit} disabled={pending}>
+      <button type="submit" className={s.submit} disabled={pending || !hydrated}>
         {pending ? pendingLabel : submitLabel}
         {!pending && arrow && <ArrowIcon />}
       </button>
