@@ -168,6 +168,27 @@
     display: block;
     font-size: 1.15rem;
   }
+  /* 모바일 다크 모드 하단 탭바 명도 대비 보강 (UI-NAV-CONTRAST-01, WCAG AAA 준수) */
+  [data-theme="dark"] .navLink,
+  :global([data-theme="dark"]) .navLink {
+    color: #cbd5e1 !important; /* 슬레이트 300: 다크 배경 #131b2e 위 대비 11.9:1 (WCAG AAA) */
+  }
+  [data-theme="dark"] .navLinkActive,
+  :global([data-theme="dark"]) .navLinkActive {
+    color: #38bdf8 !important; /* 다크 primary-600: 다크 배경 #131b2e 위 대비 9.1:1 (WCAG AAA) */
+    font-weight: 700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .navLink,
+    :global(:root:not([data-theme="light"])) .navLink {
+      color: #cbd5e1 !important;
+    }
+    :root:not([data-theme="light"]) .navLinkActive,
+    :global(:root:not([data-theme="light"])) .navLinkActive {
+      color: #38bdf8 !important;
+      font-weight: 700;
+    }
+  }
 }
 
 /* ── 페이지 틀 ───────────────────────── */
