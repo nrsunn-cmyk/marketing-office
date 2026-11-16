@@ -22,9 +22,9 @@ npm run dev                        # http://127.0.0.1:3000
 | `npm run verify` | 형식검사·코드 검사·단위·DB 테스트 |
 | `npm run build` | 배포용 빌드 |
 | `npm run e2e:reset && bash scripts/e2e-check.sh` | 실제 Chrome으로 전체 흐름. **로컬 DB를 비운다** |
+| `node scripts/render-pdf-pages.mjs <pdf> <접두어> 1,2` | PDF 쪽을 그림으로 확인 |
 
 **e2e:reset 안전 확인(RESET-SAFETY-01):** 전용 시험 스택 폴더에서만, 그 스택의 project_id를 명시해 실행한다. 예: `E2E_SUPABASE_PROJECT_ID=<전용 project_id> npm run e2e:reset`. 실행 폴더의 `supabase/config.toml`, 실제 DB·API 컨테이너 포트, `.env.local`의 API 주소가 서로 맞지 않거나, 공유 스택(project_id `marketing-office`, 포트 5432x)·원격 주소이면 아무것도 지우지 않고 멈춘다. 그래서 이 저장소 원본 설정(공유 스택)에서는 초기화되지 않는다. E2E 실행에는 추가로 `E2E_MAILPIT_URL`·`E2E_BASE_URL`이 필요하다(`tests/e2e/stack-guard.ts`).
-| `node scripts/render-pdf-pages.mjs <pdf> <접두어> 1,2` | PDF 쪽을 그림으로 확인 |
 
 ## 3. 백업과 복원 (T20)
 
