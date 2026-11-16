@@ -6,7 +6,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
-import { buildStrategyDraft } from "@/domain/strategy";
+import { buildStrategyDraft, type StrategyDraft } from "@/domain/strategy";
 import { asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture, type Tx } from "./harness";
 
 let db: Db;
@@ -305,8 +305,12 @@ describe("입력·결과 대조와 중복 요청", () => {
 
   it("T17 입력의 프로필 출처 버전이 참조 버전과 다름 → SOURCE_MISMATCH(계약을 우회한 입력)", async () => {
     const d = draft(strategyInput());
-    const forged = { ...d, input: { ...d.input, sections: { goals: { facts: [{ text: "x", sources: [{ kind: "profile", profileId: a.profileA1, version: 7 }] }], inferences: [] } } } };
-    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, forged)), /SOURCE_MISMATCH/);
+    // 입력만 바꾸면 결과와 달라 CONTENT_MISMATCH, 입력·결과를 같이 바꾸면 출처 규칙으로 SOURCE_MISMATCH
+    const badSrc = [{ kind: "profile", profileId: a.profileA1, version: 7 }];
+    const inputOnly = { ...d, input: { ...d.input, sections: { ...d.input.sections, goals: { facts: [{ text: "합성 목표", sources: badSrc }], inferences: [] } } } };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, inputOnly)), /CONTENT_MISMATCH/);
+    const both = { input: inputOnly.input, content: { ...d.content, facts: [{ ...d.content.facts[0]!, sources: badSrc }] } };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, both)), /SOURCE_MISMATCH/);
   });
 
   it("T13 계약은 통과해도 DB는 거절할 수 있다(미승인 프로필·다른 프로젝트 자료)", async () => {
@@ -354,5 +358,47 @@ describe("입력·결과 대조와 중복 요청", () => {
       }),
       /PROFILE_REQUIRED/,
     );
+  });
+});
+
+describe("R1 검수: 정의자 RPC 직접 호출로 계약 보장을 우회할 수 없다", () => {
+  const firstFact = (c: StrategyDraft) => c.facts[0]!;
+  it("R1-a 결과에 입력에 없는 사실을 지어 넣음 → CONTENT_MISMATCH", async () => {
+    const d = draft(strategyInput());
+    const forged = { ...d, content: { ...d.content, facts: [...d.content.facts, { ...firstFact(d.content), id: "goals-fact-9", text: "지어낸 사실" }] } };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, forged)), /CONTENT_MISMATCH/);
+  });
+  it("R1-b 추정을 사실로 올림(결과만 조작) → CONTENT_MISMATCH", async () => {
+    const d = draft(strategyInput());
+    const inf = d.content.inferences[0]!;
+    const promoted = { ...d.content, facts: [...d.content.facts, { id: "offers-fact-1", section: inf.section, text: inf.text, sources: [{ kind: "profile", profileId: a.profileA1, version: 1 }] }] };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, { ...d, content: promoted })), /CONTENT_MISMATCH/);
+  });
+  it("R1-c 입력·결과 모두 출처 없는 사실 → VALIDATION", async () => {
+    const d = draft(strategyInput());
+    const input = { ...d.input, sections: { ...d.input.sections, goals: { facts: [{ text: "합성 목표", sources: [] }], inferences: [] } } };
+    const content = { ...d.content, facts: [{ ...firstFact(d.content), sources: [] }] };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, { input, content })), /VALIDATION/);
+  });
+  it("R1-d http(s)가 아닌 url 출처(입력·결과 일치) → SOURCE_MISMATCH", async () => {
+    const d = draft(strategyInput());
+    const bad = [{ kind: "url", url: "javascript:alert(1)" }];
+    const input = { ...d.input, sections: { ...d.input.sections, goals: { facts: [{ text: "합성 목표", sources: bad }], inferences: [] } } };
+    const content = { ...d.content, facts: [{ ...firstFact(d.content), sources: bad }] };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, { input, content })), /SOURCE_MISMATCH/);
+  });
+  it("R1-e 직접 고치기로 다른 프로젝트 자료를 출처로 넣음 → SOURCE_MISMATCH, 출처 없는 사실 → VALIDATION", async () => {
+    const d = draft(strategyInput());
+    const g = await asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, d));
+    const rev = (await one<{ revision: number }>(db, "select revision from artifacts where id = $1", [g.artifact_id])).revision;
+    const save = (c: unknown) => asA((tx) => tx.query("select * from save_strategy_manual_version($1, $2, $3)", [g.artifact_id, rev, JSON.stringify(c)]));
+    await expectDbError(save({ ...d.content, facts: [{ ...firstFact(d.content), sources: [{ kind: "asset", assetId: assetB, projectId: a.projectA }] }] }), /SOURCE_MISMATCH/);
+    await expectDbError(save({ ...d.content, facts: [{ ...firstFact(d.content), sources: [] }] }), /VALIDATION/);
+    await expectDbError(save({ ...d.content, facts: [{ ...firstFact(d.content), sources: [{ kind: "profile", profileId: a.profileB1, version: 1 }] }] }), /SOURCE_MISMATCH/);
+  });
+  it("R1-f 결과의 템플릿 버전·생성 방식 위조 → CONTENT_MISMATCH", async () => {
+    const d = draft(strategyInput());
+    const forged = { ...d, content: { ...d.content, generator: { mode: "ai", templateVersion: "strategy-template@1" } } };
+    await expectDbError(asA(async (tx) => generate(tx, await newStrategyTask(tx), a.profileA1, forged)), /CONTENT_MISMATCH/);
   });
 });

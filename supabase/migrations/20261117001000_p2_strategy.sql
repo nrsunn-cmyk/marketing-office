@@ -245,6 +245,88 @@ revoke execute on function public.approve_company_profile_version(uuid, text, te
 grant execute on function public.approve_company_profile_version(uuid, text, text) to authenticated;
 
 -- ─────────────────────────────────────────────
+-- 6-0) 전략 내용 검사 도우미 (R1: 정의자 RPC를 직접 불러 계약 보장을 건너뛰지 못하게)
+--   사실 배열: 각 사실은 영역 이름이 7개 중 하나(있을 때), 문장이 비어 있지 않고, 출처가 1개 이상.
+--   출처: profile = 참조 프로필 버전만, asset = 같은 프로젝트 자료만, url = http(s)·2000자 이하. 그 밖의 종류는 거절.
+-- ─────────────────────────────────────────────
+create or replace function app.check_strategy_facts(
+  p_list            jsonb,
+  p_profile_id      uuid,
+  p_profile_version integer,
+  p_workspace_id    uuid,
+  p_project_id      uuid
+) returns void
+language plpgsql stable set search_path = '' as $$
+declare
+  f jsonb;
+  s jsonb;
+begin
+  if jsonb_typeof(p_list) is distinct from 'array' then
+    raise exception 'VALIDATION: 사실 목록 형식이 올바르지 않습니다' using errcode = '22023';
+  end if;
+  for f in select x from jsonb_array_elements(p_list) x loop
+    if f ? 'section' and (f ->> 'section') not in ('goals', 'offers', 'audiences', 'positioning', 'problems', 'opportunities', 'priorities') then
+      raise exception 'VALIDATION: 알 수 없는 영역입니다' using errcode = '22023';
+    end if;
+    if coalesce(btrim(f ->> 'text'), '') = '' or length(f ->> 'text') > 500 then
+      raise exception 'VALIDATION: 사실 문장은 1~500자여야 합니다' using errcode = '22023';
+    end if;
+    if jsonb_typeof(f -> 'sources') is distinct from 'array' or jsonb_array_length(f -> 'sources') = 0 then
+      raise exception 'VALIDATION: 사실에는 출처가 하나 이상 필요합니다' using errcode = '22023';
+    end if;
+    for s in select y from jsonb_array_elements(f -> 'sources') y loop
+      if s ->> 'kind' = 'profile' then
+        if s ->> 'profileId' is distinct from p_profile_id::text or s ->> 'version' is distinct from p_profile_version::text then
+          raise exception 'SOURCE_MISMATCH: 참조한 프로필 버전과 다른 프로필 출처입니다' using errcode = 'P0001';
+        end if;
+      elsif s ->> 'kind' = 'asset' then
+        if not exists (
+          select 1 from public.source_assets a
+           where a.id::text = s ->> 'assetId' and a.workspace_id = p_workspace_id and a.project_id = p_project_id
+        ) then
+          raise exception 'SOURCE_MISMATCH: 이 프로젝트의 자료가 아닙니다' using errcode = 'P0001';
+        end if;
+      elsif s ->> 'kind' = 'url' then
+        if coalesce(s ->> 'url', '') !~ '^https?://' or length(s ->> 'url') > 2000 then
+          raise exception 'SOURCE_MISMATCH: 출처 주소는 http(s) 여야 합니다' using errcode = 'P0001';
+        end if;
+      else
+        raise exception 'SOURCE_MISMATCH: 알 수 없는 출처 종류입니다' using errcode = 'P0001';
+      end if;
+    end loop;
+  end loop;
+end $$;
+revoke execute on function app.check_strategy_facts(jsonb, uuid, integer, uuid, uuid) from public, anon, authenticated;
+
+-- 입력(영역별 객체)을 비교용 정렬 배열로 펼친다. kind: 'facts' | 'inferences'
+create or replace function app.flatten_strategy_input(p_input jsonb, p_kind text) returns jsonb
+language sql immutable set search_path = '' as $$
+  select coalesce(jsonb_agg(item order by item::text), '[]'::jsonb)
+    from (
+      select case when p_kind = 'facts'
+               then jsonb_build_object('section', s.key, 'text', btrim(e ->> 'text'), 'sources', e -> 'sources')
+               else jsonb_build_object('section', s.key, 'text', btrim(e ->> 'text'), 'rationale', btrim(e ->> 'rationale'))
+             end as item
+        from jsonb_each(coalesce(p_input -> 'sections', '{}'::jsonb)) s
+        cross join lateral jsonb_array_elements(coalesce(s.value -> p_kind, '[]'::jsonb)) e
+    ) q
+$$;
+-- 결과(평평한 배열)를 같은 모양으로 정렬한다
+create or replace function app.flatten_strategy_content(p_content jsonb, p_kind text) returns jsonb
+language sql immutable set search_path = '' as $$
+  select coalesce(jsonb_agg(item order by item::text), '[]'::jsonb)
+    from (
+      select case when p_kind = 'facts'
+               then jsonb_build_object('section', e ->> 'section', 'text', btrim(e ->> 'text'), 'sources', e -> 'sources')
+               else jsonb_build_object('section', e ->> 'section', 'text', btrim(e ->> 'text'), 'rationale', btrim(e ->> 'rationale'))
+             end as item
+        from jsonb_array_elements(case when jsonb_typeof(p_content -> p_kind) = 'array' then p_content -> p_kind else '[]'::jsonb end) e
+    ) q
+$$;
+revoke execute on function app.flatten_strategy_input(jsonb, text) from public, anon;
+revoke execute on function app.flatten_strategy_content(jsonb, text) from public, anon;
+
+-- ─────────────────────────────────────────────
 -- 6-2) 전략 생성 (template). 프로필 사본·근거 참조·입력 해시는 DB가 직접 만든다(G1·G2·G5).
 --   p_extra_inputs: 계약 strategyInputSchema 를 통과한 입력, p_content: buildStrategyDraft 결과.
 --   DB가 보장하는 것: 작업 소유·유형, 고객 프로젝트, 프로필이 그 고객의 승인된 버전, 입력·결과의 프로필·프로젝트가 같음,
@@ -336,6 +418,25 @@ begin
      or p_content #>> '{profileRef,version}' is distinct from pv.version::text then
     raise exception 'CONTENT_MISMATCH: 입력·결과의 프로젝트나 프로필이 실제 연결과 다릅니다' using errcode = 'P0001';
   end if;
+
+  -- R1: 결과는 입력을 정리한 것이어야 한다. 사실·추정·사용자 미확인이 입력과 같고(지어내기·추정 승격 금지),
+  --     템플릿 생성 표시가 맞아야 한다. 사실은 모두 출처 규칙을 지켜야 한다.
+  if p_content ->> 'templateVersion' is distinct from 'strategy-template@1'
+     or p_content #>> '{generator,mode}' is distinct from 'template'
+     or p_content #>> '{generator,templateVersion}' is distinct from 'strategy-template@1'
+     or app.flatten_strategy_content(p_content, 'facts') is distinct from app.flatten_strategy_input(p_extra_inputs, 'facts')
+     or app.flatten_strategy_content(p_content, 'inferences') is distinct from app.flatten_strategy_input(p_extra_inputs, 'inferences')
+     or coalesce((select jsonb_agg(jsonb_build_object('topic', btrim(u ->> 'topic'), 'question', btrim(u ->> 'question')) order by ord)
+                    from jsonb_array_elements(case when jsonb_typeof(p_content -> 'unknowns') = 'array' then p_content -> 'unknowns' else '[]'::jsonb end)
+                         with ordinality as x(u, ord)
+                   where u ->> 'origin' = 'input'), '[]'::jsonb)
+        is distinct from
+        coalesce((select jsonb_agg(jsonb_build_object('topic', btrim(u ->> 'topic'), 'question', btrim(u ->> 'question')) order by ord)
+                    from jsonb_array_elements(case when jsonb_typeof(p_extra_inputs -> 'unknowns') = 'array' then p_extra_inputs -> 'unknowns' else '[]'::jsonb end)
+                         with ordinality as x(u, ord)), '[]'::jsonb) then
+    raise exception 'CONTENT_MISMATCH: 결과가 입력과 다릅니다(사실·추정·미확인은 입력 그대로여야 합니다)' using errcode = 'P0001';
+  end if;
+  perform app.check_strategy_facts(app.flatten_strategy_input(p_extra_inputs, 'facts'), pv.id, pv.version, t.workspace_id, p.id);
 
   -- 출처: 프로필 출처는 이 프로필 버전만, 자료 출처는 같은 프로젝트의 자료만(I7)
   asset_ids := '{}';
@@ -451,6 +552,14 @@ begin
      or p_content ->> 'projectId' is distinct from base.content ->> 'projectId'
      or p_content -> 'profileRef' is distinct from base.content -> 'profileRef' then
     raise exception 'CONTENT_MISMATCH: 프로젝트·프로필 참조는 바꿀 수 없습니다. 새로 만들어 주세요' using errcode = 'P0001';
+  end if;
+  -- R1: 고친 사실도 출처 규칙을 지켜야 한다(다른 프로젝트 자료·다른 프로필·http(s) 아닌 주소·출처 없음 거절)
+  perform app.check_strategy_facts(
+    case when jsonb_typeof(p_content -> 'facts') = 'array' then p_content -> 'facts' else '[]'::jsonb end,
+    (base.content #>> '{profileRef,id}')::uuid, (base.content #>> '{profileRef,version}')::integer,
+    a.workspace_id, a.project_id);
+  if jsonb_typeof(p_content -> 'facts') is distinct from 'array' or jsonb_typeof(p_content -> 'inferences') is distinct from 'array' then
+    raise exception 'VALIDATION: 사실·추정 목록 형식이 올바르지 않습니다' using errcode = '22023';
   end if;
 
   select coalesce(max(av.version), 0) + 1 into v_no from public.artifact_versions av where av.artifact_id = a.id;
