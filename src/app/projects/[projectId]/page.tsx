@@ -115,6 +115,7 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
           <select id="task-type" name="type" defaultValue="logo_brief">
             <option value="logo_brief">{TASK_TYPE_LABELS.logo_brief}</option>
             <option value="quote">{TASK_TYPE_LABELS.quote}</option>
+            {project.kind === "client" && <option value="strategy">{TASK_TYPE_LABELS.strategy}</option>}
           </select>
         </ActionForm>
         </MobileActionSheet>

@@ -50,6 +50,7 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
 export const TASK_TYPE_LABELS: Record<string, string> = {
   logo_brief: "로고 브리프·프롬프트",
   quote: "견적",
+  strategy: "마케팅 전략",
 };
 
 export const GENERATOR_LABELS: Record<string, string> = {

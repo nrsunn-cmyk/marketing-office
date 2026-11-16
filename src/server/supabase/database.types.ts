@@ -31,6 +31,50 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"artifact_version_refs": {
+                  Row: {
+                    "company_profile_version_id": string | null,"created_at": string,"from_version_id": string,"id": string,"project_id": string,"ref_kind": string,"source_asset_id": string | null,"to_version_id": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_profile_version_id"?: string | null,"created_at"?: string,"from_version_id": string,"id"?: string,"project_id": string,"ref_kind": string,"source_asset_id"?: string | null,"to_version_id"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "company_profile_version_id"?: string | null,"created_at"?: string,"from_version_id"?: string,"id"?: string,"project_id"?: string,"ref_kind"?: string,"source_asset_id"?: string | null,"to_version_id"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "artifact_version_refs_company_profile_version_id_fkey"
+      columns: ["company_profile_version_id"]
+isOneToOne: false
+      referencedRelation: "company_profile_versions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "artifact_version_refs_source_asset_id_fkey"
+      columns: ["source_asset_id"]
+isOneToOne: false
+      referencedRelation: "source_assets"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "artifact_version_refs_workspace_id_from_version_id_fkey"
+      columns: ["workspace_id","from_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["workspace_id","id"]
+    },{
+      foreignKeyName: "artifact_version_refs_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    },{
+      foreignKeyName: "artifact_version_refs_workspace_id_to_version_id_fkey"
+      columns: ["workspace_id","to_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"artifact_versions": {
                   Row: {
                     "artifact_id": string,"content": NonNullable<Json>,"created_at": string,"created_by": string | null,"generator": string,"id": string,"input_snapshot_id": string | null,"model_id": string | null,"template_id": string | null,"version": number,"workspace_id": string
@@ -139,6 +183,32 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"company_profile_approvals": {
+                  Row: {
+                    "actor_id": string,"client_id": string,"comment": string | null,"company_profile_version_id": string,"created_at": string,"decision": string,"id": string,"seq": number,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"client_id": string,"comment"?: string | null,"company_profile_version_id": string,"created_at"?: string,"decision": string,"id"?: string,"seq"?: never,"workspace_id": string
+                  }
+                  Update: {
+                    "actor_id"?: string,"client_id"?: string,"comment"?: string | null,"company_profile_version_id"?: string,"created_at"?: string,"decision"?: string,"id"?: string,"seq"?: never,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_profile_approvals_client_id_company_profile_versio_fkey"
+      columns: ["client_id","company_profile_version_id"]
+isOneToOne: false
+      referencedRelation: "company_profile_versions"
+      referencedColumns: ["client_id","id"]
+    },{
+      foreignKeyName: "company_profile_approvals_workspace_id_client_id_fkey"
+      columns: ["workspace_id","client_id"]
+isOneToOne: false
+      referencedRelation: "clients"
+      referencedColumns: ["workspace_id","id"]
     }
                   ]
                 },"company_profile_versions": {
@@ -395,6 +465,40 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"research_sources": {
+                  Row: {
+                    "created_at": string,"created_by": string,"id": string,"project_id": string,"publisher": string | null,"quoted_excerpt": string | null,"retrieved_at": string,"review_status": string,"revision": number,"title": string,"updated_at": string,"url": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"id"?: string,"project_id": string,"publisher"?: string | null,"quoted_excerpt"?: string | null,"retrieved_at": string,"review_status"?: string,"revision"?: number,"title": string,"updated_at"?: string,"url": string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"id"?: string,"project_id"?: string,"publisher"?: string | null,"quoted_excerpt"?: string | null,"retrieved_at"?: string,"review_status"?: string,"revision"?: number,"title"?: string,"updated_at"?: string,"url"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "research_sources_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"signup_allowlist": {
+                  Row: {
+                    "created_at": string,"email": string,"note": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"email": string,"note"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string,"note"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"source_assets": {
                   Row: {
                     "bytes": number | null,"checksum_sha256": string | null,"client_id": string | null,"created_at": string,"display_name": string | null,"extraction_status": string,"file_name": string | null,"id": string,"kind": string,"mime": string | null,"object_key": string | null,"project_id": string | null,"review_status": string,"revision": number,"text_content": string | null,"updated_at": string,"upload_status": string,"url": string | null,"workspace_id": string
@@ -533,7 +637,13 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "assign_quote_number":
+            "add_research_source":
+{ Args: { "p_project_id": string,"p_publisher"?: string,"p_quoted_excerpt"?: string,"p_retrieved_at": string,"p_title": string,"p_url": string }; Returns: string
+                           },
+"approve_company_profile_version":
+{ Args: { "p_comment"?: string,"p_decision"?: string,"p_profile_version_id": string }; Returns: number
+                           },
+"assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
                            },
 "decide_version":
@@ -542,6 +652,11 @@ isOneToOne: false
 "finalize_quote":
 { Args: { "p_artifact_id": string,"p_customer_snapshot": Json,"p_issue_date": string,"p_items": Json,"p_notes": string,"p_payment_terms": string,"p_subtotal_won": number,"p_supplier_profile_id": string,"p_supplier_snapshot": Json,"p_tax_mode": string,"p_tax_rate_bp": number,"p_tax_won": number,"p_total_won": number,"p_valid_until": string,"p_version_id": string }; Returns: {
               "quote_id": string,"quote_number": string,"quote_version_id": string,"reused": boolean
+            }[]
+                           },
+"generate_strategy":
+{ Args: { "p_content": Json,"p_extra_inputs": Json,"p_idempotency_key": string,"p_profile_version_id": string,"p_task_id": string }; Returns: {
+              "artifact_id": string,"reused": boolean,"version": number,"version_id": string
             }[]
                            },
 "record_delivery":
@@ -561,6 +676,14 @@ isOneToOne: false
 { Args: { "p_artifact_id": string,"p_content": Json,"p_expected_revision": number }; Returns: {
               "version": number,"version_id": string
             }[]
+                           },
+"save_strategy_manual_version":
+{ Args: { "p_artifact_id": string,"p_content": Json,"p_expected_revision": number }; Returns: {
+              "version": number,"version_id": string
+            }[]
+                           },
+"set_research_source_review":
+{ Args: { "p_expected_revision": number,"p_source_id": string,"p_status": string }; Returns: number
                            },
 "setup_workspace":
 { Args: { "p_address"?: string,"p_business_number"?: string,"p_email"?: string,"p_legal_name": string,"p_name": string,"p_phone"?: string,"p_representative"?: string }; Returns: string

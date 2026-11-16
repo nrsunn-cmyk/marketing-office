@@ -1,0 +1,112 @@
+/* P2-c 전략 화면 전용. 색·간격은 토큰만 쓴다(src/styles/tokens.css). */
+.sectionBox {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin: 0 0 var(--space-3);
+  min-width: 0;
+}
+.legend {
+  font-weight: 600;
+  padding: 0 var(--space-1);
+}
+.requiredMark {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.itemRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+  margin-bottom: var(--space-3);
+}
+.textBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.textBox textarea {
+  width: 100%;
+}
+.smallLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+.sourceBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.cards {
+  display: grid;
+  gap: var(--space-3);
+}
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+}
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cardTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+.tone {
+  display: inline-block;
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-2);
+  font-size: 0.8125rem;
+  border: 1px solid var(--border-subtle);
+}
+.tone[data-tone="success"] {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.tone[data-tone="warning"] {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+.tone[data-tone="danger"] {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+.tone[data-tone="neutral"] {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+.kindTag {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-right: var(--space-1);
+}
+.entry {
+  margin: var(--space-2) 0;
+  overflow-wrap: anywhere;
+}
+.sourceLine {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .itemRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

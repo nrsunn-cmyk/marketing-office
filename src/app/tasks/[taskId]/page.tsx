@@ -15,6 +15,7 @@ import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveryPanel } from "./delivery-panel";
 import { QuoteSection } from "./quote-section";
+import { StrategySection } from "./strategy-section";
 
 export const metadata: Metadata = { title: "작업 · 마케팅 업무실" };
 
@@ -60,7 +61,11 @@ async function TaskView({
             <Link href={`/projects/${detail.project.id}`}>{detail.project.title}</Link>
             {detail.client && ` · ${detail.client.name}`}
             {" · "}
-            {detail.profile ? `회사 프로필 ${detail.profile.version}번 버전 사용` : "연결된 회사 프로필 없음"}
+            {detail.task.type === "strategy"
+              ? "회사 프로필 버전은 전략을 만들 때 고릅니다"
+              : detail.profile
+                ? `회사 프로필 ${detail.profile.version}번 버전 사용`
+                : "연결된 회사 프로필 없음"}
           </p>
         </div>
         <span className={styles.badge}>{TASK_STATUS_LABELS[detail.task.status] ?? detail.task.status}</span>
@@ -73,13 +78,15 @@ async function TaskView({
             {shown ? <ResultView detail={detail} version={shown} isCurrent={shown.id === current?.id} timeZone={workspace.timezone} /> : <EmptyResult />}
           </div>
         </div>
+      ) : detail.task.type === "strategy" ? (
+        <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
       ) : (
         <QuoteSection detail={detail} />
       )}
 
       <DeliveryPanel detail={detail} timeZone={workspace.timezone} />
 
-      {detail.task.type === "logo_brief" && detail.versions.length > 0 && (
+      {(detail.task.type === "logo_brief" || detail.task.type === "strategy") && detail.versions.length > 0 && (
         <VersionHistory detail={detail} shownId={shown?.id ?? null} />
       )}
     </>

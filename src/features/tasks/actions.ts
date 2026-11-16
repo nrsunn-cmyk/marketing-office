@@ -19,7 +19,7 @@ const lines = (fd: FormData, k: string) =>
 export async function createTaskAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const projectId = uuid.safeParse(fd.get("projectId"));
   const k = key.safeParse(fd.get("idempotencyKey"));
-  const type = z.enum(["logo_brief", "quote"]).safeParse(fd.get("type"));
+  const type = z.enum(["logo_brief", "quote", "strategy"]).safeParse(fd.get("type"));
   if (!projectId.success || !k.success || !type.success) return { message: "잘못된 요청입니다." };
   const r = await createTask(projectId.data, type.data, k.data);
   if (!r.ok) return { message: r.message };

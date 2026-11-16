@@ -8,7 +8,7 @@ import { CONFLICT_MESSAGE, fail, fromDbError, ok, type Result } from "@/server/r
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import type { Json } from "@/server/supabase/database.types";
 
-export type TaskType = "logo_brief" | "quote";
+export type TaskType = "logo_brief" | "quote" | "strategy";
 
 export interface TaskSummary {
   id: string;
@@ -83,6 +83,12 @@ export async function listTasks(projectId: string): Promise<TaskSummary[]> {
 export async function createTask(projectId: string, type: TaskType, idempotencyKey: string): Promise<Result<{ id: string }>> {
   const { workspace } = await requireWorkspace();
   const sb = await createSupabaseServerClient();
+  if (type === "strategy") {
+    // 회사 프로필은 고객에만 있다. 자체 프로젝트 전략은 아직 지원하지 않는다(P2-STRATEGY-IMPL-01 3절)
+    const { data: project } = await sb.from("projects").select("kind").eq("workspace_id", workspace.id).eq("id", projectId).maybeSingle();
+    if (!project) return fail("NOT_FOUND", "프로젝트를 찾을 수 없습니다.");
+    if (project.kind !== "client") return fail("VALIDATION", "전략은 지금 고객 프로젝트에서만 만들 수 있습니다.");
+  }
   const { data: template, error: tplError } = await sb
     .from("templates")
     .select("id")

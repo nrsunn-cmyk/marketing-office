@@ -98,7 +98,7 @@ export const projectInputSchema = z.discriminatedUnion("kind", [
 ]);
 export type ProjectInput = z.infer<typeof projectInputSchema>;
 
-export const TASK_TYPES = ["logo_brief", "quote"] as const;
+export const TASK_TYPES = ["logo_brief", "quote", "strategy"] as const;
 
 export const taskCreateSchema = z.object({
   projectId: z.uuid(),

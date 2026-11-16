@@ -277,8 +277,8 @@ describe("빈 값·길이·개수", () => {
 });
 
 describe("기존 로고·견적 계약 회귀 영향 없음", () => {
-  it("작업 유형은 그대로 logo_brief·quote 두 개(전략은 아직 작업 유형이 아니다)", () => {
-    expect(TASK_TYPES).toEqual(["logo_brief", "quote"]);
+  it("작업 유형: 기존 logo_brief·quote 순서를 유지하고 strategy 만 뒤에 더한다(P2-STRATEGY-APP-01, 퍼널 등 하위 유형 없음)", () => {
+    expect(TASK_TYPES).toEqual(["logo_brief", "quote", "strategy"]);
   });
 
   it("로고·견적 입력 계약과 로고 생성은 예전처럼 동작한다", () => {
