@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { adminClient, loginAsOwner, loginWithPassword, mailGap, OWNER, OWNER_PASSWORD } from "./helpers";
-import { clearMailbox, countMessagesTo, waitForMail, waitForMailLink } from "./mailpit";
+import { countMessagesTo, deleteMessagesTo, waitForMail, waitForMailLink } from "./mailpit";
 
 /**
  * 회원가입·이메일+비밀번호 로그인·비밀번호 찾기 E2E (D03 변경, 2026-11-15) + 업무실 처음 설정(T16) + 허용 계정(T01).
@@ -117,7 +117,7 @@ test("회원가입 입력 검사: 형식·약한 비밀번호·확인 불일치�
 });
 
 test("DB 허용 목록에 없으면 앱이 허용해도 가입되지 않는다(직접 가입 API 호출도 막힘)", async ({ page }) => {
-  await clearMailbox();
+  await deleteMessagesTo([DB_BLOCKED]);
   await mailGap(DB_BLOCKED);
   await fillSignup(page, DB_BLOCKED, NEWBIE_PASSWORD);
   await expect(alert(page, "가입하지 못했습니다")).toBeVisible();
@@ -135,7 +135,7 @@ test("DB 허용 목록에 없으면 앱이 허용해도 가입되지 않는다(�
 
 test("회원가입 → 메일 인증 전에는 로그인 불가 → 한국어 확인 메일 링크 → 바로 업무실 처음 설정", async ({ page }) => {
   expect((await adminClient().from("signup_allowlist").upsert({ email: NEWBIE })).error).toBeNull();
-  await clearMailbox();
+  await deleteMessagesTo([NEWBIE]);
   await mailGap(NEWBIE);
   await fillSignup(page, NEWBIE, NEWBIE_PASSWORD);
   await expect(page).toHaveURL(/\/signup\?sent=1$/);
@@ -175,7 +175,7 @@ test("이미 가입한 이메일로 다시 가입해도 같은 안내만 나온�
 });
 
 test("비밀번호 찾기 → 한국어 재설정 메일 → 새 비밀번호 → 새 비밀번호로만 로그인", async ({ page }) => {
-  await clearMailbox();
+  await deleteMessagesTo([NEWBIE, STRANGER]);
   // 허용 안 된 이메일은 같은 안내지만 메일이 가지 않는다
   for (const email of [STRANGER, NEWBIE]) {
     await mailGap(email);

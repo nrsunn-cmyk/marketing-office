@@ -49,7 +49,9 @@ export async function loginWithWorkspace(page: Page) {
 }
 
 export function adminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
+  // MAIL-SAFETY-01: 공유 스택(54321) 기본값을 두지 않는다. 주소 확인은 globalSetup(stack-guard.preflight)이 먼저 한다.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL 필요 (.env.local, 자기 전용 시험 스택)");
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!secret) throw new Error("SUPABASE_SECRET_KEY 필요 (.env.local)");
   return createClient(url, secret, { auth: { persistSession: false } });

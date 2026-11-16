@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { loginWithWorkspace, mailGap, OWNER } from "./helpers";
-import { clearMailbox, waitForMail } from "./mailpit";
+import { deleteMessagesTo, waitForMail } from "./mailpit";
 
 /**
  * AGY 브랜드 에셋 적용: 탭 아이콘·아이폰 아이콘·링크 미리보기 그림·머리글/로그인 심볼·로그인 메일.
@@ -62,7 +62,7 @@ test("머리글에 심볼, 로그인 화면에 슬레이트 엠블럼이 보이�
 });
 
 test("계정 메일(비밀번호 재설정)은 AGY 디자인이고, 유효 시간은 실제 설정(1시간)과 같다", async ({ page }) => {
-  await clearMailbox();
+  await deleteMessagesTo([OWNER]);
   // 메일 발송 간격(1초 제한)을 지킨다. 재설정 메일을 받기만 하고 링크는 열지 않으므로 비밀번호는 그대로다.
   await mailGap(OWNER);
   await page.goto("/forgot-password");
