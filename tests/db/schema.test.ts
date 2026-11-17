@@ -275,7 +275,12 @@ describe("C04 추가 전용 기록은 수정·삭제 불가", () => {
         f.userId,
       ]),
     );
-    await expectImmutable("audit_events", "delete from audit_events where entity_id = $1", [artifactId]);
+    // 감사 기록은 SEC-AUDIT-FIX-02(R-A)부터 본인 계정의 UPDATE·DELETE 권한 자체가 없다(0행이 아니라 권한 거절).
+    // 관리자 권한으로도 수정 불가 트리거가 막는지는 그대로 확인한다.
+    const auditBefore = (await db.query("select * from audit_events order by 1")).rows;
+    await expectDbError(asOwner((tx) => tx.query("delete from audit_events where entity_id = $1", [artifactId])), /permission denied/);
+    await expectDbError(db.query("delete from audit_events where entity_id = $1", [artifactId]), /IMMUTABLE_ROW/);
+    expect((await db.query("select * from audit_events order by 1")).rows).toEqual(auditBefore);
   });
 
   it("템플릿은 관리자 권한으로도 고칠 수 없다 (새 버전 행만 추가)", async () => {
