@@ -238,3 +238,34 @@ describe("감사 기록 직접 추가 차단", () => {
     expect(await count("select 1 from audit_events where workspace_id = $1 and action = 'admin_note'", [a.workspaceId])).toBe(1);
   });
 });
+
+describe("SEC-AUDIT-FIX-02 S1: 소유 확인 전에 남의 행을 잠그지 않는다", () => {
+  // PGlite 는 연결이 하나라 두 세션 경합은 재현할 수 없다. 함수 본문으로 잠금 방식을 확인하고,
+  // 실제 두 세션 시험(B 가 A 의 커밋을 기다리지 않고 바로 P0002)은 Docker 전용 스택에서 한다.
+  const src = async (sig: string) =>
+    (await one<{ s: string }>(db, "select prosrc as s from pg_proc where oid = $1::regprocedure", [sig])).s.replace(/\s+/g, " ");
+
+  it.each([
+    ["public.record_generation(uuid,text,text,jsonb,jsonb,jsonb,jsonb,text)", "public.tasks x where x.id = p_task_id"],
+    ["public.save_draft_version(uuid,integer,text,jsonb,jsonb)", "public.tasks x where x.id = p_task_id"],
+    ["public.save_manual_version(uuid,integer,jsonb)", "public.artifacts x where x.id = p_artifact_id"],
+  ])("%s: 소유 조건이 잠그는 조회의 WHERE 안에 있고 그 표의 행만 잠근다", async (sig, from) => {
+    const s = await src(sig);
+    expect(s).toContain(`from ${from} and exists (select 1 from public.workspaces w where w.id = x.workspace_id and w.owner_user_id = uid) for update of x;`);
+    // 예전 방식(id 로만 잠근 뒤 소유 확인)이 남아 있지 않다
+    expect(s).not.toMatch(/where id = p_(task|artifact)_id for update;/);
+  });
+
+  it("남의 행·없는 행은 같은 P0002 이고, 주인의 정상 경로는 그대로다", async () => {
+    const g = await generated();
+    const missing = "00000000-0000-4000-8000-000000000000";
+    for (const id of [g.artifactId, missing]) {
+      const c = await codeOf(asB((tx) => tx.query(`select * from save_manual_version('${id}', 1, '{}')`)));
+      expect(c.code).toBe("P0002");
+      expect(c.message).toMatch(/^NOT_FOUND/);
+    }
+    const rev = (await one<{ revision: number }>(db, "select revision from artifacts where id = $1", [g.artifactId])).revision;
+    const r = await asA((tx) => one<{ version: number }>(tx, "select * from save_manual_version($1, $2, '{}')", [g.artifactId, rev]));
+    expect(r.version).toBe(2);
+  });
+});
