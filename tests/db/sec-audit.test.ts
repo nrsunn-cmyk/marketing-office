@@ -269,3 +269,91 @@ describe("SEC-AUDIT-FIX-02 S1: 소유 확인 전에 남의 행을 잠그지 않�
     expect(r.version).toBe(2);
   });
 });
+
+describe("SEC-AUDIT-FIX-02 R-A: 감사 기록 최소 권한, 로그인 역할 TRUNCATE 없음", () => {
+  it("authenticated 의 audit_events 권한은 SELECT 뿐(UPDATE·DELETE·TRUNCATE·INSERT 없음)", async () => {
+    const r = await one<Record<string, boolean>>(
+      db,
+      `select has_table_privilege('authenticated', 'public.audit_events', 'SELECT') as sel,
+              has_table_privilege('authenticated', 'public.audit_events', 'INSERT') as ins,
+              has_table_privilege('authenticated', 'public.audit_events', 'UPDATE') as upd,
+              has_table_privilege('authenticated', 'public.audit_events', 'DELETE') as del,
+              has_table_privilege('authenticated', 'public.audit_events', 'TRUNCATE') as trn`,
+    );
+    expect(r).toEqual({ sel: true, ins: false, upd: false, del: false, trn: false });
+  });
+
+  it("public 의 어떤 표도 authenticated·anon 이 TRUNCATE 할 수 없다", async () => {
+    const rows = (
+      await db.query<{ t: string }>(
+        `select c.relname as t from pg_class c
+          where c.relnamespace = 'public'::regnamespace and c.relkind in ('r','p')
+            and (has_table_privilege('authenticated', c.oid, 'TRUNCATE') or has_table_privilege('anon', c.oid, 'TRUNCATE'))`,
+      )
+    ).rows;
+    expect(rows).toEqual([]);
+  });
+
+  it("공격: 본인이 감사 기록 TRUNCATE·UPDATE·DELETE → 42501, 행은 그대로", async () => {
+    const before = await count("select 1 from audit_events", []);
+    expect(before).toBeGreaterThan(0);
+    for (const sql of ["truncate audit_events", "update audit_events set action = 'x'", "delete from audit_events"]) {
+      const c = await codeOf(asA((tx) => tx.query(sql)));
+      expect(c.code, sql).toBe("42501");
+    }
+    expect(await count("select 1 from audit_events", [])).toBe(before);
+  });
+
+  it("다른 추가 전용 표(결과 버전)도 TRUNCATE 는 42501", async () => {
+    const c = await codeOf(asA((tx) => tx.query("truncate artifact_versions cascade")));
+    expect(c.code).toBe("42501");
+  });
+});
+
+describe("SEC-AUDIT-FIX-02 R-B: 결과물 유형 = 작업 유형", () => {
+  it("공격: 전략 작업에 logo_brief 결과물 직접 INSERT → 23514 TYPE_MISMATCH, 행 없음, 작업 상태 그대로", async () => {
+    const taskId = await strategyTask(a);
+    const c = await codeOf(
+      asA((tx) =>
+        tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')", [a.workspaceId, a.projectA, taskId]),
+      ),
+    );
+    expect(c.code).toBe("23514");
+    expect(c.message).toMatch(/TYPE_MISMATCH/);
+    expect(await count("select 1 from artifacts where task_id = $1", [taskId])).toBe(0);
+    expect(await status(taskId)).toBe("draft");
+  });
+
+  it("로고 작업에 quote 결과물 직접 INSERT 도 23514", async () => {
+    const taskId = await asA((tx) => createTask(tx, a, a.projectA));
+    const c = await codeOf(
+      asA((tx) => tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'quote')", [a.workspaceId, a.projectA, taskId])),
+    );
+    expect(c.code).toBe("23514");
+  });
+
+  it("유형이 같으면 지금처럼 직접 INSERT 된다(P1 흐름 유지)", async () => {
+    const taskId = await asA((tx) => createTask(tx, a, a.projectA));
+    await asA((tx) => tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')", [a.workspaceId, a.projectA, taskId]));
+    expect(await count("select 1 from artifacts where task_id = $1", [taskId])).toBe(1);
+  });
+
+  it("남의 작업을 가리키면 유형을 알려 주지 않고 기존처럼 권한 오류(42501)로 거절", async () => {
+    const taskB = await asB((tx) => createTask(tx, b, b.projectA));
+    for (const type of ["logo_brief", "quote"]) {
+      const c = await codeOf(
+        asA((tx) => tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, $4)", [a.workspaceId, a.projectA, taskB, type])),
+      );
+      expect(c.message, type).not.toMatch(/TYPE_MISMATCH/);
+      expect(c.code).not.toBeNull();
+    }
+  });
+
+  it("트리거 함수는 로그인 역할이 직접 부를 수 없다", async () => {
+    const r = await one<{ authed: boolean; anon: boolean }>(
+      db,
+      "select has_function_privilege('authenticated', 'app.enforce_artifact_task_type()', 'EXECUTE') as authed, has_function_privilege('anon', 'app.enforce_artifact_task_type()', 'EXECUTE') as anon",
+    );
+    expect(r).toEqual({ authed: false, anon: false });
+  });
+});
