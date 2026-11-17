@@ -230,21 +230,21 @@ describe("함수 속성·정책·권한 (수정 후 상태)", () => {
     }
   });
 
-  it("다른 invoker RPC 는 그대로 invoker 다(일괄 전환 없음), finalize_quote 는 기존대로 정의자", async () => {
+  it("감사 기록을 쓰는 RPC 는 모두 정의자다(SEC-AUDIT-01 에서 invoker 4개 전환), finalize_quote 는 기존대로 정의자", async () => {
     const rows = (
       await db.query<{ name: string; secdef: boolean }>(
         "select proname as name, prosecdef as secdef from pg_proc where pronamespace = 'public'::regnamespace and proname in ('record_generation','save_draft_version','save_manual_version','setup_workspace','finalize_quote')",
       )
     ).rows;
     const map = Object.fromEntries(rows.map((r) => [r.name, r.secdef]));
-    expect(map).toEqual({ record_generation: false, save_draft_version: false, save_manual_version: false, setup_workspace: false, finalize_quote: true });
+    expect(map).toEqual({ record_generation: true, save_draft_version: true, save_manual_version: true, setup_workspace: true, finalize_quote: true });
   });
 
-  it("insert 정책: approvals·delivery_records 없음, audit_events 는 유지(잔여 위험)", async () => {
+  it("insert 정책: approvals·delivery_records·audit_events 모두 없음(SEC-AUDIT-01)", async () => {
     const rows = (
       await db.query<{ tablename: string }>("select tablename from pg_policies where schemaname = 'public' and cmd = 'INSERT' and tablename in ('approvals','delivery_records','audit_events')")
     ).rows.map((r) => r.tablename);
-    expect(rows).toEqual(["audit_events"]);
+    expect(rows).toEqual([]);
   });
 
   it("artifacts UPDATE 권한: authenticated 는 current_draft_version_id 열만", async () => {

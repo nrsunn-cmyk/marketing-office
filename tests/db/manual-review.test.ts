@@ -106,7 +106,8 @@ describe("바뀌지 않아야 하는 것", () => {
     expect(await status(g.taskId)).toBe("review");
   });
 
-  it("save_manual_version 은 invoker 그대로, anon 실행 불가·authenticated 실행 가능", async () => {
+  // SEC-AUDIT-01(20261117003000)에서 감사 기록 직접 추가를 막으려고 정의자 권한으로 바꿨다. 실행 권한 규칙은 그대로다.
+  it("save_manual_version 은 정의자(SEC-AUDIT-01), anon 실행 불가·authenticated 실행 가능", async () => {
     const row = await one<{ secdef: boolean; anon: boolean; authed: boolean }>(
       db,
       `select prosecdef as secdef,
@@ -114,7 +115,7 @@ describe("바뀌지 않아야 하는 것", () => {
               has_function_privilege('authenticated', 'public.save_manual_version(uuid,integer,jsonb)', 'execute') as authed
          from pg_proc where oid = 'public.save_manual_version(uuid,integer,jsonb)'::regprocedure`,
     );
-    expect(row).toEqual({ secdef: false, anon: false, authed: true });
+    expect(row).toEqual({ secdef: true, anon: false, authed: true });
   });
 
   it("다른 업무실 사용자는 남의 결과물을 직접 고칠 수 없다(invoker + RLS 로 NOT_FOUND)", async () => {
