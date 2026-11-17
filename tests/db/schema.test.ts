@@ -267,7 +267,8 @@ describe("C04 추가 전용 기록은 수정·삭제 불가", () => {
       ),
     );
     await expectImmutable("approvals", "update approvals set decision = 'rejected' where artifact_version_id = $1", [versionId]);
-    await asOwner((tx) =>
+    // 감사 기록은 로그인 사용자가 직접 넣을 수 없다(SEC-AUDIT-01). 수정 불가 확인용 행은 관리자 권한으로 넣는다.
+    await asAdmin((tx) =>
       tx.query("insert into audit_events (workspace_id, entity_type, entity_id, actor_id, action) values ($1, 'artifact', $2, $3, 'approve')", [
         f.workspaceId,
         artifactId,
