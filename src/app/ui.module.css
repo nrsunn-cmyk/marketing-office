@@ -482,19 +482,26 @@
 }
 
 /* ── 현황 숫자 (1안 테크 그리드 위젯 카드) ─────────────────── */
+/* 메인 시안 A: 넓은 화면 4칸 · 960px 이하 2칸 · 480px 이하 1칸 (MAIN-A-IMPLEMENT-01) */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 960px) {
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .tiles {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -795,4 +802,242 @@ a.secondaryButton {
   align-items: center;
   text-decoration: none;
   color: var(--text-main) !important;
+}
+
+/* ── 메인 시안 A 전용 (MAIN-A-IMPLEMENT-01, Design/main-site-concepts-20261117/concept-a-status.html R2) ──
+ * 색은 앱 토큰만 쓴다(시안 styles.css 색은 옮기지 않음). 다크 모드는 토큰이 바뀌어 따라간다. */
+.tileNote {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: 11.5px;
+  font-weight: var(--font-weight-bold);
+}
+
+/* 넓은 화면 1.2 : 0.8 두 칸(왼쪽 처리할 작업, 오른쪽 납기·결과물). 960px 미만은 같은 순서로 한 칸 */
+.dashGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (min-width: 961px) {
+  .dashGrid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  }
+}
+
+.dashColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.moreLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.moreLink:hover {
+  text-decoration: underline;
+}
+
+/* 상태·납기 알약 배지 (토큰 색 + 글자로 뜻 전달) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pillInfo {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.pillWarning {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+.pillDanger {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+.pillNeutral {
+  background: var(--bg-subtle);
+  border-color: var(--border-subtle);
+  color: var(--text-main);
+}
+
+/* 처리할 작업: 항목 전체가 작업 화면으로 가는 링크 */
+.taskCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-main) !important;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.taskCard:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taskCard,
+  .taskCard:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+.taskMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.taskType {
+  font-size: var(--font-size-sm);
+  color: var(--text-main);
+}
+
+/* 긴 프로젝트 이름은 한 줄 말줄임(전체 이름은 작업 화면에서) */
+.taskProject {
+  font-size: var(--font-size-sm);
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskAction {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--primary-600);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+/* 납기 임박: 지남은 빨강, 오늘은 주황 왼쪽 막대(배지 글자로도 구분) */
+.dueItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  overflow-wrap: anywhere;
+}
+/* 회색 항목 배경(--bg-subtle) 위 보조 글자 대비 보강: 기존 .listItem .muted 와 같은 값(DASH-UI-03, 6.91:1) */
+.dueItem .muted {
+  color: #475569;
+}
+[data-theme="dark"] .dueItem .muted,
+:global([data-theme="dark"]) .dueItem .muted {
+  color: var(--text-muted);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dueItem .muted {
+    color: var(--text-muted);
+  }
+}
+.dueOverdue {
+  border-left-color: var(--danger-text);
+}
+.dueToday {
+  border-left-color: var(--warning-text);
+}
+
+.recentMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: none;
+  text-align: right;
+}
+
+/* 좁은 화면에서 줄이 바뀌면 왼쪽 정렬 */
+@media (max-width: 480px) {
+  .recentMeta {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+.asOf {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* 빈 상태의 첫 행동 순서 */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-6);
+}
+
+.steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
 }
