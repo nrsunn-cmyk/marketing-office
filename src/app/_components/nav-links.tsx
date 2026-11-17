@@ -40,3 +40,21 @@ export function NavLinks({ pathname }: { pathname: string | null }) {
 export function ActiveNavLinks() {
   return <NavLinks pathname={usePathname()} />;
 }
+
+/** 머리글의 '설정' 링크. 주 메뉴(5개)에는 넣지 않고, 설정 화면에 있을 때 현재 위치만 알린다(UI-NAV-02). */
+export function SettingsLink({ pathname }: { pathname: string | null }) {
+  const active = pathname !== null && pathname.startsWith("/settings");
+  return (
+    <Link
+      href="/settings"
+      className={active ? `${styles.secondaryButton} ${styles.settingsActive}` : styles.secondaryButton}
+      aria-current={active ? "page" : undefined}
+    >
+      설정
+    </Link>
+  );
+}
+
+export function ActiveSettingsLink() {
+  return <SettingsLink pathname={usePathname()} />;
+}

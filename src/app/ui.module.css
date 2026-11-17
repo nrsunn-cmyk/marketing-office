@@ -116,6 +116,49 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: none;
+}
+
+/* 설정 화면에 있을 때 머리글 '설정' 버튼의 현재 위치 (UI-NAV-02) */
+.settingsActive {
+  border-color: var(--primary-600);
+  color: var(--primary-600) !important;
+  font-weight: var(--font-weight-bold);
+}
+
+/* 태블릿(641~900px): 한 줄에 다 넣지 않고 메뉴를 둘째 줄 전체 폭으로 (UI-NAV-02) */
+@media (min-width: 641px) and (max-width: 900px) {
+  .appHeaderInner {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+  .headerActions {
+    margin-left: auto;
+  }
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0;
+    justify-content: center;
+  }
+}
+
+/* 좁은 휴대폰(420px 이하): 브랜드 글자는 눈으로만 숨긴다(링크 이름은 유지). 심볼만 보인다 */
+@media (max-width: 420px) {
+  .brandText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .headerActions {
+    gap: var(--space-1);
+  }
+  .headerActions .secondaryButton {
+    padding: 8px 10px;
+  }
 }
 
 .iconButton {
@@ -160,9 +203,18 @@
   .navLink {
     flex: 1;
     flex-direction: column;
+    justify-content: center;
     gap: 2px;
+    min-width: 0;
+    min-height: 48px;
     font-size: var(--font-size-xs);
     padding: var(--space-2) var(--space-1);
+    white-space: nowrap;
+  }
+  /* 현재 탭: 글자색·굵기에 더해 위쪽 막대로 모양 표시 (UI-NAV-02, 색만으로 전하지 않기) */
+  .navLinkActive {
+    box-shadow: inset 0 3px 0 currentColor;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
   .navIcon {
     display: block;
