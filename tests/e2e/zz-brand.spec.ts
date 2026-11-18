@@ -68,7 +68,7 @@ test("계정 메일(비밀번호 재설정)은 AGY 디자인이고, 유효 시�
   await page.goto("/forgot-password");
   await page.getByLabel("이메일").fill(OWNER);
   await page.getByRole("button", { name: "재설정 링크 받기" }).click();
-  await expect(page.getByRole("status")).toContainText("재설정 메일을 보냈습니다");
+  await expect(page.getByRole("status").filter({ hasText: "재설정 메일을 보냈습니다" })).toBeVisible(); // 공용 성공 안내 영역(role=status)이 늘 있어 범위 없이 찾으면 두 곳에 걸린다 → 기대 문구로 좁힌다(BUNDLE-C-R1)
   const { subject, html } = await waitForMail(OWNER);
   expect(subject).toBe("[마케팅 업무실] 비밀번호 재설정");
   expect(html).toContain("새 비밀번호 정하기");

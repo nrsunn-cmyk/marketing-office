@@ -158,7 +158,7 @@ test("회원가입 → 메일 인증 전에는 로그인 불가 → 한국어 �
   await mailGap(NEWBIE);
   await fillSignup(page, NEWBIE, NEWBIE_PASSWORD);
   await expect(page).toHaveURL(/\/signup\?sent=1$/);
-  await expect(page.getByRole("status")).toContainText("확인 메일을 보냈습니다");
+  await expect(page.getByRole("status").filter({ hasText: "확인 메일을 보냈습니다" })).toBeVisible(); // 공용 성공 안내 영역(role=status)이 늘 있어 범위 없이 찾으면 두 곳에 걸린다 → 기대 문구로 좁힌다(BUNDLE-C-R1)
 
   // 인증 전 로그인
   await page.goto("/login");
@@ -190,7 +190,7 @@ test("회원가입 → 메일 인증 전에는 로그인 불가 → 한국어 �
 test("이미 가입한 이메일로 다시 가입해도 같은 안내만 나온다(가입 여부 노출 없음)", async ({ page }) => {
   await mailGap(NEWBIE);
   await fillSignup(page, NEWBIE, NEWBIE_PASSWORD);
-  await expect(page.getByRole("status")).toContainText("확인 메일을 보냈습니다");
+  await expect(page.getByRole("status").filter({ hasText: "확인 메일을 보냈습니다" })).toBeVisible(); // 공용 성공 안내 영역(role=status)이 늘 있어 범위 없이 찾으면 두 곳에 걸린다 → 기대 문구로 좁힌다(BUNDLE-C-R1)
 });
 
 test("비밀번호 찾기 → 한국어 재설정 메일 → 새 비밀번호 → 새 비밀번호로만 로그인", async ({ page }) => {
@@ -201,7 +201,7 @@ test("비밀번호 찾기 → 한국어 재설정 메일 → 새 비밀번호 �
     await page.goto("/forgot-password");
     await page.getByLabel("이메일").fill(email);
     await page.getByRole("button", { name: "재설정 링크 받기" }).click();
-    await expect(page.getByRole("status")).toContainText("가입된 이메일이면 비밀번호 재설정 메일을 보냈습니다");
+    await expect(page.getByRole("status").filter({ hasText: "가입된 이메일이면 비밀번호 재설정 메일을 보냈습니다" })).toBeVisible(); // 공용 성공 안내 영역(role=status)이 늘 있어 범위 없이 찾으면 두 곳에 걸린다 → 기대 문구로 좁힌다(BUNDLE-C-R1)
   }
   const mail = await waitForMail(NEWBIE);
   expect(mail.subject).toBe("[마케팅 업무실] 비밀번호 재설정");
@@ -220,7 +220,7 @@ test("비밀번호 찾기 → 한국어 재설정 메일 → 새 비밀번호 �
   await page.getByLabel("새 비밀번호", { exact: true }).fill(NEWBIE_NEW_PASSWORD);
   await page.getByLabel("새 비밀번호 확인", { exact: true }).fill(NEWBIE_NEW_PASSWORD);
   await page.getByRole("button", { name: "비밀번호 바꾸기" }).click();
-  await expect(page.getByRole("status")).toContainText("비밀번호를 바꿨습니다");
+  await expect(page.getByRole("status").filter({ hasText: "비밀번호를 바꿨습니다" })).toBeVisible(); // 공용 성공 안내 영역(role=status)이 늘 있어 범위 없이 찾으면 두 곳에 걸린다 → 기대 문구로 좁힌다(BUNDLE-C-R1)
 
   // 새 비밀번호 화면에는 머리글이 없으므로 쿠키를 지워 로그아웃 상태로 만든다
   await page.context().clearCookies();
