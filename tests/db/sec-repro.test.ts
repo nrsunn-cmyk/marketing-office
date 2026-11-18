@@ -67,7 +67,7 @@ beforeAll(async () => {
     artifactB = rb.artifactId;
     vB1 = rb.versionId;
   });
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 afterAll(() => {
   // 보고서용 요약(SEC-REPRO-01.md에 옮김)

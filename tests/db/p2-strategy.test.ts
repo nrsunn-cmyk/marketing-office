@@ -27,7 +27,7 @@ beforeAll(async () => {
     );
   assetA = await asset(a.projectA, "https://example.com/a");
   assetB = await asset(a.projectB, "https://example.com/b");
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 const asA = <T>(fn: (tx: Tx) => Promise<T>) => asUser(db, a.userId, fn);
 const asB = <T>(fn: (tx: Tx) => Promise<T>) => asUser(db, b.userId, fn);
@@ -76,7 +76,7 @@ const generate = (tx: Tx, taskId: string, profileId: string, d: { input: unknown
 // 프로필 A1 승인(대부분의 시험 전제). 고객 B 프로필은 승인하지 않는다.
 beforeAll(async () => {
   await asA((tx) => approveProfile(tx, a.profileA1));
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 describe("정상 흐름: 프로필 승인 → 생성 → 직접 고치기 → 승인", () => {
   it("DB가 프로필 사본·근거 참조를 직접 만들고, 작업은 review → completed", async () => {
