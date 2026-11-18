@@ -119,8 +119,10 @@
   flex: none;
 }
 
-/* 설정 화면에 있을 때 머리글 '설정' 버튼의 현재 위치 (UI-NAV-02) */
-.settingsActive {
+/* 설정 화면에 있을 때 머리글 '설정' 버튼의 현재 위치 (UI-NAV-02).
+ * 뒤에 오는 .secondaryButton(테두리·굵기)과 a.secondaryButton(글자색 !important)보다 강해야 하므로
+ * 선택자를 a.secondaryButton.settingsActive 로 둔다(UI-NAV-02-FIX-01, QA-UI-NAV-02 D1). 색은 토큰이라 다크에서도 따라간다. */
+a.secondaryButton.settingsActive {
   border-color: var(--primary-600);
   color: var(--primary-600) !important;
   font-weight: var(--font-weight-bold);
