@@ -15,6 +15,44 @@ export function localProjectId(cwd: string = process.cwd()): string | null {
   return /^\s*project_id\s*=\s*"([^"]+)"/m.exec(readFileSync(p, "utf8"))?.[1] ?? null;
 }
 
+/** 여러 CLI 가 같이 쓰는 공용 로컬 스택의 project_id(원본 저장소 config.toml). 복원 연습은 이 프로젝트에서 하지 않는다 */
+export const SHARED_PROJECT_ID = "marketing-office";
+
+/** 현재 폴더 config.toml 의 [api] port (없으면 null) */
+export function configApiPort(cwd: string = process.cwd()): number | null {
+  const p = join(cwd, "supabase", "config.toml");
+  if (!existsSync(p)) return null;
+  const api = /^\[api\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(readFileSync(p, "utf8"))?.[1] ?? "";
+  const port = /^\s*port\s*=\s*(\d+)/m.exec(api)?.[1];
+  return port ? Number(port) : null;
+}
+
+/** API 주소의 포트(없으면 null) */
+export function apiPort(url: string): number | null {
+  try {
+    const u = new URL(url);
+    return u.port ? Number(u.port) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 컨테이너가 어느 로컬 Supabase 스택의 것인지(라벨 com.supabase.cli.project). 스택 컨테이너가 아니면 "".
+ * 이름 대신 라벨로 판정하므로 '/이름'·컨테이너 ID 형태로 적어도 같은 결과다(R2, QA-BACKUP-P2-01-R1 R1-b).
+ * 컨테이너가 없으면 멈춘다. 인자에는 컨테이너 이름만 들어간다(비밀값 없음).
+ */
+export function containerProject(container: string): string {
+  let out: string;
+  try {
+    out = run("docker", ["inspect", "--format", '{{index .Config.Labels "com.supabase.cli.project"}}', container]);
+  } catch {
+    throw new Error(`컨테이너(${container})를 찾을 수 없습니다. 먼저 띄운 뒤 다시 실행하세요.`);
+  }
+  const v = out.trim();
+  return v === "<no value>" ? "" : v;
+}
+
 /**
  * psql 을 빌려 쓸 Docker 컨테이너 정하기(BACKUP-P2-TABLES-01-R1, QA-BACKUP-P2-01 W1·W3).
  * 예전에는 지정이 없으면 공용 스택 컨테이너(supabase_db_marketing-office)를 썼다. 이제 기본값이 없다.
@@ -28,14 +66,25 @@ export function dbContainer(kind: BackupTarget["kind"], env: EnvMap = process.en
     if (!named) {
       throw new Error("운영 대상에는 SUPABASE_DB_CONTAINER(전용 psql 클라이언트 컨테이너)를 지정해야 합니다. 공용 컨테이너로 운영 비밀번호를 넘기지 않도록 멈춥니다.");
     }
-    if (/^supabase_/.test(named)) {
+    if (/^\/?supabase_/.test(named)) {
       throw new Error(`운영 대상에 로컬 Supabase 스택 컨테이너(${named})는 쓸 수 없습니다. 전용 psql 클라이언트 컨테이너를 띄워 지정하세요.`);
+    }
+    // 이름이 아닌 라벨로 한 번 더 판정한다('/이름'·컨테이너 ID 형태로 적은 스택 컨테이너도 막는다, R2)
+    const project = containerProject(named);
+    if (project) {
+      throw new Error(`운영 대상에 로컬 Supabase 스택 컨테이너(${named}, 프로젝트 ${project})는 쓸 수 없습니다. 전용 psql 클라이언트 컨테이너를 띄워 지정하세요.`);
     }
     return named;
   }
   if (named) return named;
   const id = localProjectId(cwd);
   if (!id) throw new Error("로컬 대상인데 SUPABASE_DB_CONTAINER 가 없고, 현재 폴더에 supabase/config.toml(project_id)도 없습니다. 컨테이너를 정할 수 없어 멈춥니다.");
+  // config 로 정할 때는 API 주소 포트가 그 프로젝트의 API 포트와 같아야 한다(행 수·파일은 API, 표 목록·SQL 은 이 컨테이너를 본다, R2)
+  const cfgPort = configApiPort(cwd);
+  const urlPort = apiPort(env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  if (cfgPort !== urlPort) {
+    throw new Error(`API 주소 포트(${urlPort ?? "없음"})가 현재 폴더 프로젝트(${id})의 API 포트(${cfgPort ?? "없음"})와 다릅니다. 서로 다른 로컬 스택이 섞이지 않도록 멈춥니다.`);
+  }
   return `supabase_db_${id}`;
 }
 
