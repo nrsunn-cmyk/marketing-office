@@ -2,10 +2,42 @@
  * 백업·복원 공통 도구 (T20). 관리자 키(SUPABASE_SECRET_KEY)를 쓰는 운영 스크립트이며 앱 코드에서 쓰지 않는다 (C05).
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const BUCKET = "source-assets";
-export const DB_CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? "supabase_db_marketing-office";
+
+/** 현재 폴더 supabase/config.toml 의 project_id (없으면 null). supabase db reset·dump 는 이 프로젝트를 대상으로 한다 */
+export function localProjectId(cwd: string = process.cwd()): string | null {
+  const p = join(cwd, "supabase", "config.toml");
+  if (!existsSync(p)) return null;
+  return /^\s*project_id\s*=\s*"([^"]+)"/m.exec(readFileSync(p, "utf8"))?.[1] ?? null;
+}
+
+/**
+ * psql 을 빌려 쓸 Docker 컨테이너 정하기(BACKUP-P2-TABLES-01-R1, QA-BACKUP-P2-01 W1·W3).
+ * 예전에는 지정이 없으면 공용 스택 컨테이너(supabase_db_marketing-office)를 썼다. 이제 기본값이 없다.
+ * - 원격(운영): SUPABASE_DB_CONTAINER 를 반드시 지정한다. 로컬 Supabase 스택 컨테이너(supabase_ 로 시작)는 거부한다.
+ *   운영 비밀번호를 다른 CLI·공용 스택의 컨테이너 안으로 넣지 않게 하려는 것이다. 이 확인은 비밀번호를 넘기기 전에 한다.
+ * - 로컬: 지정이 없으면 현재 폴더 config.toml 의 project_id 로 supabase_db_<id> 를 쓴다. 그것도 없으면 멈춘다.
+ */
+export function dbContainer(kind: BackupTarget["kind"], env: EnvMap = process.env, cwd: string = process.cwd()): string {
+  const named = (env.SUPABASE_DB_CONTAINER ?? "").trim();
+  if (kind === "remote") {
+    if (!named) {
+      throw new Error("운영 대상에는 SUPABASE_DB_CONTAINER(전용 psql 클라이언트 컨테이너)를 지정해야 합니다. 공용 컨테이너로 운영 비밀번호를 넘기지 않도록 멈춥니다.");
+    }
+    if (/^supabase_/.test(named)) {
+      throw new Error(`운영 대상에 로컬 Supabase 스택 컨테이너(${named})는 쓸 수 없습니다. 전용 psql 클라이언트 컨테이너를 띄워 지정하세요.`);
+    }
+    return named;
+  }
+  if (named) return named;
+  const id = localProjectId(cwd);
+  if (!id) throw new Error("로컬 대상인데 SUPABASE_DB_CONTAINER 가 없고, 현재 폴더에 supabase/config.toml(project_id)도 없습니다. 컨테이너를 정할 수 없어 멈춥니다.");
+  return `supabase_db_${id}`;
+}
 
 /**
  * 백업 대상 public 표 전체 (행 수 비교용). BACKUP-P2-TABLES-01: migration 이 만드는 표를 빠짐없이 둔다.
@@ -237,15 +269,17 @@ export function resolveBackupTarget(env: Record<string, string | undefined> = pr
 export function psql(sql: string): string {
   // 백업과 같은 규칙으로 대상을 정한다(로컬/운영 섞임·프로젝트 불일치면 여기서 멈춤)
   const backupTarget = resolveBackupTarget();
+  // 컨테이너를 먼저 정한다. 운영인데 지정이 없거나 로컬 스택 컨테이너면 비밀번호를 꺼내기 전에 멈춘다(R1 W1)
+  const container = dbContainer(backupTarget.kind);
   if (backupTarget.kind === "local") {
-    return run("docker", ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
+    return run("docker", ["exec", "-i", container, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
   }
   // BACKUP-SECRET-01: 비밀번호는 docker·psql 명령 인자에 넣지 않고 표준 입력 첫 줄로 넘긴다(컨테이너 안 sh 가 읽어 PGPASSWORD 로).
   // docker exec -e NAME=값 도 인자에 값이 보이므로 쓰지 않는다.
   const { conninfo, password } = splitDbUrl(process.env.BACKUP_DB_URL ?? "");
   return run(
     "docker",
-    ["exec", "-i", DB_CONTAINER, "sh", "-c", PSQL_STDIN_PASSWORD_SCRIPT, "sh", conninfo, "-v", "ON_ERROR_STOP=1", "-At", "-q"],
+    ["exec", "-i", container, "sh", "-c", PSQL_STDIN_PASSWORD_SCRIPT, "sh", conninfo, "-v", "ON_ERROR_STOP=1", "-At", "-q"],
     `${password}\n${sql}`,
     { env: childEnv(), secrets: [password] },
   );
@@ -275,6 +309,41 @@ export interface Manifest {
   counts: Record<string, number>;
   files: StoredFile[];
   quoteTotalWon: number;
+  /**
+   * 행 수 목록 판(BACKUP-P2-TABLES-01-R1). 2 = DB 의 public 표 전체를 대조해 센 백업.
+   * 없으면 예전 20개 목록 백업이다. 그 백업의 data.sql 은 public 표 전체를 담지만, 목록 밖 표는 행 수로 확인할 수 없다.
+   */
+  tableListVersion?: 2;
+}
+
+export const TABLE_LIST_VERSION = 2 as const;
+
+/**
+ * 백업 목록의 행 수와 지금 DB 행 수 비교(counts 의 키 = 지금 DB 에 있는 표).
+ * - 백업에 있던 표가 없거나 행 수가 다르면 실패
+ * - 목록 밖 표에 행이 있으면: 새 판(2) 백업은 실패(백업 때 모든 표를 셌으므로 생기면 안 됨),
+ *   예전 20개 목록 백업은 **경고**(data.sql 에는 들어 있지만 이 백업으로 행 수를 확인할 수 없음, R1 W2)
+ */
+export function compareCounts(manifest: Pick<Manifest, "counts" | "tableListVersion">, counts: Record<string, number>): { problems: string[]; warning: string | null } {
+  const problems: string[] = [];
+  for (const [t, n] of Object.entries(manifest.counts)) {
+    if (!(t in counts)) problems.push(`백업에 있던 표가 지금 DB에 없음 ${t}(백업 ${n}행)`);
+    else if (counts[t] !== n) problems.push(`행 수 불일치 ${t}: 백업 ${n} / 복원 ${counts[t]}`);
+  }
+  const oldList = manifest.tableListVersion !== TABLE_LIST_VERSION;
+  const unchecked: string[] = [];
+  for (const [t, n] of Object.entries(counts)) {
+    if (t in manifest.counts || n === 0) continue;
+    if (oldList) unchecked.push(`${t} ${n}행`);
+    else problems.push(`백업 목록에 없는 표에 행이 있음 ${t}: ${n}행`);
+  }
+  const warning = oldList
+    ? `경고: 예전 목록 백업입니다(행 수 목록 ${Object.keys(manifest.counts).length}개 표). ` +
+      (unchecked.length
+        ? `다음 표는 data.sql 에 들어 있지만 이 백업으로 행 수를 확인할 수 없습니다: ${unchecked.join(", ")}.`
+        : "목록 밖 표는 모두 0행입니다.")
+    : null;
+  return { problems, warning };
 }
 
 /** 모든 외래키에 대해 부모 없는 행이 있는지 검사하는 SQL. 하나라도 있으면 오류. */

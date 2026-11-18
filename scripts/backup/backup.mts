@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { admin, BUCKET, checkTableCoverage, listDbTables, resolveBackupTarget, runDump, tableCounts, type Manifest, type StoredFile } from "./common.mts";
+import { admin, BUCKET, checkTableCoverage, listDbTables, resolveBackupTarget, runDump, TABLE_LIST_VERSION, tableCounts, type Manifest, type StoredFile } from "./common.mts";
 
 const out = process.argv[2];
 if (!out) {
@@ -68,6 +68,7 @@ const manifest: Manifest = {
   createdAt: new Date().toISOString(),
   target: target.label,
   counts: await tableCounts(sb, tables),
+  tableListVersion: TABLE_LIST_VERSION,
   files,
   quoteTotalWon: (quotes ?? []).reduce((s, q) => s + Number(q.total_won), 0),
 };

@@ -54,6 +54,14 @@ describe("복원 초기화 전 대상 설정 확인", () => {
     expect(commands.run).not.toHaveBeenCalled();
   });
 
+  it("데이터를 넣을 컨테이너가 초기화할 프로젝트(현재 폴더 config.toml)의 DB가 아니면 초기화하지 않는다(QA-BACKUP-P2-01 W3)", async () => {
+    // 저장소 config.toml 의 project_id 와 다른 스택 컨테이너를 지정: 예전에는 현재 폴더 프로젝트를 비우고 다른 DB에 넣을 수 있었다
+    vi.stubEnv("SUPABASE_DB_CONTAINER", "supabase_db_some-other-stack");
+    await expect(import("../../scripts/backup/restore-drill.mts")).rejects.toThrow("검사 중단");
+    expect(commands.run).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(expect.stringMatching(/초기화할 프로젝트\(.+\)와 데이터를 넣을 컨테이너\(supabase_db_some-other-stack\)가 다릅니다/));
+  });
+
   it("로컬 설정과 명시 확인이 맞으면 초기화 단계에 도달한다", async () => {
     // 실제 초기화 대신 호출 직후 멈춰 외부 CLI·DB는 사용하지 않는다.
     commands.run.mockImplementation(() => { throw new Error("초기화 단계 도달"); });

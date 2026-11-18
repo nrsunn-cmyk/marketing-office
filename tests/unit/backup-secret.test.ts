@@ -138,6 +138,8 @@ describe("실패해도 비밀이 오류에 남지 않는다", () => {
     spawnSync.mockReturnValue({ status: 1, stdout: "", stderr: `connection failed for password ${SECRET}` });
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", API);
     vi.stubEnv("BACKUP_DB_URL", DIRECT);
+    // 운영 대상 psql 은 전용 클라이언트 지정이 필수다(BACKUP-P2-TABLES-01-R1). 지정해야 실제 실행 단계까지 간다
+    vi.stubEnv("SUPABASE_DB_CONTAINER", "claude-backup-client-test");
     const { psql, resolveBackupTarget, runDump } = await load();
     const msgs: string[] = [];
     for (const f of [() => psql("select 1;"), () => runDump("d.sql", resolveBackupTarget())]) {

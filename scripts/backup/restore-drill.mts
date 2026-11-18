@@ -9,7 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { admin, BUCKET, psql, resolveBackupTarget, run, type Manifest } from "./common.mts";
+import { admin, BUCKET, dbContainer, localProjectId, psql, resolveBackupTarget, run, type Manifest } from "./common.mts";
 import { verify } from "./verify.mts";
 
 const dir = process.argv[2];
@@ -34,6 +34,24 @@ try {
 } catch (e) {
   console.error(`복원 훈련을 시작하지 않았습니다: ${(e as Error).message} DB는 초기화하지 않았습니다.`);
   process.exit(1);
+}
+// R1 W3: supabase db reset 은 현재 폴더의 프로젝트를 비운다. data.sql 을 넣을 컨테이너가 그 프로젝트의 DB 가 아니면
+// (예: 개인 스택을 비우고 공용 스택에 넣음) 초기화 전에 멈춘다.
+{
+  const id = localProjectId();
+  let container = "";
+  try {
+    container = dbContainer("local");
+  } catch (e) {
+    console.error(`복원 훈련을 시작하지 않았습니다: ${(e as Error).message} DB는 초기화하지 않았습니다.`);
+    process.exit(1);
+  }
+  if (!id || container !== `supabase_db_${id}`) {
+    console.error(
+      `복원 훈련을 시작하지 않았습니다: 초기화할 프로젝트(${id ?? "config.toml 없음"})와 데이터를 넣을 컨테이너(${container})가 다릅니다. DB는 초기화하지 않았습니다.`,
+    );
+    process.exit(1);
+  }
 }
 const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as Manifest;
 

@@ -6,7 +6,7 @@
  * - 확정 견적의 항목 합계를 다시 계산해 고정 금액과 같음
  */
 import { createHash } from "node:crypto";
-import { admin, BUCKET, checkTableCoverage, listDbTables, ORPHAN_CHECK_SQL, psql, tableCounts, type Manifest } from "./common.mts";
+import { admin, BUCKET, checkTableCoverage, compareCounts, listDbTables, ORPHAN_CHECK_SQL, psql, tableCounts, type Manifest } from "./common.mts";
 
 export async function verify(manifest: Manifest): Promise<void> {
   const sb = admin();
@@ -20,14 +20,9 @@ export async function verify(manifest: Manifest): Promise<void> {
     throw new Error(`복원 검증 실패:\n- 표 목록 대조: ${(e as Error).message}`);
   }
   const counts = await tableCounts(sb, tables);
-  for (const [t, n] of Object.entries(manifest.counts)) {
-    if (!(t in counts)) problems.push(`백업에 있던 표가 지금 DB에 없음 ${t}(백업 ${n}행)`);
-    else if (counts[t] !== n) problems.push(`행 수 불일치 ${t}: 백업 ${n} / 복원 ${counts[t]}`);
-  }
-  // 예전 백업(표 20개 목록)에는 없던 표: 지금 DB 에 행이 있으면 백업 목록으로 확인할 수 없으므로 알린다
-  for (const t of tables) {
-    if (!(t in manifest.counts) && counts[t] > 0) problems.push(`백업 목록에 없는 표에 행이 있음 ${t}: ${counts[t]}행(이 백업으로는 행 수를 확인할 수 없음)`);
-  }
+  const compared = compareCounts(manifest, counts);
+  problems.push(...compared.problems);
+  if (compared.warning) console.warn(compared.warning);
 
   try {
     psql(ORPHAN_CHECK_SQL);
@@ -70,6 +65,6 @@ export async function verify(manifest: Manifest): Promise<void> {
     throw new Error(`복원 검증 실패:\n- ${problems.join("\n- ")}`);
   }
   console.log(
-    `검증 통과: 테이블 ${Object.keys(counts).length}개 행 수 일치, 외래키 고아 행 0, 파일 ${manifest.files.length}개 체크섬 일치, 확정 견적 ${qvs?.length ?? 0}건 금액 재계산 일치`,
+    `검증 통과: 테이블 ${Object.keys(manifest.counts).length}개 행 수 일치(지금 DB 표 ${Object.keys(counts).length}개${compared.warning ? ", 예전 목록 백업 경고 있음" : ""}), 외래키 고아 행 0, 파일 ${manifest.files.length}개 체크섬 일치, 확정 견적 ${qvs?.length ?? 0}건 금액 재계산 일치`,
   );
 }
