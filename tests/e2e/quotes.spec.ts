@@ -38,7 +38,7 @@ test("견적 작업 시작: 오늘 날짜·세율 10%·부가세 별도가 기�
   await page.getByLabel("고객명 (필수)").fill(CLIENT);
   await page.getByRole("button", { name: "고객 등록" }).click();
   await expect(page.getByRole("heading", { level: 1, name: CLIENT })).toBeVisible();
-  await page.getByText("새 프로젝트").click();
+  await page.getByText("새 프로젝트", { exact: true }).click(); // 빈 상태 안내 문구에도 같은 글자가 있어 펼치기 이름만 정확히(QA-E2E-FULL-01 T1)
   await page.getByLabel("프로젝트 제목 (필수)").fill("D 브랜딩");
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "D 브랜딩" })).toBeVisible();

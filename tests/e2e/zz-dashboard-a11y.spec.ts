@@ -25,6 +25,14 @@ async function noHorizontalScroll(page: Page) {
   expect(overflow, "가로 스크롤이 생기면 안 된다").toBeLessThanOrEqual(1);
 }
 
+/** 테마를 바꾼 뒤 색 전환(transition, 약 0.18초)이 끝날 때까지 기다린다(QA-E2E-FULL-01 T4).
+ * 전환 중간 색으로 대비를 재면 위반처럼 보인다. 고정 시간 대신 실제 상태(테마 속성 + 진행 중인 CSS 전환 0개)를 본다.
+ * 계속 도는 CSS 애니메이션(점멸 표시 등)은 끝나지 않으므로 CSSTransition 만 센다. */
+async function themeSettled(page: Page, theme: "dark" | "light") {
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+  await page.waitForFunction(() => document.getAnimations().filter((a) => a instanceof CSSTransition).every((a) => a.playState !== "running"));
+}
+
 async function axe(page: Page, label: string) {
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const summary = r.violations.map(
@@ -39,7 +47,7 @@ test("T17 현황: 실제 데이터로 숫자·오늘 처리할 작업·납기 �
   await page.getByLabel("고객명 (필수)").fill(CLIENT);
   await page.getByRole("button", { name: "고객 등록" }).click();
   await expect(page.getByRole("heading", { level: 1, name: CLIENT })).toBeVisible();
-  await page.getByText("새 프로젝트").click();
+  await page.getByText("새 프로젝트", { exact: true }).click(); // 빈 상태 안내 문구에도 같은 글자가 있어 펼치기 이름만 정확히(QA-E2E-FULL-01 T1)
   await page.getByLabel("프로젝트 제목 (필수)").fill(PROJECT);
   await page.getByLabel("납기").fill(tomorrow());
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
@@ -203,6 +211,7 @@ test("모바일 새 작업 시트: 키보드 닫기·포커스 복귀·작업 �
   await axe(page, "모바일 견적");
   await page.screenshot({ path: testInfo.outputPath("quote-mobile-light.png") });
   await page.getByRole("button", { name: "어두운 화면" }).click();
+  await themeSettled(page, "dark");
   await axe(page, "다크 모바일 견적");
   await page.screenshot({ path: testInfo.outputPath("quote-mobile-dark.png") });
 });

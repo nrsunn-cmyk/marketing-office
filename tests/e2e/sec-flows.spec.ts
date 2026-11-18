@@ -28,7 +28,7 @@ test("준비: 고객·프로젝트·로고 작업을 만들고 1번 초안 생�
   await page.getByRole("button", { name: "고객 등록" }).click();
   await expect(page.getByRole("heading", { level: 1, name: CLIENT })).toBeVisible();
 
-  await page.getByText("새 프로젝트").click();
+  await page.getByText("새 프로젝트", { exact: true }).click(); // 빈 상태 안내 문구에도 같은 글자가 있어 펼치기 이름만 정확히(QA-E2E-FULL-01 T1)
   await page.getByLabel("프로젝트 제목 (필수)").fill("S 로고");
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "S 로고" })).toBeVisible();
