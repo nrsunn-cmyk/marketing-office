@@ -84,7 +84,9 @@ export async function setupApprovedStrategy(page: Page, labelBase: string): Prom
   const approve = page.getByRole("button", { name: "이 버전 승인" });
   await expect(approve).toBeEnabled();
   await approve.click();
-  await expect(page.getByText("승인했습니다.", { exact: true })).toBeVisible();
+  // 승인 폼은 성공과 함께 사라지므로 안내는 화면 아래 공용 안내 영역(role=status)에 남는다(BUNDLE-C-PREP-01, QA T5)
+  await expect(page.getByRole("status").filter({ hasText: "승인했습니다." })).toBeVisible();
+  await expect(page.getByRole("region", { name: /^전략 \d+번 버전$/ }).getByText("승인본", { exact: true })).toBeVisible();
   const art = await sb.from("artifacts").select("id, approved_version_id").eq("task_id", taskId).single();
   if (art.error) throw art.error;
   expect(art.data.approved_version_id).not.toBeNull();
@@ -106,7 +108,9 @@ export async function approveNewStrategyVersion(page: Page, s: StrategySetup) {
   const approve = page.getByRole("button", { name: "이 버전 승인" });
   await expect(approve).toBeEnabled();
   await approve.click();
-  await expect(page.getByText("승인했습니다.", { exact: true })).toBeVisible();
+  // 승인 폼은 성공과 함께 사라지므로 안내는 화면 아래 공용 안내 영역(role=status)에 남는다(BUNDLE-C-PREP-01, QA T5)
+  await expect(page.getByRole("status").filter({ hasText: "승인했습니다." })).toBeVisible();
+  await expect(page.getByRole("region", { name: /^전략 \d+번 버전$/ }).getByText("승인본", { exact: true })).toBeVisible();
 }
 
 /** 프로젝트 상태를 화면에서 바꾼다(보관 = '보관(으)로', 다시 열기 = '진행 중(으)로') */
@@ -115,7 +119,9 @@ export async function setProjectStatus(page: Page, s: StrategySetup, to: "보관
   const button = page.getByRole("button", { name: `${to}(으)로` });
   await expect(button).toBeEnabled();
   await button.click();
-  await expect(page.getByText("상태를 바꿨습니다.")).toBeVisible();
+  // 상태 버튼 폼은 다시 그려지며 사라지므로 안내는 공용 안내 영역에 남는다(BUNDLE-C-PREP-01, QA T6). 머리 배지도 바뀐다
+  await expect(page.getByRole("status").filter({ hasText: "상태를 바꿨습니다." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 }).locator("..").getByText(to, { exact: true })).toBeVisible();
 }
 
 /** 다른 업무실 주인(합성, 실행마다 고유 주소). cleanup 은 이번 실행이 만든 가입 허용 목록 행만 지운다 */

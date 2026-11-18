@@ -2,6 +2,9 @@
 
 import { startTransition, useActionState, useEffect, useRef, type FormEvent, type ReactNode } from "react";
 import styles from "../ui.module.css";
+// useState 는 따로 가져온다(위 react import 줄은 다른 브랜치가 고친 줄이라 병합 충돌을 피한다)
+import { useState } from "react";
+import { useFlash } from "./flash";
 import { EMPTY_FORM_STATE, type FormState } from "./form-state";
 import { useHydrated } from "./use-hydrated";
 
@@ -25,7 +28,10 @@ export function ActionForm({
   /** primary: 화면의 주된 동작 / secondary: 상태 바꾸기·보관 같은 보조 동작 */
   variant?: "primary" | "secondary";
 }) {
-  const [state, formAction, pending] = useActionState(action, EMPTY_FORM_STATE);
+  // 성공과 함께 이 폼이 화면에서 빠지면 안내를 공용 안내 영역으로 넘긴다(flash.tsx, BUNDLE-C-PREP-01)
+  const flash = useFlash();
+  const [flashKey] = useState(() => ({})); // 이 폼 하나를 가리키는 변하지 않는 표지(렌더 중 ref 읽기를 피한다)
+  const [state, formAction, pending] = useActionState(flash ? flash.wrap(flashKey, action) : action, EMPTY_FORM_STATE);
   const formRef = useRef<HTMLFormElement>(null);
   const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
 
@@ -33,7 +39,12 @@ export function ActionForm({
   // 오류일 때는 그대로 두어 입력한 값이 남는다. 는 이전 호출과의 호환을 위해 남겨 둔다.
   useEffect(() => {
     if (state.ok) formRef.current?.reset();
-  }, [state]);
+    if (state.ok && state.message) flash?.claim(flashKey); // 폼이 남아 안내를 직접 그린다
+  }, [state, flash, flashKey]);
+  useEffect(() => {
+    flash?.mount(flashKey);
+    return () => flash?.release(flashKey); // 폼이 사라질 때 맡겨 둔 성공 안내가 있으면 공용 영역에 보인다
+  }, [flash, flashKey]);
 
   /**
    * React 19는 `<form action>`으로 보낸 뒤 입력을 자동으로 비운다. 그러면 칸 하나가 틀려도

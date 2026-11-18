@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
+import { FlashProvider } from "./_components/flash";
 
 /**
  * 브라우저 탭 아이콘(icon.svg)·아이폰 홈 화면 아이콘(apple-icon.png)·링크 미리보기 그림(opengraph-image.png)은
@@ -29,7 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* 폼이 사라지는 동작의 성공 안내를 화면 아래에 남긴다(BUNDLE-C-PREP-01) */}
+        <FlashProvider>{children}</FlashProvider>
+      </body>
     </html>
   );
 }

@@ -1210,3 +1210,34 @@ main.touchPage details > summary {
   padding-bottom: 10px;
   line-height: 24px;
 }
+
+/* ── 공용 성공 안내(flash.tsx): 성공과 함께 폼이 사라지는 동작의 안내를 화면 아래에 남긴다(BUNDLE-C-PREP-01) ──
+ * 휴대폰은 하단 메뉴(약 56px) 위에 띄운다. 색은 .notice(성공) 토큰 그대로. */
+.flashRegion {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  z-index: 40;
+  width: min(560px, calc(100% - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.flashToast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 18%);
+  pointer-events: auto;
+  overflow-wrap: anywhere;
+}
+.flashToast button {
+  flex: none;
+  min-height: 44px;
+}
+@media (max-width: 640px) {
+  .flashRegion {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
