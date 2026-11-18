@@ -1201,7 +1201,10 @@ a.secondaryButton {
 .touchPage summary {
   min-height: 44px;
 }
+/* UI-RESP-03-R1: summary 는 기본 display(list-item)를 유지해야 펼치기 삼각형(마커)이 보인다.
+ * display:flex 대신 위아래 여백과 줄 높이로 44px 를 맞춘다(10px + 24px + 10px). */
 .touchPage summary {
-  display: flex;
-  align-items: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  line-height: 24px;
 }
