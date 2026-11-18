@@ -83,7 +83,7 @@ export function StrategyEditor({
         )}
         {mode === "generate" && approved.length === 0 && (
           <p className={styles.error} role="alert">
-            승인된 회사 프로필 버전이 없습니다. 프로필 승인 화면은 아직 준비 중이라(P2-b), 지금은 전략을 만들 수 없습니다.
+            승인된 회사 프로필 버전이 없습니다. 고객 화면의 &lsquo;프로필 버전 검토·승인&rsquo;에서 프로필 버전을 승인하면 전략을 만들 수 있습니다.
           </p>
         )}
       </div>

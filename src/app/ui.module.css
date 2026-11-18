@@ -1304,3 +1304,42 @@ a.metaLink {
   word-break: keep-all;
   overflow-wrap: break-word;
 }
+
+/* ── 휴대폰 아래쪽 대화상자(MobileActionSheet) 준비 전후 같은 구조 (BUG-MOBILE-NEWTASK-01) ──
+ * 서버·브라우저가 '열기 버튼 + 대화상자'를 같이 그리고, 배치는 여기서 정한다.
+ * 넓은 화면: 열기 줄을 숨기고 닫힌 대화상자를 본문 폼처럼 펼친다(브라우저 기본 대화상자 모양을 모두 푼다).
+ * 휴대폰: 열기 줄만 보이고, 대화상자는 열었을 때만 아래쪽에 뜬다(.actionSheet 기본 모양). */
+.sheetOpenerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+@media (min-width: 641px) {
+  .sheetOpenerRow {
+    display: none;
+  }
+  .actionSheet:not([open]) {
+    display: block;
+  }
+  .actionSheet {
+    position: static;
+    inset: auto;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    box-shadow: none;
+  }
+  .actionSheet .sheetHandle,
+  .actionSheet .sheetHeader {
+    display: none;
+  }
+}
