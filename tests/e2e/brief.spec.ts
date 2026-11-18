@@ -197,3 +197,26 @@ test("다른 업무실 격리: 브리프·주장·근거 읽기 0행, 쓰기 RPC
     test.info().annotations.push({ type: "정리", description: `허용 목록 행 삭제 ${await other.cleanup()}건` });
   }
 });
+
+/** P2F-FRONT-01-R1(QA D1): 카드를 보관한 뒤 브리프를 주소로 직접 열면 읽기 전용(서버 assert_brief_open 과 같은 결과). 카드를 되돌릴 수 없으므로 마지막에 둔다 */
+test("보관한 퍼널 카드의 브리프: 주소로 열어도 편집 요소가 없고 서버도 거절", async ({ page }) => {
+  const sb = await ownerSupabase();
+  const b = (await sb.from("content_briefs").select("funnel_item_id").eq("id", briefId).single()).data!;
+  const item = (await sb.from("funnel_items").select("revision").eq("id", b.funnel_item_id).single()).data!;
+  expect((await sb.rpc("archive_funnel_item", { p_item_id: b.funnel_item_id, p_expected_revision: item.revision })).error).toBeNull();
+
+  await loginWithWorkspace(page);
+  await page.goto(briefUrl);
+  const brief = briefRegion(page);
+  await expect(brief.getByRole("note").filter({ hasText: "보관한 퍼널 카드의 브리프는 읽기만 할 수 있습니다." })).toBeVisible();
+  // 복사용 마크다운(접힌 칸)에도 "- 퍼널 단계: 보관한 카드"가 있어 정확 일치로 머리 줄만 찾는다
+  await expect(brief.getByText("퍼널 단계: 보관한 카드", { exact: true })).toBeVisible();
+  await expect(claimItem(page)).toBeVisible(); // 읽기는 된다
+  for (const summary of ["+ 주장 추가", "근거 연결하기", "브리프 고치기", "주장 고치기·보관"]) await expect(detailsBy(brief, summary)).toHaveCount(0);
+  await expect(brief.getByRole("button", { name: /근거 해제|브리프 보관|맞추기/ })).toHaveCount(0);
+  await expect(brief.getByRole("button", { name: "마크다운 복사" })).toBeVisible(); // 복사는 읽기라 남는다
+  await expect(cardIn(stageColumn(page, "인지"), CARD)).toHaveCount(0); // 보드에서는 빠졌다
+
+  const r = await sb.rpc("add_brief_claim", { p_brief_id: briefId, p_text: "보관 카드에 추가", p_claim_kind: "other" });
+  expect(r.error?.message).toMatch(/^INVALID_TRANSITION: 보관한 퍼널 카드의 브리프는 고칠 수 없습니다/);
+});
