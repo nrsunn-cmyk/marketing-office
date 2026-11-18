@@ -14,6 +14,7 @@ import { CopyButton } from "../../_components/copy-button";
 import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveryPanel } from "./delivery-panel";
+import { FunnelSection } from "./funnel-section";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
 
@@ -78,6 +79,8 @@ async function TaskView({
   if (!detail) notFound();
   const sp = await searchParams;
   const requested = typeof sp.v === "string" ? Number(sp.v) : null;
+  // P2F-FRONT-01: 열어 볼 콘텐츠 브리프(형식이 맞을 때만. 이 작업 퍼널의 브리프인지는 서버가 다시 확인한다)
+  const briefId = typeof sp.brief === "string" && z.uuid().safeParse(sp.brief).success ? sp.brief : null;
 
   const current = detail.versions.find((v) => v.id === detail.artifact?.current_draft_version_id) ?? null;
   const shown = (requested && detail.versions.find((v) => v.version === requested)) || current;
@@ -111,7 +114,19 @@ async function TaskView({
           </div>
         </div>
       ) : detail.task.type === "strategy" ? (
-        <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
+        <>
+          <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
+          {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                퍼널 보드를 불러오는 중…
+              </p>
+            }
+          >
+            <FunnelSection detail={detail} briefId={briefId} />
+          </Suspense>
+        </>
       ) : (
         <QuoteSection detail={detail} />
       )}
