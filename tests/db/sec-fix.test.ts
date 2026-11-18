@@ -14,7 +14,7 @@ beforeAll(async () => {
   db = await createDb();
   a = await seedOwner(db, "fix-owner-a@example.test");
   b = await seedOwner(db, "fix-owner-b@example.test");
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 const asA = <T>(fn: (tx: Tx) => Promise<T>) => asUser(db, a.userId, fn);
 /** 로그인 역할(authenticated)이지만 로그인 정보(sub)가 없는 상태 */

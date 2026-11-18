@@ -14,7 +14,7 @@ const asOwner = <T>(fn: (tx: Tx) => Promise<T>) => asUser(db, f.userId, fn);
 beforeAll(async () => {
   db = await createDb();
   f = await seedOwner(db, "review-fix@example.test");
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 async function generated() {
   return asOwner(async (tx) => {

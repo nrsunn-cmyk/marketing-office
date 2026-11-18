@@ -21,7 +21,7 @@ beforeAll(async () => {
   a = await seedOwner(db, "audit-owner-a@example.test");
   b = await seedOwner(db, "audit-owner-b@example.test");
   strategyTpl = (await one<{ id: string }>(db, "select id from templates where key = $1", [STRATEGY_TEMPLATE_VERSION])).id;
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 const asA = <T>(fn: (tx: Tx) => Promise<T>) => asUser(db, a.userId, fn);
 const asB = <T>(fn: (tx: Tx) => Promise<T>) => asUser(db, b.userId, fn);
