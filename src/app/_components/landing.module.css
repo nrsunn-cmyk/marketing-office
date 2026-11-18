@@ -779,6 +779,8 @@
 }
 
 .ctaHeading {
+  word-break: keep-all; /* LANDING-FIX-01-R2: I2(제목·설명 keep-all)와 같은 규칙. "마케팅 업/무실" 단어 중간 끊김 방지 */
+  overflow-wrap: break-word;
   font-size: clamp(26px, 3.5vw, 40px);
   font-weight: 800;
   margin-bottom: 16px;
