@@ -231,6 +231,108 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"content_briefs": {
+                  Row: {
+                    "archived_at": string | null,"audience": string | null,"channel": string,"channel_spec": Json,"copy_draft": string | null,"copy_origin": string,"core_message": string | null,"created_at": string,"created_by": string,"cta": string | null,"funnel_id": string,"funnel_item_id": string,"hook": string | null,"id": string,"image_guide": string | null,"project_id": string,"revision": number,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"audience"?: string | null,"channel": string,"channel_spec"?: Json,"copy_draft"?: string | null,"copy_origin"?: string,"core_message"?: string | null,"created_at"?: string,"created_by": string,"cta"?: string | null,"funnel_id": string,"funnel_item_id": string,"hook"?: string | null,"id"?: string,"image_guide"?: string | null,"project_id": string,"revision"?: number,"status"?: string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"audience"?: string | null,"channel"?: string,"channel_spec"?: Json,"copy_draft"?: string | null,"copy_origin"?: string,"core_message"?: string | null,"created_at"?: string,"created_by"?: string,"cta"?: string | null,"funnel_id"?: string,"funnel_item_id"?: string,"hook"?: string | null,"id"?: string,"image_guide"?: string | null,"project_id"?: string,"revision"?: number,"status"?: string,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_briefs_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    },
+                    {
+      foreignKeyName: "content_briefs_workspace_id_funnel_id_fkey"
+      columns: ["workspace_id","funnel_id"]
+isOneToOne: false
+      referencedRelation: "funnels"
+      referencedColumns: ["workspace_id","id"]
+    },
+                    {
+      foreignKeyName: "content_briefs_funnel_id_funnel_item_id_fkey"
+      columns: ["funnel_id","funnel_item_id"]
+isOneToOne: false
+      referencedRelation: "funnel_items"
+      referencedColumns: ["funnel_id","id"]
+    },
+                    {
+      foreignKeyName: "content_briefs_strategy_artifact_id_strategy_version_id_fkey"
+      columns: ["strategy_artifact_id","strategy_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["artifact_id","id"]
+    }
+                  ]
+                },"content_brief_claims": {
+                  Row: {
+                    "archived_at": string | null,"brief_id": string,"claim_kind": string,"created_at": string,"created_by": string,"id": string,"position": number,"revision": number,"text": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"brief_id": string,"claim_kind"?: string,"created_at"?: string,"created_by": string,"id"?: string,"position": number,"revision"?: number,"text": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"brief_id"?: string,"claim_kind"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"position"?: number,"revision"?: number,"text"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_brief_claims_workspace_id_brief_id_fkey"
+      columns: ["workspace_id","brief_id"]
+isOneToOne: false
+      referencedRelation: "content_briefs"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"content_claim_sources": {
+                  Row: {
+                    "claim_id": string,"company_profile_version_id": string | null,"created_at": string,"created_by": string,"id": string,"kind": string,"note": string | null,"profile_field": string | null,"research_source_id": string | null,"source_asset_id": string | null,"unlinked_at": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "claim_id": string,"company_profile_version_id"?: string | null,"created_at"?: string,"created_by": string,"id"?: string,"kind": string,"note"?: string | null,"profile_field"?: string | null,"research_source_id"?: string | null,"source_asset_id"?: string | null,"unlinked_at"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "claim_id"?: string,"company_profile_version_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"kind"?: string,"note"?: string | null,"profile_field"?: string | null,"research_source_id"?: string | null,"source_asset_id"?: string | null,"unlinked_at"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_claim_sources_workspace_id_claim_id_fkey"
+      columns: ["workspace_id","claim_id"]
+isOneToOne: false
+      referencedRelation: "content_brief_claims"
+      referencedColumns: ["workspace_id","id"]
+    },
+                    {
+      foreignKeyName: "content_claim_sources_company_profile_version_id_fkey"
+      columns: ["company_profile_version_id"]
+isOneToOne: false
+      referencedRelation: "company_profile_versions"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "content_claim_sources_source_asset_id_fkey"
+      columns: ["source_asset_id"]
+isOneToOne: false
+      referencedRelation: "source_assets"
+      referencedColumns: ["id"]
+    },
+                    {
+      foreignKeyName: "content_claim_sources_research_source_id_fkey"
+      columns: ["research_source_id"]
+isOneToOne: false
+      referencedRelation: "research_sources"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"delivery_records": {
                   Row: {
                     "artifact_version_id": string,"created_at": string,"delivered_at": string,"export_id": string | null,"id": string,"method": string,"note": string | null,"project_id": string,"workspace_id": string
@@ -734,6 +836,35 @@ isOneToOne: false
 { Args: { "p_artifact_id": string,"p_customer_snapshot": Json,"p_issue_date": string,"p_items": Json,"p_notes": string,"p_payment_terms": string,"p_subtotal_won": number,"p_supplier_profile_id": string,"p_supplier_snapshot": Json,"p_tax_mode": string,"p_tax_rate_bp": number,"p_tax_won": number,"p_total_won": number,"p_valid_until": string,"p_version_id": string }; Returns: {
               "quote_id": string,"quote_number": string,"quote_version_id": string,"reused": boolean
             }[]
+                           },
+"add_brief_claim":
+{ Args: { "p_brief_id": string,"p_claim_kind"?: string,"p_text": string }; Returns: string
+                           },
+"archive_brief_claim":
+{ Args: { "p_claim_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"archive_content_brief":
+{ Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"create_content_brief":
+{ Args: { "p_audience"?: string,"p_channel": string,"p_channel_spec"?: Json,"p_core_message"?: string,"p_cta"?: string,"p_funnel_item_id": string,"p_title": string }; Returns: {
+              "brief_id": string,"reused": boolean
+            }[]
+                           },
+"link_claim_source":
+{ Args: { "p_claim_id": string,"p_kind": string,"p_note"?: string,"p_profile_field"?: string,"p_target_id": string }; Returns: string
+                           },
+"rebase_content_brief":
+{ Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"unlink_claim_source":
+{ Args: { "p_source_id": string }; Returns: undefined
+                           },
+"update_brief_claim":
+{ Args: { "p_claim_id": string,"p_claim_kind": string,"p_expected_revision": number,"p_text": string }; Returns: number
+                           },
+"update_content_brief":
+{ Args: { "p_audience": string,"p_brief_id": string,"p_channel_spec": Json,"p_copy_draft": string,"p_copy_origin": string,"p_core_message": string,"p_cta": string,"p_expected_revision": number,"p_hook": string,"p_image_guide": string,"p_status": string,"p_title": string }; Returns: number
                            },
 "add_funnel_item":
 { Args: { "p_channel"?: string,"p_description"?: string,"p_details"?: Json,"p_kind": string,"p_stage_id": string,"p_status"?: string,"p_target_note"?: string,"p_title": string }; Returns: string
