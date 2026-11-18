@@ -49,6 +49,8 @@ async function TaskView({
   if (!detail) notFound();
   const sp = await searchParams;
   const requested = typeof sp.v === "string" ? Number(sp.v) : null;
+  // P2F-FRONT-01: 열어 볼 콘텐츠 브리프(형식이 맞을 때만. 이 작업 퍼널의 브리프인지는 서버가 다시 확인한다)
+  const briefId = typeof sp.brief === "string" && z.uuid().safeParse(sp.brief).success ? sp.brief : null;
 
   const current = detail.versions.find((v) => v.id === detail.artifact?.current_draft_version_id) ?? null;
   const shown = (requested && detail.versions.find((v) => v.version === requested)) || current;
@@ -90,7 +92,7 @@ async function TaskView({
               </p>
             }
           >
-            <FunnelSection detail={detail} />
+            <FunnelSection detail={detail} briefId={briefId} />
           </Suspense>
         </>
       ) : (

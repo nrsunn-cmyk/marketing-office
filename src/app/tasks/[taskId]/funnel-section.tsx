@@ -1,5 +1,8 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { BRIEF_CHANNELS, type BriefChannel } from "@/domain/brief";
+import { createContentBriefAction } from "@/features/brief/actions";
+import { listContentBriefsFor, type BriefSummary } from "@/features/brief/server";
 import { unstable_rethrow } from "next/navigation";
 import { FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, funnelStageLabel } from "@/domain/funnel";
 import {
@@ -18,12 +21,21 @@ import styles from "../../ui.module.css";
 import f from "./funnel.module.css";
 import { EMPTY_FUNNEL_ITEM, type FunnelItemFormValue } from "./funnel-form";
 import { FunnelItemForm } from "./funnel-item-form";
+import { BriefPanel } from "./brief-panel";
+
+/** 카드마다 보여 줄 브리프 목록(P2F-FRONT-01). error = 목록을 못 읽음(보드는 그대로 보인다) */
+interface BriefCtx {
+  taskId: string;
+  list: BriefSummary[];
+  error: boolean;
+  selected: string | null;
+}
 
 /**
  * P2D-FRONT-01 퍼널 보드(전략 작업 화면 아래). 시안: Design/P2-next-concepts/funnel-board.html.
  * 서버: src/features/funnel (P2D-BACKEND-01). 보관한 프로젝트·취소한 작업의 퍼널은 읽기 전용이다(서버도 거절한다).
  */
-export async function FunnelSection({ detail }: { detail: TaskDetail }) {
+export async function FunnelSection({ detail, briefId = null }: { detail: TaskDetail; briefId?: string | null }) {
   let board: FunnelBoard | null;
   let archived = false;
   try {
@@ -51,7 +63,20 @@ export async function FunnelSection({ detail }: { detail: TaskDetail }) {
   const cancelled = detail.task.status === "cancelled";
   const readOnly = archived || cancelled;
 
+  // 브리프 목록은 따로 읽는다. 실패해도 보드는 보이고, 카드에 목록 오류만 알린다(P2F-FRONT-01)
+  const briefs: BriefCtx = { taskId: detail.task.id, list: [], error: false, selected: briefId };
+  if (board.state === "board") {
+    try {
+      briefs.list = (await listContentBriefsFor(board)) ?? [];
+    } catch (e) {
+      unstable_rethrow(e);
+      console.error("[brief-list]", e);
+      briefs.error = true;
+    }
+  }
+
   return (
+    <>
     <Shell>
       {readOnly && (
         <div className={styles.notice} role="note">
@@ -68,8 +93,20 @@ export async function FunnelSection({ detail }: { detail: TaskDetail }) {
           )}
         </div>
       )}
-      <BoardBody board={board} taskId={detail.task.id} readOnly={readOnly} />
+      <BoardBody board={board} taskId={detail.task.id} readOnly={readOnly} briefs={briefs} />
     </Shell>
+    {board.state === "board" && briefId && (
+      <Suspense
+        fallback={
+          <p className={styles.muted} role="status">
+            브리프를 불러오는 중…
+          </p>
+        }
+      >
+        <BriefPanel board={board} taskId={detail.task.id} briefId={briefId} readOnly={readOnly} />
+      </Suspense>
+    )}
+    </>
   );
 }
 
@@ -87,7 +124,7 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-function BoardBody({ board, taskId, readOnly }: { board: FunnelBoard; taskId: string; readOnly: boolean }) {
+function BoardBody({ board, taskId, readOnly, briefs }: { board: FunnelBoard; taskId: string; readOnly: boolean; briefs: BriefCtx }) {
   if (board.state === "no_artifact") {
     return (
       <div className={styles.emptyState}>
@@ -135,7 +172,7 @@ function BoardBody({ board, taskId, readOnly }: { board: FunnelBoard; taskId: st
           <span className={styles.muted}>기준 전략</span> <strong>{funnel.strategyVersion.version}번 버전</strong>
         </span>
         {funnel.stale ? (
-          <span className={`${styles.badge} ${f.warnBadge}`}>이전 전략 기준</span>
+          <span className={`${styles.badge} ${f.warnBadge}`}>보드: 이전 전략 기준</span>
         ) : (
           <span className={styles.badge}>지금 승인본</span>
         )}
@@ -146,10 +183,10 @@ function BoardBody({ board, taskId, readOnly }: { board: FunnelBoard; taskId: st
         <div className={`${styles.notice} ${f.warnBox}`} role="note">
           <p className={f.keep}>
             <strong>이 보드는 이전 전략({funnel.strategyVersion.version}번 버전) 기준입니다.</strong> 지금 승인본은{" "}
-            {board.strategy.approvedVersion ? `${board.strategy.approvedVersion.version}번 버전` : "없음"}입니다. 카드는 그대로 두고 기준만 바꿀 수 있습니다.
+            {board.strategy.approvedVersion ? `${board.strategy.approvedVersion.version}번 버전` : "없음"}입니다. 카드는 그대로 두고 보드의 기준만 바꿀 수 있습니다. 콘텐츠 브리프는 브리프마다 따로 맞춥니다.
           </p>
           {!readOnly && board.strategy.approvedVersion && (
-            <ActionForm action={rebaseFunnelAction} submitLabel="지금 승인본 기준으로 맞추기" pendingLabel="맞추는 중…" variant="secondary" className={f.inlineForm}>
+            <ActionForm action={rebaseFunnelAction} submitLabel="퍼널 보드를 지금 승인본 기준으로 맞추기" pendingLabel="맞추는 중…" variant="secondary" className={f.inlineForm}>
               <input type="hidden" name="funnelId" value={funnel.id} />
               <input type="hidden" name="revision" value={funnel.revision} />
             </ActionForm>
@@ -179,6 +216,7 @@ function BoardBody({ board, taskId, readOnly }: { board: FunnelBoard; taskId: st
           <StageColumn
             key={stage.id}
             stage={stage}
+            briefs={briefs}
             readOnly={readOnly}
             stageOptions={stageOptions}
             missing={!!bottleneck && bottleneck.kind === "bottleneck" && bottleneck.stages.includes(stage.key)}
@@ -218,11 +256,13 @@ function Basis({ board }: { board: FunnelBoard }) {
 
 function StageColumn({
   stage,
+  briefs,
   readOnly,
   stageOptions,
   missing,
 }: {
   stage: FunnelStageView;
+  briefs: BriefCtx;
   readOnly: boolean;
   stageOptions: Array<{ id: string; label: string }>;
   missing: boolean;
@@ -258,7 +298,7 @@ function StageColumn({
       ) : (
         <ul className={f.cards} aria-label={`${stage.label} 단계 카드`}>
           {stage.items.map((item) => (
-            <ItemCard key={item.id} item={item} stage={stage} readOnly={readOnly} stageOptions={stageOptions} />
+            <ItemCard key={item.id} item={item} stage={stage} readOnly={readOnly} stageOptions={stageOptions} briefs={briefs} />
           ))}
         </ul>
       )}
@@ -302,8 +342,10 @@ function ItemCard({
   stage,
   readOnly,
   stageOptions,
+  briefs,
 }: {
   item: FunnelItemView;
+  briefs: BriefCtx;
   stage: FunnelStageView;
   readOnly: boolean;
   stageOptions: Array<{ id: string; label: string }>;
@@ -351,6 +393,7 @@ function ItemCard({
           </dl>
         </details>
       )}
+      <CardBriefs item={item} briefs={briefs} readOnly={readOnly} />
       {!readOnly && (
         <details className={f.inlineDetails}>
           <summary>고치기·옮기기</summary>
@@ -375,3 +418,57 @@ function ItemCard({
   );
 }
 
+/** 카드의 채널별 콘텐츠 브리프(P2F-FRONT-01): 이미 만든 채널은 링크, 남은 채널로 새로 만든다(카드 1장 × 채널마다 1개) */
+function CardBriefs({ item, briefs, readOnly }: { item: FunnelItemView; briefs: BriefCtx; readOnly: boolean }) {
+  const mine = briefs.list.filter((b) => b.funnelItemId === item.id);
+  const used = new Set(mine.map((b) => b.channel));
+  const left = (Object.keys(BRIEF_CHANNELS) as BriefChannel[]).filter((c) => !used.has(c));
+  return (
+    <div className={f.briefArea} aria-label={`${item.title} 콘텐츠 브리프`}>
+      <span className={f.stepNum}>콘텐츠 브리프</span>
+      {briefs.error ? (
+        <p className={styles.error} role="alert">
+          브리프 목록을 불러오지 못했습니다. 화면을 새로 고쳐 주세요.
+        </p>
+      ) : mine.length === 0 ? (
+        <p className={`${styles.muted} ${f.colEmpty}`}>아직 브리프가 없습니다.</p>
+      ) : (
+        <ul className={f.briefChips}>
+          {mine.map((b) => (
+            <li key={b.id}>
+              <Link
+                href={`/tasks/${briefs.taskId}?brief=${b.id}#brief`}
+                className={f.briefChip}
+                aria-current={briefs.selected === b.id ? "true" : undefined}
+                title={b.title}
+              >
+                {BRIEF_CHANNELS[b.channel]}
+                {b.stale ? " · 이전 전략 기준" : ""}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!readOnly && !briefs.error && left.length > 0 && (
+        <details className={f.inlineDetails}>
+          <summary>+ 채널 브리프 만들기</summary>
+          <ActionForm action={createContentBriefAction} submitLabel="브리프 만들기" pendingLabel="만드는 중…" variant="secondary" className={f.form}>
+            <input type="hidden" name="taskId" value={briefs.taskId} />
+            <input type="hidden" name="funnelItemId" value={item.id} />
+            <div className={styles.field}>
+              <label htmlFor={`brief-ch-${item.id}`}>채널</label>
+              <select id={`brief-ch-${item.id}`} name="channel" defaultValue={left[0]}>
+                {left.map((c) => (
+                  <option key={c} value={c}>
+                    {BRIEF_CHANNELS[c]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className={styles.muted}>카드 제목과 전략의 타깃·제안 문장으로 빈 틀을 채웁니다. 문장을 새로 지어내지 않습니다.</p>
+          </ActionForm>
+        </details>
+      )}
+    </div>
+  );
+}

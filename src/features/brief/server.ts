@@ -20,7 +20,7 @@ import {
   type ProfileField,
 } from "@/domain/brief";
 import { funnelStageLabel } from "@/domain/funnel";
-import { getFunnelBoard } from "@/features/funnel/server";
+import { getFunnelBoard, type FunnelBoard } from "@/features/funnel/server";
 import { requireWorkspace } from "@/server/auth/session";
 import { fail, ok, type ErrorCode, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -89,7 +89,14 @@ const BRIEF_COLS =
 
 /** 전략 작업 퍼널의 브리프 목록(보관 제외). 퍼널이 없으면 빈 목록 */
 export async function listContentBriefs(taskId: string): Promise<BriefSummary[] | null> {
-  const board = await getFunnelBoard(taskId);
+  return listContentBriefsFor(await getFunnelBoard(taskId));
+}
+
+/**
+ * 이미 읽은 퍼널 보드로 브리프 목록을 읽는다(P2F-FRONT-01, P2D-FRONT-01-R1 과 같은 이유: 한 요청에서 작업 상세·보드를 다시 읽지 않음).
+ * board 는 반드시 서버에서 getFunnelBoard·getFunnelBoardFor 로 읽은 값이어야 한다. 조회는 그대로 본인 업무실·그 퍼널로 한정된다.
+ */
+export async function listContentBriefsFor(board: FunnelBoard | null): Promise<BriefSummary[] | null> {
   if (!board) return null;
   if (!board.funnel) return [];
   const { workspace } = await requireWorkspace();
@@ -116,7 +123,11 @@ export async function listContentBriefs(taskId: string): Promise<BriefSummary[] 
 
 /** 브리프 상세: 주장·근거(이름 포함)·경고·근거 후보·복사용 마크다운 */
 export async function getContentBrief(taskId: string, briefId: string): Promise<BriefDetail | null> {
-  const board = await getFunnelBoard(taskId);
+  return getContentBriefFor(await getFunnelBoard(taskId), briefId);
+}
+
+/** 이미 읽은 퍼널 보드로 브리프 상세를 읽는다(listContentBriefsFor 와 같은 조건) */
+export async function getContentBriefFor(board: FunnelBoard | null, briefId: string): Promise<BriefDetail | null> {
   if (!board?.funnel) return null;
   const { workspace } = await requireWorkspace();
   const sb = await createSupabaseServerClient();

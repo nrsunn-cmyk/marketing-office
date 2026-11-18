@@ -92,14 +92,17 @@
 }
 /* 회색 칸 배경 위 흐린 글자 대비 보강: 목록 화면 .listItem .muted 와 같은 값(#475569, 6.91:1).
  * 새 토큰을 만들지 않고 칸 안에서만 --text-muted 를 바꾼다. 어두운 화면은 원래 토큰을 그대로 쓴다. */
-.column {
+.column,
+.sourceRow {
   --text-muted: #475569;
 }
-:global([data-theme="dark"]) .column {
+:global([data-theme="dark"]) .column,
+:global([data-theme="dark"]) .sourceRow {
   --text-muted: inherit;
 }
 @media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme="light"])) .column {
+  :global(:root:not([data-theme="light"])) .column,
+  :global(:root:not([data-theme="light"])) .sourceRow {
     --text-muted: inherit;
   }
 }
@@ -245,4 +248,99 @@
     grid-template-columns: minmax(0, 1fr);
     overflow-x: visible;
   }
+}
+
+/* ── P2F-FRONT-01 콘텐츠 브리프(퍼널 카드 × 채널). 시안 content-brief.html. 기존 토큰만 ── */
+.briefChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.briefChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+}
+.briefTitle {
+  overflow-wrap: anywhere;
+}
+.briefFacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.briefFacts dt {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.briefFacts dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.claimsBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.claimUnverified {
+  border: 2px dashed var(--warning-border);
+}
+.tag_warn {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+  font-weight: var(--font-weight-semibold);
+}
+.claimText {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sourceList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+.sourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  overflow-wrap: anywhere;
+}
+.mdBox {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.briefArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.briefChip[aria-current="true"] {
+  font-weight: var(--font-weight-bold);
 }
