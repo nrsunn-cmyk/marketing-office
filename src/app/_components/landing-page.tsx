@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import styles from "./landing.module.css";
 
@@ -13,9 +14,14 @@ export function LandingPage() {
       <header className={styles.landingHeader}>
         <div className={`${styles.container} ${styles.landingHeaderInner}`}>
           <Link href="/" className={styles.brandLogoLink}>
-            <img
+            {/* SVG 로고는 변환 없이 그대로(머리글 AppNav 와 같은 방식), 첫 화면이라 먼저 불러온다 */}
+            <Image
               src="/brand/logo-horizontal.svg"
               alt="나다움 마케팅 오피스"
+              width={260}
+              height={48}
+              unoptimized
+              priority
               className={styles.logoImg}
             />
           </Link>
@@ -98,9 +104,14 @@ export function LandingPage() {
           {/* 지적이고 전문적인 오피스 캐릭터 쇼케이스 */}
           <div className={styles.characterShowcaseCard}>
             <div className={styles.characterImgBox}>
-              <img
+              {/* 원본 1264×848 JPG(702KB)를 화면 폭에 맞춰 줄인 최적화 이미지로 받는다(LANDING-FIX-01 I1) */}
+              <Image
                 src="/brand/office-character-intellectual.jpg"
                 alt="나다움 마케팅 오피스 수석 전략 디렉터 실사"
+                width={1264}
+                height={848}
+                sizes="(max-width: 860px) 100vw, 600px"
+                priority
                 className={styles.characterPhoto}
               />
               <div className={styles.characterBadgeFloating}>
@@ -217,7 +228,7 @@ export function LandingPage() {
                 <div className={styles.panelBox}>
                   <div className={styles.panelTitle}>
                     <span>📑 원클릭 공식 A4 PDF 견적서</span>
-                    <span style={{ fontSize: 11, color: "#10b981", fontWeight: 700 }}>● 계산 일치</span>
+                    <span className={styles.quoteMatchBadge}>● 계산 일치</span>
                   </div>
                   <div>
                     <div className={styles.quoteRow}>

@@ -191,6 +191,8 @@
 }
 
 .heroTitle {
+  word-break: keep-all; /* LANDING-FIX-01 I2: 한국어 단어 중간 쪼개짐 방지 */
+  overflow-wrap: break-word;
   font-size: clamp(32px, 5.2vw, 54px);
   font-weight: 800;
   line-height: 1.25;
@@ -206,6 +208,8 @@
 }
 
 .heroDesc {
+  word-break: keep-all; /* LANDING-FIX-01 I2 */
+  overflow-wrap: break-word;
   font-size: clamp(15px, 1.8vw, 19px);
   color: var(--text-muted);
   max-width: 760px;
@@ -426,7 +430,7 @@
 .mockupUrl {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: #334155; /* LANDING-FIX-01 E3: 슬레이트 700, #f1f5f9 배경 대비 8.2:1 (AGY DESIGN-LANDING-FIX-01 결정 2) */
   margin-left: 10px;
   font-family: monospace;
 }
@@ -809,4 +813,43 @@
 
 .footerLoginLink:hover {
   text-decoration: underline;
+}
+
+/* ── LANDING-FIX-01 (AGY DESIGN-LANDING-FIX-01 결정 1·2) ── */
+
+/* E3: '● 계산 일치' 성공 색은 토큰(밝음 #065f46 · 어두움 #a7f3d0) */
+.quoteMatchBadge {
+  color: var(--success-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* E3: 어두운 화면 주소 줄. 앱 다크 방식 두 가지(버튼 선택 data-theme · OS 설정)를 모두 따른다(ui.module.css 와 같은 패턴) */
+[data-theme="dark"] .mockupUrl {
+  color: var(--text-muted);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mockupUrl {
+    color: var(--text-muted);
+  }
+}
+
+/* E2: 420px 이하 머리글 — 두 버튼 모두 유지, 여백·간격·로고 축소로 320px 에서도 잘림 없음 */
+@media (max-width: 420px) {
+  .landingHeader .container {
+    padding: 0 12px;
+  }
+  .logoImg {
+    height: 26px;
+    width: auto;
+  }
+  .headerActions {
+    gap: 6px;
+  }
+  .headerActions .btnSm {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 38px;
+    line-height: 1;
+  }
 }

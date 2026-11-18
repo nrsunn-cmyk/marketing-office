@@ -90,12 +90,27 @@ test("본인: 비밀번호 로그인 → 처음 설정 → 첫 화면", async ({
   }
 });
 
+test("비로그인 '/'는 공개 랜딩(200)이고 로그인·가입으로 갈 수 있으며, 보호 경로는 로그인으로 보낸다", async ({ page }) => {
+  // LANDING-FIX-01 E1: 7411d5b 부터 '/'만 공개(proxy.ts). 데이터 화면은 그대로 보호한다
+  const res = await page.goto("/");
+  expect(res?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("고객 자료는 단 한 번 입력");
+  await expect(page.getByRole("banner").getByRole("link", { name: "로그인" })).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("banner").getByRole("link", { name: "무료 시작하기" })).toHaveAttribute("href", "/signup");
+  for (const path of ["/projects", "/clients", "/settings"]) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(/\/login$/);
+  }
+});
+
 test("T16 로그아웃 후 다시 로그인해도 업무실이 그대로 있다", async ({ page }) => {
   await loginAsOwner(page);
   await expect(page.getByRole("heading", { name: "나다움 업무실" })).toBeVisible();
   await page.getByRole("button", { name: "로그아웃" }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await page.goto("/");
+  // 7411d5b 이후 '/'는 공개 랜딩이다. 보호 경로로 로그아웃 상태를 확인한다(LANDING-FIX-01 E1)
+  await page.goto("/projects");
   await expect(page).toHaveURL(/\/login$/);
   await loginAsOwner(page);
   await expect(page.getByRole("heading", { name: "나다움 업무실" })).toBeVisible();
@@ -244,6 +259,7 @@ test("T01 앱 허용 목록에 없는 계정은 Supabase 계정이 있어도 들
   expect(error).toBeNull();
   await page.goto(`/auth/callback?token_hash=${data.properties!.hashed_token}&type=email`);
   await expect(page).toHaveURL(/\/login\?error=not_allowed$/);
-  await page.goto("/");
+  // 허용되지 않은 사람은 세션이 남지 않는다: 보호 경로는 로그인으로 보낸다('/'는 공개 랜딩, LANDING-FIX-01 E1)
+  await page.goto("/projects");
   await expect(page).toHaveURL(/\/login$/);
 });
