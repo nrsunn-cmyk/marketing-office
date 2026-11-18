@@ -17,7 +17,7 @@ import { requireWorkspace } from "@/server/auth/session";
 import { fail, ok, type ErrorCode, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import type { Json } from "@/server/supabase/database.types";
-import { getTaskDetail } from "@/features/tasks/server";
+import { getTaskDetail, type TaskDetail } from "@/features/tasks/server";
 
 /**
  * P2D-BACKEND-01: 퍼널 보드 서버 함수. 화면은 전략 작업 화면(tasks/[taskId]) 아래에 붙는다.
@@ -74,7 +74,16 @@ type VersionRow = { id: string; version: number; content: unknown };
 
 /** 전략 작업의 퍼널 보드. 작업이 없거나 전략이 아니면 null */
 export async function getFunnelBoard(taskId: string): Promise<FunnelBoard | null> {
-  const detail = await getTaskDetail(taskId);
+  return getFunnelBoardFor(await getTaskDetail(taskId));
+}
+
+/**
+ * 이미 읽은 작업 상세로 퍼널 보드를 읽는다(P2D-FRONT-01-R1, QA O-b).
+ * 작업 화면이 getTaskDetail 을 한 번 읽었으면 그 값을 넘겨 같은 요청에서 다시 읽지 않는다.
+ * detail 은 반드시 서버에서 getTaskDetail 로 읽은 값이어야 한다(브라우저 입력을 받지 않는다).
+ * 퍼널 표 조회는 그대로 본인 업무실(workspace_id 조건 + RLS)로 한정된다.
+ */
+export async function getFunnelBoardFor(detail: TaskDetail | null): Promise<FunnelBoard | null> {
   if (!detail || detail.task.type !== "strategy") return null;
   const art = detail.artifact;
   const versions = detail.versions as unknown as VersionRow[];

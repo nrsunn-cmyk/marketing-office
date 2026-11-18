@@ -10,7 +10,7 @@ import {
   updateFunnelItemAction,
   updateFunnelStageAction,
 } from "@/features/funnel/actions";
-import { getFunnelBoard, type FunnelBoard, type FunnelItemView, type FunnelStageView } from "@/features/funnel/server";
+import { getFunnelBoardFor, type FunnelBoard, type FunnelItemView, type FunnelStageView } from "@/features/funnel/server";
 import { getProject } from "@/features/projects/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { ActionForm } from "../../_components/action-form";
@@ -27,7 +27,8 @@ export async function FunnelSection({ detail }: { detail: TaskDetail }) {
   let board: FunnelBoard | null;
   let archived = false;
   try {
-    const [b, project] = await Promise.all([getFunnelBoard(detail.task.id), getProject(detail.project.id)]);
+    // 작업 화면이 이미 읽은 detail 을 그대로 쓴다(같은 요청에서 getTaskDetail 을 다시 부르지 않음, P2D-FRONT-01-R1)
+    const [b, project] = await Promise.all([getFunnelBoardFor(detail), getProject(detail.project.id)]);
     board = b;
     archived = project?.status === "archived";
   } catch (e) {
