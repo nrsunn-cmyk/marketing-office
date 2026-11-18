@@ -3,20 +3,35 @@ import { Suspense } from "react";
 import { GENERATOR_LABELS, PROJECT_STATUS_LABELS, TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
 import { getDashboard, type DashboardData } from "@/features/dashboard/server";
 import { todayIn } from "@/features/quotes/server";
-import { requireWorkspace } from "@/server/auth/session";
+import { getSessionUser, requireWorkspace } from "@/server/auth/session";
 import { AppNav } from "./_components/app-nav";
 import { formatDateTimeIn } from "./_components/format-time";
+import { LandingPage } from "./_components/landing-page";
 import styles from "./ui.module.css";
 
 /**
- * 전체 현황 (S02) — 주인님 확정 메인 시안 A(현황 중심, Design/main-site-concepts-20261117/concept-a-status.html R2).
- * 실제 getDashboard 값만 쓴다. 시안의 예시 숫자·설명 배지·% 는 넣지 않는다. 색은 앱 토큰(tokens.css).
+ * 전체 현황 (S02) & 공식 웹 메인:
+ * 1) 비로그인 방문자: 공식 웹 메인 랜딩 페이지 (시안 1 테크 그리드 + 오피스 캐릭터) 렌더링.
+ * 2) 로그인 회원: 내부 업무실 전체 현황 대시보드 (주인님 확정 메인 시안 A) 렌더링.
  */
 
 /** 처리할 작업은 서버가 최근 수정 순 최대 10개만 가져온다(features/dashboard/server.ts) */
 const TODO_LIMIT = 10;
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+async function HomeContent() {
+  const user = await getSessionUser();
+  if (!user) {
+    return <LandingPage />;
+  }
+
   return (
     <>
       <AppNav />
