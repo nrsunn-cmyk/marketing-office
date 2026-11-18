@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FormState } from "./form-state";
 import styles from "../ui.module.css";
+import f from "./flash.module.css";
 
 /**
  * 폼이 사라지는 동작의 성공 안내를 남긴다(BUNDLE-C-PREP-01, QA-E2E-FULL-01 T5·T6).
@@ -70,9 +71,9 @@ export function FlashProvider({ children }: { children: ReactNode }) {
     <FlashContext.Provider value={api}>
       {children}
       {/* 영역은 늘 두고(화면 읽기 프로그램이 바뀐 내용을 읽도록) 글만 바꾼다 */}
-      <div className={styles.flashRegion} role="status" aria-live="polite">
+      <div className={f.flashRegion} role="status" aria-live="polite">
         {msg && (
-          <p key={msg.n} className={`${styles.notice} ${styles.flashToast}`}>
+          <p key={msg.n} className={`${styles.notice} ${f.flashToast}`}>
             <span>{msg.text}</span>
             <button type="button" className={styles.secondaryButton} onClick={() => setMsg(null)}>
               닫기
