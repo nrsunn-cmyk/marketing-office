@@ -69,7 +69,7 @@ export function ProfileReview({
           return (
             <li key={v.id} className={styles.listItem}>
               <span>
-                {v.id === selected.id ? <strong>{v.version}번 버전 (보는 중)</strong> : <Link href={`?pv=${v.version}#profile-review`}>{v.version}번 버전</Link>}
+                {v.id === selected.id ? <strong>{v.version}번 버전 (보는 중)</strong> : <Link href={`?pv=${v.version}#profile-review`} className={styles.touchLink}>{v.version}번 버전</Link>}
                 {" · "}
                 <span className={styles.muted}>{formatDateTimeIn(v.created_at, timeZone)}</span>
               </span>
@@ -89,7 +89,7 @@ export function ProfileReview({
             <span className={styles.badge}>{TONE[status]}</span>
           </span>
         </div>
-        <p className={styles.muted}>내용 확인값 {hash} · 승인할 때 이 값과 저장된 내용이 같은지 서버가 다시 확인합니다.</p>
+        <p className={`${styles.muted} ${styles.breakAny}`}>내용 확인값 {hash} · 승인할 때 이 값과 저장된 내용이 같은지 서버가 다시 확인합니다.</p>
 
         {changes.length === 0 ? (
           <p className={styles.muted}>{prev ? "이전 버전과 내용이 같습니다." : "입력된 내용이 없습니다."}</p>
@@ -157,7 +157,9 @@ export function ProfileReview({
         </div>
         <p className={styles.muted}>
           수정 요청: 지원하지 않습니다(프로필 승인 기록에는 &lsquo;수정 요청&rsquo; 결정이 없습니다). 고칠 점이 있으면 위 회사 프로필에서{" "}
-          <a href="#profile">새 버전으로 저장</a>해 새 초안을 만든 뒤 그 버전을 승인해 주세요.
+          <a href="#profile" className={styles.touchLink}>
+            새 버전으로 저장
+          </a>해 새 초안을 만든 뒤 그 버전을 승인해 주세요.
         </p>
       </div>
     </section>

@@ -1210,3 +1210,97 @@ main.touchPage details > summary {
   padding-bottom: 10px;
   line-height: 24px;
 }
+
+/* ── 나머지 화면 반응형 (UI-RESP-04: 고객 상세·작업 상세·자료실·결과물·설정) ──
+ * UI-RESP-03 의 .touchPage·.rowItem·.emptyState 를 그대로 쓰고, 모자란 것만 더한다. 색·간격은 토큰만. */
+
+/* 견적 표의 줄 삭제·글자형 버튼과 라디오·체크 상자 줄도 44px */
+.touchPage .linkButton,
+.touchPage label:has(> input[type="radio"]),
+.touchPage label:has(> input[type="checkbox"]) {
+  min-height: 44px;
+}
+.touchPage label:has(> input[type="radio"]),
+.touchPage label:has(> input[type="checkbox"]) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* 따로 떨어진 링크(내려받기·열기·버전 이동·고객/프로젝트 이동): 글자 크기는 그대로, 누르는 높이만 44px */
+.touchLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+}
+
+/* 긴 이름 한 줄 말줄임(전체는 title). 링크가 아닌 제목·보조 링크에 쓴다 */
+.rowTitle,
+.metaLink {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowTitle {
+  line-height: 24px;
+  padding: 10px 0;
+  font-weight: var(--font-weight-semibold);
+}
+/* 링크만 누르는 높이 44px(10px + 24px + 10px), 글자 정보는 한 줄 높이 */
+.metaLink {
+  line-height: 24px;
+}
+a.metaLink {
+  min-height: 44px;
+  padding: 10px 0;
+}
+/* 항목 사이 구분점은 글자로 넣지 않고 앞에 붙인다(줄이 바뀌어도 점만 홀로 남지 않게) */
+.metaRow > .metaLink + .metaLink::before {
+  content: "·";
+  display: inline-block; /* 링크 밑줄이 점까지 이어지지 않게 */
+  margin-right: 0.25em;
+  color: var(--text-muted);
+}
+
+/* 보조 정보 줄: 고객·프로젝트 링크가 각자 줄어들고, 모자라면 다음 줄로 */
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-1);
+  min-width: 0;
+}
+.metaRow > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 자료·결과물 목록: 왼쪽은 남은 폭을 다 쓰고, 오른쪽(상태·버튼)은 좁으면 아래 줄로 */
+.rowMainGrow {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 확인값처럼 띄어쓰기 없는 긴 글자는 아무 데서나 줄바꿈 */
+.breakAny {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* 한국어 안내문이 단어 중간에서 끊기지 않게(UI-RESP-04, QA-SWEEP-01 O4. 랜딩 I2 규칙과 같음) */
+.keepAll {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}

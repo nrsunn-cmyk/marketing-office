@@ -24,7 +24,7 @@ export async function QuoteSection({ detail }: { detail: TaskDetail }) {
         <h2 id="quote-edit" className={styles.subtitle}>
           견적 작성
         </h2>
-        <p className={styles.muted}>
+        <p className={`${styles.muted} ${styles.keepAll}`}>
           받는 분: {detail.client?.name ?? detail.project.title}. 금액은 입력하는 동안 바로 계산되고, 저장·확정할 때 서버와 DB가 다시
           계산합니다.
         </p>
@@ -41,7 +41,7 @@ export async function QuoteSection({ detail }: { detail: TaskDetail }) {
             {" · "}
             {content.totals.isFinalizable ? "확정할 수 있습니다" : "아직 확정할 수 없습니다"}
           </p>
-          <p className={styles.muted}>확정은 마지막으로 저장한 초안 기준입니다. 고친 내용이 있으면 먼저 저장해 주세요.</p>
+          <p className={`${styles.muted} ${styles.keepAll}`}>확정은 마지막으로 저장한 초안 기준입니다. 고친 내용이 있으면 먼저 저장해 주세요.</p>
           {currentFinal ? (
             <p className={styles.notice} role="status">
               이 초안은 견적 번호 <strong>{currentFinal.quote_number}</strong>(으)로 확정했습니다. 아래에서 PDF를 받을 수 있습니다.
@@ -67,7 +67,9 @@ export async function QuoteSection({ detail }: { detail: TaskDetail }) {
                   <strong>{q.quote_number}</strong>
                   {i === 0 ? " (최신)" : ""} · {formatWon(q.total_won)}원 · 작성일 {q.issue_date}
                 </span>
-                <a href={`/quote-versions/${q.id}/pdf`}>PDF 내려받기</a>
+                <a href={`/quote-versions/${q.id}/pdf`} className={styles.touchLink}>
+                  PDF 내려받기
+                </a>
               </li>
             ))}
           </ul>

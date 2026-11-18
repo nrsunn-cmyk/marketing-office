@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 import { PROJECT_STATUS_LABELS } from "@/domain/state/labels";
@@ -27,8 +27,14 @@ export default function ClientPage({ params, searchParams }: PageProps<"/clients
   return (
     <>
       <AppNav />
-      <main className={`${styles.page} ${styles.wide}`}>
-      <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
+      <main className={`${styles.page} ${styles.wide} ${styles.touchPage}`}>
+      <Suspense
+        fallback={
+          <p className={styles.muted} role="status">
+            고객 정보를 불러오는 중…
+          </p>
+        }
+      >
         <ClientWorkspace params={params} searchParams={searchParams} />
       </Suspense>
       </main>
@@ -45,22 +51,49 @@ async function ClientWorkspace({
 }) {
   const { clientId } = await params;
   if (!z.uuid().safeParse(clientId).success) notFound();
-  const client = await getClient(clientId);
-  if (!client) notFound();
-  const [versions, projects, { workspace, user }, decisions, sp] = await Promise.all([
-    listProfileVersions(clientId),
-    listProjects({ clientId }),
-    requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
-    listProfileDecisions(clientId),
-    searchParams,
-  ]);
+  // UI-RESP-04: 불러오기 실패는 화면 안에서 알리고 다시 불러오기를 준다. 없음(notFound)·로그인 이동은 그대로 통과
+  let loaded;
+  try {
+    const client = await getClient(clientId);
+    if (!client) notFound();
+    loaded = [
+      client,
+      ...(await Promise.all([
+        listProfileVersions(clientId),
+        listProjects({ clientId }),
+        requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
+        listProfileDecisions(clientId),
+        searchParams,
+      ])),
+    ] as const;
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[client]", e);
+    return (
+      <section className={styles.section} aria-label="고객 정보 상태">
+        <h1 className={styles.title}>고객 작업실</h1>
+        <p className={styles.error} role="alert">
+          고객 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+        </p>
+        <p className={styles.row}>
+          <Link href={`/clients/${clientId}`} className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            다시 불러오기
+          </Link>
+          <Link href="/clients" className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            고객 목록으로
+          </Link>
+        </p>
+      </section>
+    );
+  }
+  const [client, versions, projects, { workspace, user }, decisions, sp] = loaded;
   const pv = typeof sp.pv === "string" && /^\d{1,6}$/.test(sp.pv) ? Number(sp.pv) : null;
   const current = versions[0];
 
   return (
     <>
       <div className={styles.header}>
-        <h1 className={styles.title}>{client.name}</h1>
+        <h1 className={`${styles.title} ${styles.titleWrap}`}>{client.name}</h1>
         {client.archived_at && <span className={styles.badge}>보관한 고객</span>}
       </div>
 
@@ -153,12 +186,20 @@ async function ClientWorkspace({
           프로젝트
         </h2>
         {projects.length === 0 ? (
-          <p className={styles.muted}>프로젝트가 없습니다.</p>
+          <div className={styles.emptyState}>
+            <strong>이 고객의 프로젝트가 아직 없습니다.</strong>
+            <p className={styles.muted}>아래 &lsquo;새 프로젝트&rsquo;를 펼쳐 제목만 적으면 바로 만들 수 있습니다.</p>
+          </div>
         ) : (
-          <ul className={styles.list}>
+          <ul className={styles.list} aria-label="이 고객의 프로젝트 목록">
             {projects.map((p) => (
-              <li key={p.id} className={styles.listItem}>
-                <Link href={`/projects/${p.id}`}>{p.title}</Link>
+              <li key={p.id} className={`${styles.listItem} ${styles.rowItem}`}>
+                <span className={styles.rowMain}>
+                  <Link href={`/projects/${p.id}`} className={styles.rowLink} title={p.title}>
+                    {p.title}
+                  </Link>
+                  {p.due_at && <span className={`${styles.muted} ${styles.rowSub}`}>납기 {p.due_at}</span>}
+                </span>
                 <span className={styles.badge}>{PROJECT_STATUS_LABELS[p.status] ?? p.status}</span>
               </li>
             ))}

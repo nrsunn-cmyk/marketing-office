@@ -35,12 +35,17 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
         <ul className={styles.list} aria-label="자료 목록">
           {assets.map((a) => (
             <li key={a.id} className={styles.listItem}>
-              <div>
-                <span className={styles.badge}>{ASSET_KIND_LABELS[a.kind]}</span>{" "}
-                <strong>{a.file_name ?? (a.kind === "url" ? a.url : "메모")}</strong>
+              {/* UI-RESP-04: 긴 파일 이름·주소는 한 줄 말줄임 + title, 상태·버튼은 좁으면 아래 줄로 */}
+              <div className={styles.rowMainGrow}>
+                <span className={styles.metaRow}>
+                  <span className={styles.badge}>{ASSET_KIND_LABELS[a.kind]}</span>
+                  <strong className={styles.rowTitle} title={a.file_name ?? (a.kind === "url" ? (a.url ?? undefined) : undefined)}>
+                    {a.file_name ?? (a.kind === "url" ? a.url : "메모")}
+                  </strong>
+                </span>
                 {a.kind === "url" && a.url && (
                   <div className={styles.muted}>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer nofollow">
+                    <a href={a.url} target="_blank" rel="noopener noreferrer nofollow" className={styles.metaLink} title={a.url}>
                       {a.url}
                     </a>
                   </div>
@@ -52,10 +57,12 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
                   </div>
                 )}
               </div>
-              <div className={styles.row}>
+              <div className={styles.rowActions}>
                 <span className={styles.badge}>{UPLOAD_STATUS_LABELS[a.upload_status] ?? a.upload_status}</span>
                 {a.kind === "file" && a.upload_status === "stored" && (
-                  <a href={`/assets/${a.id}/download`}>내려받기</a>
+                  <a href={`/assets/${a.id}/download`} className={styles.touchLink}>
+                    내려받기
+                  </a>
                 )}
                 {a.kind === "file" && a.upload_status === "pending" && (
                   <ActionForm action={confirmUploadAction} submitLabel="저장 다시 확인" pendingLabel="확인 중…" className={styles.row} variant="secondary">

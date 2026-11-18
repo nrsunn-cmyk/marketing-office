@@ -105,7 +105,7 @@ export interface ResultItem {
 }
 
 export async function listResults(
-  opts: { type?: "logo_brief" | "quote" | null; approvedOnly?: boolean; cursor?: Cursor | null } = {},
+  opts: { type?: "logo_brief" | "quote" | "strategy" | null; approvedOnly?: boolean; cursor?: Cursor | null } = {},
 ): Promise<Page<ResultItem>> {
   const { workspace } = await requireWorkspace();
   const sb = await createSupabaseServerClient();

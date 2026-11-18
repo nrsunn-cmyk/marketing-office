@@ -407,3 +407,28 @@
     font-size: 23px;
   }
 }
+
+.errorList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 인증 화면 터치 크기 44px (UI-RESP-04, QA-SWEEP-01 T): 글자 크기는 그대로, 누르는 높이만 늘린다 */
+.screen a.link,
+.screen a:not(.tab) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.screen .tabs a.tab {
+  min-height: 44px;
+}
+
+/* 비밀번호 보기 버튼: 입력 칸(48px) 안에 들어가는 44px */
+.toggle {
+  right: 2px;
+  width: 44px;
+  height: 44px;
+}

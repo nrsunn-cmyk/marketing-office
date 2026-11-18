@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 import { GENERATOR_LABELS, TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
@@ -23,8 +23,14 @@ export default function TaskPage({ params, searchParams }: PageProps<"/tasks/[ta
   return (
     <>
       <AppNav />
-      <main className={`${styles.page} ${styles.wide}`}>
-      <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
+      <main className={`${styles.page} ${styles.wide} ${styles.touchPage}`}>
+      <Suspense
+        fallback={
+          <p className={styles.muted} role="status">
+            작업을 불러오는 중…
+          </p>
+        }
+      >
         <TaskView params={params} searchParams={searchParams} />
       </Suspense>
       </main>
@@ -41,10 +47,34 @@ async function TaskView({
 }) {
   const { taskId } = await params;
   if (!z.uuid().safeParse(taskId).success) notFound();
-  const [detail, { workspace }] = await Promise.all([
-    getTaskDetail(taskId),
-    requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
-  ]);
+  // UI-RESP-04: 불러오기 실패는 화면 안에서 알리고 다시 불러오기를 준다. 없음(notFound)·로그인 이동은 그대로 통과
+  let loaded: [Awaited<ReturnType<typeof getTaskDetail>>, Awaited<ReturnType<typeof requireWorkspace>>];
+  try {
+    loaded = await Promise.all([
+      getTaskDetail(taskId),
+      requireWorkspace(), // 요청마다 캐시됨. 시각을 업무실 시간대로 보이기 위해(UI-TIME-02)
+    ]);
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[task]", e);
+    return (
+      <section className={styles.section} aria-label="작업 상태">
+        <h1 className={styles.title}>작업</h1>
+        <p className={styles.error} role="alert">
+          작업을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+        </p>
+        <p className={styles.row}>
+          <Link href={`/tasks/${taskId}`} className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            다시 불러오기
+          </Link>
+          <Link href="/projects" className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            프로젝트 목록으로
+          </Link>
+        </p>
+      </section>
+    );
+  }
+  const [detail, { workspace }] = loaded;
   if (!detail) notFound();
   const sp = await searchParams;
   const requested = typeof sp.v === "string" ? Number(sp.v) : null;
@@ -58,7 +88,9 @@ async function TaskView({
         <div>
           <h1 className={styles.title}>{TASK_TYPE_LABELS[detail.task.type]}</h1>
           <p className={styles.muted}>
-            <Link href={`/projects/${detail.project.id}`}>{detail.project.title}</Link>
+            <Link href={`/projects/${detail.project.id}`} className={styles.touchLink} title={detail.project.title}>
+              {detail.project.title}
+            </Link>
             {detail.client && ` · ${detail.client.name}`}
             {" · "}
             {detail.task.type === "strategy"
@@ -97,7 +129,7 @@ function EmptyResult() {
   return (
     <section className={styles.section}>
       <h2 className={styles.subtitle}>결과</h2>
-      <p className={styles.muted}>아직 만든 결과가 없습니다. 왼쪽 입력을 확인하고 &lsquo;브리프 만들기&rsquo;를 눌러 주세요.</p>
+      <p className={styles.muted}>아직 만든 결과가 없습니다. &lsquo;로고 입력&rsquo; 칸을 확인하고 &lsquo;브리프 만들기&rsquo;를 눌러 주세요.</p>
     </section>
   );
 }
@@ -257,7 +289,7 @@ function VersionHistory({ detail, shownId }: { detail: TaskDetail; shownId: stri
         {detail.versions.map((v) => (
           <li key={v.id} className={styles.listItem}>
             <span>
-              {v.id === shownId ? <strong>{v.version}번 버전 (보는 중)</strong> : <Link href={`?v=${v.version}`}>{v.version}번 버전</Link>}
+              {v.id === shownId ? <strong>{v.version}번 버전 (보는 중)</strong> : <Link href={`?v=${v.version}`} className={styles.touchLink}>{v.version}번 버전</Link>}
               {" · "}
               <span className={styles.muted}>{GENERATOR_LABELS[v.generator] ?? v.generator}</span>
               {/* 수정 요청 때 남긴 메모(BUG-CAND-04). 가장 최근 결정이 수정 요청이고 메모가 있을 때만. 텍스트로만 그린다 */}

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
 import { saveSupplierAction } from "@/features/settings/actions";
 import { getSupplier } from "@/features/settings/server";
@@ -25,9 +27,15 @@ export default function SettingsPage() {
   return (
     <>
       <AppNav />
-      <main className={`${styles.page} ${styles.wide}`}>
+      <main className={`${styles.page} ${styles.wide} ${styles.touchPage}`}>
         <h1 className={styles.title}>업무실 설정</h1>
-        <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
+        <Suspense
+          fallback={
+            <p className={styles.muted} role="status">
+              공급자 정보를 불러오는 중…
+            </p>
+          }
+        >
           <SupplierForm />
         </Suspense>
       </main>
@@ -35,13 +43,38 @@ export default function SettingsPage() {
   );
 }
 
+/** 공급자 정보 (UI-RESP-04): 불러오는 중·오류·처음(빈 상태)을 다른 화면과 같은 구조로 */
 async function SupplierForm() {
-  const supplier = await getSupplier();
+  let supplier: Awaited<ReturnType<typeof getSupplier>>;
+  try {
+    supplier = await getSupplier();
+  } catch (e) {
+    unstable_rethrow(e); // 로그인·업무실 확인의 이동(redirect)은 그대로 통과시킨다
+    console.error("[settings]", e);
+    return (
+      <section className={styles.section} aria-label="공급자 정보 상태">
+        <p className={styles.error} role="alert">
+          공급자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. 지금 저장하면 기존 정보를 덮어쓸 수 있어 입력 칸을 보이지 않습니다.
+        </p>
+        <p>
+          <Link href="/settings" className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            다시 불러오기
+          </Link>
+        </p>
+      </section>
+    );
+  }
   return (
     <section className={styles.section} aria-labelledby="supplier">
       <h2 id="supplier" className={styles.subtitle}>
         공급자 정보 (견적서에 표시){supplier ? ` · 현재 ${supplier.version}번 버전` : ""}
       </h2>
+      {!supplier && (
+        <div className={styles.emptyState}>
+          <strong>아직 저장한 공급자 정보가 없습니다.</strong>
+          <p className={styles.muted}>아래 칸을 채워 저장하면 견적서의 공급자 칸에 표시됩니다. 상호만 필수입니다.</p>
+        </div>
+      )}
       <p className={styles.muted}>저장하면 새 버전이 생깁니다. 이미 확정한 견적서는 확정할 때의 정보를 그대로 유지합니다.</p>
       <ActionForm action={saveSupplierAction} submitLabel="새 버전으로 저장">
         {/* 이 화면이 읽어 온 버전. 그사이 다른 화면에서 저장했으면 덮어쓰지 않는다(CR10). */}

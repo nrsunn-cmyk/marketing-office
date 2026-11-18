@@ -43,11 +43,14 @@ export function AuthForm({
     <form ref={formRef} action={formAction} onSubmit={submitKeepingValues} className={s.form} noValidate>
       {children}
       {errors.length > 0 && (
-        <ul className={s.error} role="alert">
-          {errors.map(([field, msg]) => (
-            <li key={field}>{msg}</li>
-          ))}
-        </ul>
+        // role=alert 는 감싸는 div 에 둔다. ul 에 직접 주면 목록 역할이 사라져 li 가 고아가 된다(axe listitem, QA-SWEEP-01 D2)
+        <div className={s.error} role="alert">
+          <ul className={s.errorList}>
+            {errors.map(([field, msg]) => (
+              <li key={field}>{msg}</li>
+            ))}
+          </ul>
+        </div>
       )}
       {state.message && (
         <p className={state.ok ? s.notice : s.error} role={state.ok ? "status" : "alert"}>

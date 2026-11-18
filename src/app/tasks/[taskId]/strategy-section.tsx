@@ -63,7 +63,7 @@ export async function StrategySection({
         ) : (
           <section className={styles.section}>
             <h2 className={styles.subtitle}>결과</h2>
-            <p className={styles.muted}>아직 만든 전략이 없습니다. 왼쪽에서 승인된 프로필 버전을 고르고 &lsquo;전략 초안 만들기&rsquo;를 눌러 주세요.</p>
+            <p className={styles.muted}>아직 만든 전략이 없습니다. &lsquo;전략 입력&rsquo; 칸에서 승인된 프로필 버전을 고르고 &lsquo;전략 초안 만들기&rsquo;를 눌러 주세요.</p>
           </section>
         )}
       </div>

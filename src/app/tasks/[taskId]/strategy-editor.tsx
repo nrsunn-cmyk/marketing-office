@@ -213,7 +213,7 @@ function SourcePicker({
 }) {
   return (
     <div className={s.sourceBox} role="group" aria-label={label}>
-      <label className={s.smallLabel}>
+      <label className={`${s.smallLabel} ${styles.field}`}>
         출처 종류
         <select
           value={source.kind}
@@ -230,7 +230,7 @@ function SourcePicker({
         </select>
       </label>
       {source.kind === "asset" && (
-        <label className={s.smallLabel}>
+        <label className={`${s.smallLabel} ${styles.field}`}>
           자료
           <select value={source.assetId} onChange={(e) => onChange({ kind: "asset", assetId: e.target.value })}>
             {assets.map((a) => (
@@ -242,7 +242,7 @@ function SourcePicker({
         </label>
       )}
       {source.kind === "url" && (
-        <label className={s.smallLabel}>
+        <label className={`${s.smallLabel} ${styles.field}`}>
           주소 (http/https)
           <input type="url" value={source.url} onChange={(e) => onChange({ kind: "url", url: e.target.value })} />
         </label>
