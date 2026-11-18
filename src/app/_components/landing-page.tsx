@@ -6,6 +6,8 @@ import styles from "./landing.module.css";
  * 공식 웹페이지 메인(랜딩 홈) 컴포넌트
  * 주인님 확정: 시안 1 (테크 그리드 & B2B 신뢰) + 지적이고 전문적인 실사 오피스 캐릭터
  * 비로그인 방문자 접속 시 루트(/)에서 기본 제공되는 대표 대외 웹사이트
+ * LANDING-COPY-DRAFT-01(DEC-01 초안): 근거를 대기 어려운 절대 표현을 앱이 실제로 하는 기능의 서술로 바꾸고,
+ * 목업의 숫자·금액에는 '예시'를 표시했다. 대조표: Plan/Claude-Plan-Audit-20261118/LANDING-COPY-DRAFT-01.md
  */
 export function LandingPage() {
   return (
@@ -35,7 +37,7 @@ export function LandingPage() {
               </li>
               <li>
                 <a href="#mockup" className={styles.navLink}>
-                  P2 전략 엔진
+                  전략 정리
                 </a>
               </li>
               <li>
@@ -78,12 +80,12 @@ export function LandingPage() {
 
           <h1 className={styles.heroTitle}>
             고객 자료는 단 한 번 입력,<br />
-            AI와 함께 <span className={styles.highlight}>검증된 전략과 견적까지</span>
+            <span className={styles.highlight}>출처가 보이는 전략과 견적까지</span>
           </h1>
 
           <p className={styles.heroDesc}>
-            반복 입력의 피로, 근거 없는 AI 환각, 주먹구구식 엑셀 견적을 끝냅니다.<br />
-            1인 마케터를 10인 에이전시급 생산성으로 이끄는 단 하나의 마케팅 OS.
+            고객 자료는 한 번 등록해 여러 작업에 다시 쓰고, 전략의 사실마다 출처를 붙이고, 견적은 입력한 단가로 자동 계산합니다.<br />
+            1인 마케터의 반복 업무를 한곳에서 정리하는 마케팅 업무실입니다.
           </p>
 
           <div className={styles.heroActions}>
@@ -128,32 +130,32 @@ export function LandingPage() {
               <h3 className={styles.characterQuote}>
                 &ldquo;우리는 뜬구름 잡는 조언을 하지 않습니다.<br />
                 <span className={styles.characterQuoteHighlight}>
-                  100% 검증된 데이터와 사실(Facts)
+                  등록한 자료와 출처
                 </span>
-                만으로<br />
-                고객사의 브랜드 전략과 공식 견적을 완성합니다.&rdquo;
+                를 근거로<br />
+                고객사의 브랜드 전략과 견적을 정리합니다.&rdquo;
               </h3>
 
               <p className={styles.characterBio}>
-                나다움 마케팅 오피스는 1인 마케터가 10인 에이전시급 성과를 낼 수 있도록, 고객 자료의 영구 자산화부터 출처 기반 마케팅 퍼널 기획, 원클릭 정식 A4 견적서 발행까지 오차 없이 보좌하는 지능형 비즈니스 플랫폼입니다.
+                나다움 마케팅 오피스는 1인 마케터가 고객 자료를 한곳에 모아 두고, 출처를 붙인 전략 초안과 A4 PDF 견적서까지 이어서 만들 수 있도록 돕는 업무 도구입니다.
               </p>
 
               <div className={styles.characterStatsMini}>
                 <div>
-                  <strong>100%</strong>
-                  <span>데이터 무결성</span>
+                  <strong>1회</strong>
+                  <span>고객 자료 등록</span>
                 </div>
                 <div>
-                  <strong>0건</strong>
-                  <span>AI 환각 차단</span>
+                  <strong>출처</strong>
+                  <span>사실마다 표시</span>
                 </div>
                 <div>
-                  <strong>0원</strong>
-                  <span>견적 계산 오차</span>
+                  <strong>자동</strong>
+                  <span>공급가·부가세 계산</span>
                 </div>
                 <div>
                   <strong>A4 PDF</strong>
-                  <span>공식 견적 출력</span>
+                  <span>견적서 내려받기</span>
                 </div>
               </div>
             </div>
@@ -166,12 +168,12 @@ export function LandingPage() {
               <span className={`${styles.dot} ${styles.dotYellow}`} />
               <span className={`${styles.dot} ${styles.dotGreen}`} />
               <span className={styles.mockupUrl}>
-                https://marketing-office-zeta.vercel.app/ (나다움 마케팅 오피스 내부 현황 대시보드)
+                예시 화면 · 아래 숫자·이름·금액은 설명을 위한 예시입니다
               </span>
             </div>
 
             <div className={styles.mockupInner}>
-              {/* 상단 4대 실시간 KPI 타일 */}
+              {/* 상단 현황 타일(예시 숫자) */}
               <div className={styles.kpiRow}>
                 <div className={`${styles.kpiCard} ${styles.blue}`}>
                   <div className={styles.kpiLabel}>진행 중 프로젝트</div>
@@ -199,15 +201,15 @@ export function LandingPage() {
               <div className={styles.mockupSplit}>
                 <div className={styles.panelBox}>
                   <div className={styles.panelTitle}>
-                    <span>🎯 P2 팩트 기반 마케팅 전략 수립 (Strict Facts)</span>
-                    <span className={styles.factTag}>검증된 팩트 100%</span>
+                    <span>🎯 출처를 붙인 마케팅 전략 초안 (예시)</span>
+                    <span className={styles.factTag}>사실마다 출처 표시</span>
                   </div>
                   <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-main)" }}>
                     <p style={{ margin: "4px 0" }}>
                       <strong>[타깃 세그먼트]</strong> 3040 맞춤형 구독형 B2B 고객사
                     </p>
                     <p style={{ margin: "4px 0" }}>
-                      <strong>[핵심 가치 제안]</strong> 자료 분산 0%, 승인된 산출물 버전 관리
+                      <strong>[핵심 가치 제안]</strong> 흩어진 자료를 한곳에, 승인한 결과물은 버전으로 관리
                     </p>
                     <div
                       style={{
@@ -220,15 +222,15 @@ export function LandingPage() {
                         color: "var(--text-muted)",
                       }}
                     >
-                      💡 <em>&ldquo;추정이나 환각 없이, 고객 프로필에 등록된 [회사 강점 3종]과 [리서치 출처 2건]만을 근거로 퍼널 5단계 브리프를 확정했습니다.&rdquo;</em>
+                      💡 <em>&ldquo;고객 프로필의 [회사 강점 3종]과 [자료 출처 2건]은 사실로, 출처가 없는 내용은 &lsquo;추정&rsquo;으로 나눠 정리했습니다. 사람이 검토한 뒤 승인합니다.&rdquo;</em>
                     </div>
                   </div>
                 </div>
 
                 <div className={styles.panelBox}>
                   <div className={styles.panelTitle}>
-                    <span>📑 원클릭 공식 A4 PDF 견적서</span>
-                    <span className={styles.quoteMatchBadge}>● 계산 일치</span>
+                    <span>📑 A4 PDF 견적서 (예시 금액)</span>
+                    <span className={styles.quoteMatchBadge}>● 자동 계산</span>
                   </div>
                   <div>
                     <div className={styles.quoteRow}>
@@ -256,19 +258,19 @@ export function LandingPage() {
           {/* 핵심 신뢰 지표 바 */}
           <div className={styles.metricsBar}>
             <div>
-              <div className={styles.metricNumber}>0건</div>
-              <div className={styles.metricLabel}>AI 거짓말(환각) 차단</div>
-              <div className={styles.metricDesc}>철저한 Facts & 출처 계약</div>
+              <div className={styles.metricNumber}>출처</div>
+              <div className={styles.metricLabel}>사실마다 출처 연결</div>
+              <div className={styles.metricDesc}>출처가 없으면 &lsquo;추정&rsquo;으로 구분</div>
             </div>
             <div>
-              <div className={styles.metricNumber}>100%</div>
-              <div className={styles.metricLabel}>고객 데이터 재사용</div>
-              <div className={styles.metricDesc}>1회 등록 후 모든 작업 연동</div>
+              <div className={styles.metricNumber}>1회</div>
+              <div className={styles.metricLabel}>고객 정보 등록</div>
+              <div className={styles.metricDesc}>고객 정보·프로필을 여러 작업에 다시 사용</div>
             </div>
             <div>
-              <div className={styles.metricNumber}>0원</div>
-              <div className={styles.metricLabel}>견적 계산 오차</div>
-              <div className={styles.metricDesc}>단가·세액 정수 산출 엔진</div>
+              <div className={styles.metricNumber}>원 단위</div>
+              <div className={styles.metricLabel}>견적 자동 계산</div>
+              <div className={styles.metricDesc}>단가×수량과 부가세를 정수로 계산</div>
             </div>
             <div>
               <div className={styles.metricNumber}>4단계</div>
@@ -293,17 +295,17 @@ export function LandingPage() {
             <h3 className={styles.solTitle}>고객 & 브랜드 자산화</h3>
             <p className={styles.solDesc}>
               매번 미팅할 때마다 고객사 정보를 다시 묻지 마세요. 
-              고객의 사업 목표, 타깃, 톤앤매너, 공식 레퍼런스를 단 한 번 등록하면 모든 프로젝트에 안전하게 연결됩니다.
+              고객의 상품, 타깃, 강점, 브랜드 규칙, 채널을 한 번 등록해 두면 그 고객의 프로젝트에서 다시 씁니다.
             </p>
             <ul className={styles.solFeatureList}>
               <li>
-                <span className={styles.solCheck}>✓</span> 고객사별 브랜드 프로필 영구 보관
+                <span className={styles.solCheck}>✓</span> 고객사별 회사 프로필을 버전으로 보관
               </li>
               <li>
-                <span className={styles.solCheck}>✓</span> 로고 브리프 및 디자인 에셋 자동 연동
+                <span className={styles.solCheck}>✓</span> 로고 브리프 입력을 고객 정보로 미리 채움
               </li>
               <li>
-                <span className={styles.solCheck}>✓</span> 과거 납품 이력 및 데이터 불변성 보장
+                <span className={styles.solCheck}>✓</span> 이미 만든 결과물은 만들 때의 프로필 버전을 유지
               </li>
             </ul>
           </div>
@@ -311,20 +313,20 @@ export function LandingPage() {
           {/* 솔루션 2 */}
           <div className={styles.solutionCard}>
             <div className={styles.solIcon}>🎯</div>
-            <h3 className={styles.solTitle}>근거 기반 P2 전략 엔진</h3>
+            <h3 className={styles.solTitle}>근거를 남기는 전략 정리</h3>
             <p className={styles.solDesc}>
-              일반 챗봇의 뜬구름 잡는 소리는 배제합니다.
-              검증된 사실(Facts)과 출처(Sources)만을 바탕으로 고객 퍼널 분석, 실행 브리프, 콘텐츠 카피를 오차 없이 설계합니다.
+              사실에는 출처(승인한 회사 프로필·자료·외부 주소)를 하나씩 붙이고, 출처가 없는 내용은 &lsquo;추정&rsquo;으로 따로 적습니다.
+              입력한 내용만 정리하며 점수나 숫자를 새로 만들지 않습니다.
             </p>
             <ul className={styles.solFeatureList}>
               <li>
-                <span className={styles.solCheck}>✓</span> 거짓 정보(Hallucination) 원천 차단 설계
+                <span className={styles.solCheck}>✓</span> 출처 없는 사실은 &lsquo;추정&rsquo;으로 구분
               </li>
               <li>
-                <span className={styles.solCheck}>✓</span> 퍼널 5단계별 맞춤형 실행 브리프
+                <span className={styles.solCheck}>✓</span> 승인한 전략을 이어받는 퍼널 5단계 보드 (준비 중)
               </li>
               <li>
-                <span className={styles.solCheck}>✓</span> 승인된 전략 기반 결과물 버전 추적
+                <span className={styles.solCheck}>✓</span> 전략 버전별 검토·승인 기록
               </li>
             </ul>
           </div>
@@ -335,17 +337,17 @@ export function LandingPage() {
             <h3 className={styles.solTitle}>공식 A4 PDF 견적서 발행</h3>
             <p className={styles.solDesc}>
               복잡한 엑셀 수식과 씨름할 필요가 없습니다. 
-              항목별 단가와 수량을 입력하면 부가세 계산부터 정식 회사 직인이 들어간 표준 A4 PDF 견적서까지 즉시 인쇄·다운로드됩니다.
+              항목별 단가와 수량을 입력하면 공급가·부가세·합계를 계산하고, 확정하면 견적 번호가 붙은 A4 PDF 견적서를 내려받을 수 있습니다.
             </p>
             <ul className={styles.solFeatureList}>
               <li>
-                <span className={styles.solCheck}>✓</span> 실시간 단가·수량·세율 정수 자동 계산
+                <span className={styles.solCheck}>✓</span> 입력하는 동안 원 단위 자동 계산(저장할 때 다시 확인)
               </li>
               <li>
-                <span className={styles.solCheck}>✓</span> 한국어 인쇄 최적화 표준 A4 PDF 출력
+                <span className={styles.solCheck}>✓</span> 한국어 A4 PDF 견적서 내려받기
               </li>
               <li>
-                <span className={styles.solCheck}>✓</span> 견적 버전별 승인 이력 및 납품 관리
+                <span className={styles.solCheck}>✓</span> 확정한 견적은 번호·금액 고정, 전달 기록 남기기
               </li>
             </ul>
           </div>
@@ -357,7 +359,7 @@ export function LandingPage() {
         <div className={styles.workflowWrap}>
           <div className={styles.sectionHead} style={{ marginBottom: 36 }}>
             <div className={styles.sectionEyebrow}>WORKFLOW</div>
-            <h2 className={styles.sectionHeading}>1인 마케터도 10인 에이전시처럼 일하는 4단계</h2>
+            <h2 className={styles.sectionHeading}>1인 마케터의 업무를 정리하는 4단계</h2>
           </div>
 
           <div className={styles.flowSteps}>
@@ -365,7 +367,7 @@ export function LandingPage() {
               <div className={styles.stepNum}>1</div>
               <div className={styles.stepTitle}>고객 프로필 등록</div>
               <div className={styles.stepDesc}>
-                고객사의 업종, 타깃 고객, 브랜드 강점과 참고 문헌을 단 1회 등록합니다.
+                고객사의 업종, 타깃 고객, 브랜드 강점과 참고 자료를 한 번 등록합니다.
               </div>
             </div>
 
@@ -379,9 +381,9 @@ export function LandingPage() {
 
             <div className={styles.stepCard}>
               <div className={styles.stepNum}>3</div>
-              <div className={styles.stepTitle}>AI 전략 수립 & 검토</div>
+              <div className={styles.stepTitle}>전략 정리 & 검토</div>
               <div className={styles.stepDesc}>
-                팩트 기반 AI 엔진이 생성한 전략과 브리프를 사람이 직접 확인하고 승인합니다.
+                입력한 사실·출처로 정리한 전략과 브리프를 사람이 직접 확인하고 승인합니다.
               </div>
             </div>
 
@@ -389,7 +391,7 @@ export function LandingPage() {
               <div className={styles.stepNum}>4</div>
               <div className={styles.stepTitle}>공식 견적 & 납품</div>
               <div className={styles.stepDesc}>
-                정식 A4 견적서를 출력해 계약을 맺고, 승인된 결과물을 고객사 프로젝트에 영구 보관합니다.
+                A4 견적서를 내려받아 계약에 쓰고, 승인한 결과물을 고객사 프로젝트에 보관합니다.
               </div>
             </div>
           </div>
@@ -402,7 +404,7 @@ export function LandingPage() {
           <h2 className={styles.ctaHeading}>지금 나만의 마케팅 업무실을 열어보세요</h2>
           <p className={styles.ctaText}>
             더 이상 산발적인 메모와 불안한 엑셀에 의존하지 마세요.<br />
-            나다움 마케팅 오피스가 든든한 AI 파트너가 되어 드립니다.
+            나다움 마케팅 오피스가 든든한 업무 파트너가 되어 드립니다.
           </p>
           <Link
             href="/login"
@@ -417,7 +419,7 @@ export function LandingPage() {
       {/* ── 푸터 ── */}
       <footer className={`${styles.container} ${styles.landingFooter}`}>
         <div>
-          <strong>나다움 마케팅 오피스</strong> · 1인 운영 전문 AI 마케팅 에이전시 플랫폼
+          <strong>나다움 마케팅 오피스</strong> · 1인 마케터를 위한 마케팅 업무실
         </div>
         <div>
           <Link href="/login" className={styles.footerLoginLink}>
