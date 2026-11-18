@@ -7,8 +7,26 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 export const BUCKET = "source-assets";
 export const DB_CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? "supabase_db_marketing-office";
 
-/** 백업 대상 업무 테이블 (개수 비교용) */
+/**
+ * 백업 대상 public 표 전체 (행 수 비교용). BACKUP-P2-TABLES-01: migration 이 만드는 표를 빠짐없이 둔다.
+ * - DB 내보내기(supabase db dump --data-only)는 원래 public 표 전체를 담는다. 이 목록은 행 수 검증 범위다.
+ * - 백업·검증 때 DB 의 실제 public 표를 읽어, 이 목록에 없는 표가 있으면 멈춘다(새 migration 이 표를 더했는데 목록을 안 고친 경우).
+ * - LATER_TABLES 는 뒤 migration(21 퍼널·22 브리프)이 만드는 표다. 아직 그 migration 이 없는 DB 에서는 없어도 된다.
+ */
+export const LATER_TABLES = [
+  // 20261118001000_p2d_funnel_board
+  "funnels",
+  "funnel_stages",
+  "funnel_items",
+  // 20261118002000_p2f_content_brief
+  "content_briefs",
+  "content_brief_claims",
+  "content_claim_sources",
+] as const;
+
 export const TABLES = [
+  "signup_allowlist",
+  "templates",
   "workspaces",
   "supplier_profiles",
   "clients",
@@ -29,7 +47,43 @@ export const TABLES = [
   "exports",
   "delivery_records",
   "audit_events",
+  // P2 전략(20261117001000)
+  "company_profile_approvals",
+  "artifact_version_refs",
+  "research_sources",
+  ...LATER_TABLES,
 ] as const;
+
+/** DB 의 실제 public 표 목록(일반·분할 표) */
+export const LIST_TABLES_SQL = "select c.relname from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') order by 1;";
+
+/**
+ * 표 목록 대조: DB 에 있는데 TABLES 에 없는 표가 있으면 오류(누락 시 실패).
+ * TABLES 에 있는데 DB 에 없는 표는 LATER_TABLES 만 허용한다(아직 뒤 migration 이 없는 DB).
+ * 돌려주는 값: 행 수를 셀 표(DB 에 있는 것, TABLES 순서)
+ */
+export function checkTableCoverage(dbTables: readonly string[]): string[] {
+  const known = new Set<string>(TABLES);
+  const later = new Set<string>(LATER_TABLES);
+  const db = new Set(dbTables);
+  const unknown = [...db].filter((t) => !known.has(t)).sort();
+  if (unknown.length > 0) {
+    throw new Error(`백업 목록에 없는 표가 DB에 있습니다: ${unknown.join(", ")}. scripts/backup/common.mts 의 TABLES 에 넣은 뒤 다시 실행하세요.`);
+  }
+  const missing = TABLES.filter((t) => !db.has(t) && !later.has(t));
+  if (missing.length > 0) {
+    throw new Error(`DB에 있어야 할 표가 없습니다: ${missing.join(", ")}. 대상 DB의 migration 상태를 확인하세요.`);
+  }
+  return TABLES.filter((t) => db.has(t));
+}
+
+/** 대상 DB 의 public 표 목록(psql, 백업과 같은 대상 규칙) */
+export function listDbTables(): string[] {
+  return psql(LIST_TABLES_SQL)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
 
 export function admin(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -197,9 +251,9 @@ export function psql(sql: string): string {
   );
 }
 
-export async function tableCounts(sb: SupabaseClient): Promise<Record<string, number>> {
+export async function tableCounts(sb: SupabaseClient, tables: readonly string[] = TABLES): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
-  for (const t of TABLES) {
+  for (const t of tables) {
     const { count, error } = await sb.from(t).select("*", { count: "exact", head: true });
     if (error) throw new Error(`${t} 개수 조회 실패: ${error.message}`);
     out[t] = count ?? 0;
