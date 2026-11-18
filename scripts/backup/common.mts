@@ -2,13 +2,112 @@
  * 백업·복원 공통 도구 (T20). 관리자 키(SUPABASE_SECRET_KEY)를 쓰는 운영 스크립트이며 앱 코드에서 쓰지 않는다 (C05).
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const BUCKET = "source-assets";
-export const DB_CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? "supabase_db_marketing-office";
 
-/** 백업 대상 업무 테이블 (개수 비교용) */
+/** 현재 폴더 supabase/config.toml 의 project_id (없으면 null). supabase db reset·dump 는 이 프로젝트를 대상으로 한다 */
+export function localProjectId(cwd: string = process.cwd()): string | null {
+  const p = join(cwd, "supabase", "config.toml");
+  if (!existsSync(p)) return null;
+  return /^\s*project_id\s*=\s*"([^"]+)"/m.exec(readFileSync(p, "utf8"))?.[1] ?? null;
+}
+
+/** 여러 CLI 가 같이 쓰는 공용 로컬 스택의 project_id(원본 저장소 config.toml). 복원 연습은 이 프로젝트에서 하지 않는다 */
+export const SHARED_PROJECT_ID = "marketing-office";
+
+/** 현재 폴더 config.toml 의 [api] port (없으면 null) */
+export function configApiPort(cwd: string = process.cwd()): number | null {
+  const p = join(cwd, "supabase", "config.toml");
+  if (!existsSync(p)) return null;
+  const api = /^\[api\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(readFileSync(p, "utf8"))?.[1] ?? "";
+  const port = /^\s*port\s*=\s*(\d+)/m.exec(api)?.[1];
+  return port ? Number(port) : null;
+}
+
+/** API 주소의 포트(없으면 null) */
+export function apiPort(url: string): number | null {
+  try {
+    const u = new URL(url);
+    return u.port ? Number(u.port) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 컨테이너가 어느 로컬 Supabase 스택의 것인지(라벨 com.supabase.cli.project). 스택 컨테이너가 아니면 "".
+ * 이름 대신 라벨로 판정하므로 '/이름'·컨테이너 ID 형태로 적어도 같은 결과다(R2, QA-BACKUP-P2-01-R1 R1-b).
+ * 컨테이너가 없으면 멈춘다. 인자에는 컨테이너 이름만 들어간다(비밀값 없음).
+ */
+export function containerProject(container: string): string {
+  let out: string;
+  try {
+    out = run("docker", ["inspect", "--format", '{{index .Config.Labels "com.supabase.cli.project"}}', container]);
+  } catch {
+    throw new Error(`컨테이너(${container})를 찾을 수 없습니다. 먼저 띄운 뒤 다시 실행하세요.`);
+  }
+  const v = out.trim();
+  return v === "<no value>" ? "" : v;
+}
+
+/**
+ * psql 을 빌려 쓸 Docker 컨테이너 정하기(BACKUP-P2-TABLES-01-R1, QA-BACKUP-P2-01 W1·W3).
+ * 예전에는 지정이 없으면 공용 스택 컨테이너(supabase_db_marketing-office)를 썼다. 이제 기본값이 없다.
+ * - 원격(운영): SUPABASE_DB_CONTAINER 를 반드시 지정한다. 로컬 Supabase 스택 컨테이너(supabase_ 로 시작)는 거부한다.
+ *   운영 비밀번호를 다른 CLI·공용 스택의 컨테이너 안으로 넣지 않게 하려는 것이다. 이 확인은 비밀번호를 넘기기 전에 한다.
+ * - 로컬: 지정이 없으면 현재 폴더 config.toml 의 project_id 로 supabase_db_<id> 를 쓴다. 그것도 없으면 멈춘다.
+ */
+export function dbContainer(kind: BackupTarget["kind"], env: EnvMap = process.env, cwd: string = process.cwd()): string {
+  const named = (env.SUPABASE_DB_CONTAINER ?? "").trim();
+  if (kind === "remote") {
+    if (!named) {
+      throw new Error("운영 대상에는 SUPABASE_DB_CONTAINER(전용 psql 클라이언트 컨테이너)를 지정해야 합니다. 공용 컨테이너로 운영 비밀번호를 넘기지 않도록 멈춥니다.");
+    }
+    if (/^\/?supabase_/.test(named)) {
+      throw new Error(`운영 대상에 로컬 Supabase 스택 컨테이너(${named})는 쓸 수 없습니다. 전용 psql 클라이언트 컨테이너를 띄워 지정하세요.`);
+    }
+    // 이름이 아닌 라벨로 한 번 더 판정한다('/이름'·컨테이너 ID 형태로 적은 스택 컨테이너도 막는다, R2)
+    const project = containerProject(named);
+    if (project) {
+      throw new Error(`운영 대상에 로컬 Supabase 스택 컨테이너(${named}, 프로젝트 ${project})는 쓸 수 없습니다. 전용 psql 클라이언트 컨테이너를 띄워 지정하세요.`);
+    }
+    return named;
+  }
+  if (named) return named;
+  const id = localProjectId(cwd);
+  if (!id) throw new Error("로컬 대상인데 SUPABASE_DB_CONTAINER 가 없고, 현재 폴더에 supabase/config.toml(project_id)도 없습니다. 컨테이너를 정할 수 없어 멈춥니다.");
+  // config 로 정할 때는 API 주소 포트가 그 프로젝트의 API 포트와 같아야 한다(행 수·파일은 API, 표 목록·SQL 은 이 컨테이너를 본다, R2)
+  const cfgPort = configApiPort(cwd);
+  const urlPort = apiPort(env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  if (cfgPort !== urlPort) {
+    throw new Error(`API 주소 포트(${urlPort ?? "없음"})가 현재 폴더 프로젝트(${id})의 API 포트(${cfgPort ?? "없음"})와 다릅니다. 서로 다른 로컬 스택이 섞이지 않도록 멈춥니다.`);
+  }
+  return `supabase_db_${id}`;
+}
+
+/**
+ * 백업 대상 public 표 전체 (행 수 비교용). BACKUP-P2-TABLES-01: migration 이 만드는 표를 빠짐없이 둔다.
+ * - DB 내보내기(supabase db dump --data-only)는 원래 public 표 전체를 담는다. 이 목록은 행 수 검증 범위다.
+ * - 백업·검증 때 DB 의 실제 public 표를 읽어, 이 목록에 없는 표가 있으면 멈춘다(새 migration 이 표를 더했는데 목록을 안 고친 경우).
+ * - LATER_TABLES 는 뒤 migration(21 퍼널·22 브리프)이 만드는 표다. 아직 그 migration 이 없는 DB 에서는 없어도 된다.
+ */
+export const LATER_TABLES = [
+  // 20261118001000_p2d_funnel_board
+  "funnels",
+  "funnel_stages",
+  "funnel_items",
+  // 20261118002000_p2f_content_brief
+  "content_briefs",
+  "content_brief_claims",
+  "content_claim_sources",
+] as const;
+
 export const TABLES = [
+  "signup_allowlist",
+  "templates",
   "workspaces",
   "supplier_profiles",
   "clients",
@@ -29,7 +128,43 @@ export const TABLES = [
   "exports",
   "delivery_records",
   "audit_events",
+  // P2 전략(20261117001000)
+  "company_profile_approvals",
+  "artifact_version_refs",
+  "research_sources",
+  ...LATER_TABLES,
 ] as const;
+
+/** DB 의 실제 public 표 목록(일반·분할 표) */
+export const LIST_TABLES_SQL = "select c.relname from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') order by 1;";
+
+/**
+ * 표 목록 대조: DB 에 있는데 TABLES 에 없는 표가 있으면 오류(누락 시 실패).
+ * TABLES 에 있는데 DB 에 없는 표는 LATER_TABLES 만 허용한다(아직 뒤 migration 이 없는 DB).
+ * 돌려주는 값: 행 수를 셀 표(DB 에 있는 것, TABLES 순서)
+ */
+export function checkTableCoverage(dbTables: readonly string[]): string[] {
+  const known = new Set<string>(TABLES);
+  const later = new Set<string>(LATER_TABLES);
+  const db = new Set(dbTables);
+  const unknown = [...db].filter((t) => !known.has(t)).sort();
+  if (unknown.length > 0) {
+    throw new Error(`백업 목록에 없는 표가 DB에 있습니다: ${unknown.join(", ")}. scripts/backup/common.mts 의 TABLES 에 넣은 뒤 다시 실행하세요.`);
+  }
+  const missing = TABLES.filter((t) => !db.has(t) && !later.has(t));
+  if (missing.length > 0) {
+    throw new Error(`DB에 있어야 할 표가 없습니다: ${missing.join(", ")}. 대상 DB의 migration 상태를 확인하세요.`);
+  }
+  return TABLES.filter((t) => db.has(t));
+}
+
+/** 대상 DB 의 public 표 목록(psql, 백업과 같은 대상 규칙) */
+export function listDbTables(): string[] {
+  return psql(LIST_TABLES_SQL)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
 
 export function admin(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -183,23 +318,25 @@ export function resolveBackupTarget(env: Record<string, string | undefined> = pr
 export function psql(sql: string): string {
   // 백업과 같은 규칙으로 대상을 정한다(로컬/운영 섞임·프로젝트 불일치면 여기서 멈춤)
   const backupTarget = resolveBackupTarget();
+  // 컨테이너를 먼저 정한다. 운영인데 지정이 없거나 로컬 스택 컨테이너면 비밀번호를 꺼내기 전에 멈춘다(R1 W1)
+  const container = dbContainer(backupTarget.kind);
   if (backupTarget.kind === "local") {
-    return run("docker", ["exec", "-i", DB_CONTAINER, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
+    return run("docker", ["exec", "-i", container, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-q"], sql);
   }
   // BACKUP-SECRET-01: 비밀번호는 docker·psql 명령 인자에 넣지 않고 표준 입력 첫 줄로 넘긴다(컨테이너 안 sh 가 읽어 PGPASSWORD 로).
   // docker exec -e NAME=값 도 인자에 값이 보이므로 쓰지 않는다.
   const { conninfo, password } = splitDbUrl(process.env.BACKUP_DB_URL ?? "");
   return run(
     "docker",
-    ["exec", "-i", DB_CONTAINER, "sh", "-c", PSQL_STDIN_PASSWORD_SCRIPT, "sh", conninfo, "-v", "ON_ERROR_STOP=1", "-At", "-q"],
+    ["exec", "-i", container, "sh", "-c", PSQL_STDIN_PASSWORD_SCRIPT, "sh", conninfo, "-v", "ON_ERROR_STOP=1", "-At", "-q"],
     `${password}\n${sql}`,
     { env: childEnv(), secrets: [password] },
   );
 }
 
-export async function tableCounts(sb: SupabaseClient): Promise<Record<string, number>> {
+export async function tableCounts(sb: SupabaseClient, tables: readonly string[] = TABLES): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
-  for (const t of TABLES) {
+  for (const t of tables) {
     const { count, error } = await sb.from(t).select("*", { count: "exact", head: true });
     if (error) throw new Error(`${t} 개수 조회 실패: ${error.message}`);
     out[t] = count ?? 0;
@@ -221,6 +358,41 @@ export interface Manifest {
   counts: Record<string, number>;
   files: StoredFile[];
   quoteTotalWon: number;
+  /**
+   * 행 수 목록 판(BACKUP-P2-TABLES-01-R1). 2 = DB 의 public 표 전체를 대조해 센 백업.
+   * 없으면 예전 20개 목록 백업이다. 그 백업의 data.sql 은 public 표 전체를 담지만, 목록 밖 표는 행 수로 확인할 수 없다.
+   */
+  tableListVersion?: 2;
+}
+
+export const TABLE_LIST_VERSION = 2 as const;
+
+/**
+ * 백업 목록의 행 수와 지금 DB 행 수 비교(counts 의 키 = 지금 DB 에 있는 표).
+ * - 백업에 있던 표가 없거나 행 수가 다르면 실패
+ * - 목록 밖 표에 행이 있으면: 새 판(2) 백업은 실패(백업 때 모든 표를 셌으므로 생기면 안 됨),
+ *   예전 20개 목록 백업은 **경고**(data.sql 에는 들어 있지만 이 백업으로 행 수를 확인할 수 없음, R1 W2)
+ */
+export function compareCounts(manifest: Pick<Manifest, "counts" | "tableListVersion">, counts: Record<string, number>): { problems: string[]; warning: string | null } {
+  const problems: string[] = [];
+  for (const [t, n] of Object.entries(manifest.counts)) {
+    if (!(t in counts)) problems.push(`백업에 있던 표가 지금 DB에 없음 ${t}(백업 ${n}행)`);
+    else if (counts[t] !== n) problems.push(`행 수 불일치 ${t}: 백업 ${n} / 복원 ${counts[t]}`);
+  }
+  const oldList = manifest.tableListVersion !== TABLE_LIST_VERSION;
+  const unchecked: string[] = [];
+  for (const [t, n] of Object.entries(counts)) {
+    if (t in manifest.counts || n === 0) continue;
+    if (oldList) unchecked.push(`${t} ${n}행`);
+    else problems.push(`백업 목록에 없는 표에 행이 있음 ${t}: ${n}행`);
+  }
+  const warning = oldList
+    ? `경고: 예전 목록 백업입니다(행 수 목록 ${Object.keys(manifest.counts).length}개 표). ` +
+      (unchecked.length
+        ? `다음 표는 data.sql 에 들어 있지만 이 백업으로 행 수를 확인할 수 없습니다: ${unchecked.join(", ")}.`
+        : "목록 밖 표는 모두 0행입니다.")
+    : null;
+  return { problems, warning };
 }
 
 /** 모든 외래키에 대해 부모 없는 행이 있는지 검사하는 SQL. 하나라도 있으면 오류. */

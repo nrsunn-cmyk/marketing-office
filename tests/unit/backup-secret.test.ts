@@ -107,9 +107,13 @@ describe("검증 psql: 인자에 비밀 없음, 표준 입력 첫 줄로만", ()
     vi.stubEnv("BACKUP_DB_URL", POOLER);
     vi.stubEnv("SUPABASE_SECRET_KEY", "SYNTH-service-key");
     vi.stubEnv("SUPABASE_DB_CONTAINER", "claude-backup-client-test");
+    // R2: 실행 전에 docker inspect 로 스택 라벨을 본다. 전용 클라이언트는 라벨이 없다
+    spawnSync.mockImplementation((_cmd, args: string[]) => ({ status: 0, stdout: args[0] === "inspect" ? "<no value>\n" : "ok", stderr: "" }));
     const { psql, PSQL_STDIN_PASSWORD_SCRIPT } = await load();
     psql("select 1;\nselect 2;");
-    const [c] = calls();
+    const [inspect, c] = calls();
+    expect(inspect!.args[0]).toBe("inspect");
+    expect(leaks(inspect!)).toBe(false);
     expect(c!.cmd).toBe("docker");
     expect(c!.args.slice(0, 7)).toEqual(["exec", "-i", "claude-backup-client-test", "sh", "-c", PSQL_STDIN_PASSWORD_SCRIPT, "sh"]);
     expect(c!.args[7]).toContain(`user='postgres.${REF}'`);
@@ -135,9 +139,14 @@ describe("검증 psql: 인자에 비밀 없음, 표준 입력 첫 줄로만", ()
 
 describe("실패해도 비밀이 오류에 남지 않는다", () => {
   it("자식 프로세스가 비밀을 stderr 에 되울려도 오류 메시지에서는 가린다", async () => {
-    spawnSync.mockReturnValue({ status: 1, stdout: "", stderr: `connection failed for password ${SECRET}` });
+    // inspect(스택 라벨 확인)는 성공하고 실제 실행만 실패하는 상황
+    spawnSync.mockImplementation((_cmd, args: string[]) =>
+      args[0] === "inspect" ? { status: 0, stdout: "<no value>\n", stderr: "" } : { status: 1, stdout: "", stderr: `connection failed for password ${SECRET}` },
+    );
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", API);
     vi.stubEnv("BACKUP_DB_URL", DIRECT);
+    // 운영 대상 psql 은 전용 클라이언트 지정이 필수다(BACKUP-P2-TABLES-01-R1). 지정해야 실제 실행 단계까지 간다
+    vi.stubEnv("SUPABASE_DB_CONTAINER", "claude-backup-client-test");
     const { psql, resolveBackupTarget, runDump } = await load();
     const msgs: string[] = [];
     for (const f of [() => psql("select 1;"), () => runDump("d.sql", resolveBackupTarget())]) {

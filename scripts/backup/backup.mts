@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { admin, BUCKET, resolveBackupTarget, runDump, tableCounts, type Manifest, type StoredFile } from "./common.mts";
+import { admin, BUCKET, checkTableCoverage, listDbTables, resolveBackupTarget, runDump, TABLE_LIST_VERSION, tableCounts, type Manifest, type StoredFile } from "./common.mts";
 
 const out = process.argv[2];
 if (!out) {
@@ -26,6 +26,14 @@ try {
   process.exit(1);
 }
 console.log(`백업 대상: ${target.kind === "local" ? "로컬 시험 DB" : `운영 프로젝트 ${target.label}`}`);
+// BACKUP-P2-TABLES-01: 대상 DB 의 public 표가 모두 백업 목록에 있는지 먼저 확인한다(누락이면 폴더도 만들지 않고 멈춤)
+let tables: string[];
+try {
+  tables = checkTableCoverage(listDbTables());
+} catch (e) {
+  console.error(`백업을 시작하지 않았습니다: ${(e as Error).message}`);
+  process.exit(1);
+}
 mkdirSync(join(out, "files"), { recursive: true });
 
 const sb = admin();
@@ -59,7 +67,8 @@ const { data: quotes } = await sb.from("quote_versions").select("total_won");
 const manifest: Manifest = {
   createdAt: new Date().toISOString(),
   target: target.label,
-  counts: await tableCounts(sb),
+  counts: await tableCounts(sb, tables),
+  tableListVersion: TABLE_LIST_VERSION,
   files,
   quoteTotalWon: (quotes ?? []).reduce((s, q) => s + Number(q.total_won), 0),
 };
