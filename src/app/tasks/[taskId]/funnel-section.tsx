@@ -183,7 +183,7 @@ function BoardBody({ board, taskId, readOnly, briefs }: { board: FunnelBoard; ta
         <div className={`${styles.notice} ${f.warnBox}`} role="note">
           <p className={f.keep}>
             <strong>이 보드는 이전 전략({funnel.strategyVersion.version}번 버전) 기준입니다.</strong> 지금 승인본은{" "}
-            {board.strategy.approvedVersion ? `${board.strategy.approvedVersion.version}번 버전` : "없음"}입니다. 카드는 그대로 두고 보드의 기준만 바꿀 수 있습니다. 콘텐츠 브리프는 브리프마다 따로 맞춥니다.
+            {board.strategy.approvedVersion ? `${board.strategy.approvedVersion.version}번 버전` : "없음"}입니다. 카드는 그대로 두고 보드의 기준만 바꿀 수 있습니다. 콘텐츠 브리프의 기준 맞추기와는 따로 동작합니다(보드를 맞춰도 브리프는 그대로이고, 브리프는 브리프 화면에서 따로 맞춥니다).
           </p>
           {!readOnly && board.strategy.approvedVersion && (
             <ActionForm action={rebaseFunnelAction} submitLabel="퍼널 보드를 지금 승인본 기준으로 맞추기" pendingLabel="맞추는 중…" variant="secondary" className={f.inlineForm}>

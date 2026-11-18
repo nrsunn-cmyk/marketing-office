@@ -68,7 +68,9 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
   }
 
   const { brief, claims, warnings, options, markdown } = detail;
-  const locked = readOnly || brief.archived;
+  // 보드에 없는 카드(보관한 카드)의 브리프는 서버가 모든 쓰기를 거절한다(assert_brief_open). 화면도 읽기 전용(P2F-FRONT-01-R1, QA D1)
+  const cardArchived = !board.stages.some((st) => st.items.some((i) => i.id === brief.funnelItemId));
+  const locked = readOnly || brief.archived || cardArchived;
   const unverified = warnings.find((w) => w.kind === "unverified");
   const groups: Array<{ label: string; choices: SourceChoice[] }> = [
     {
@@ -96,6 +98,11 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
       {brief.archived && (
         <div className={styles.notice} role="note">
           보관한 브리프는 읽기만 할 수 있습니다.
+        </div>
+      )}
+      {cardArchived && !brief.archived && (
+        <div className={styles.notice} role="note">
+          보관한 퍼널 카드의 브리프는 읽기만 할 수 있습니다. 주장·근거·내용을 고치려면 보드에 있는 카드에서 새 브리프를 만들어 주세요.
         </div>
       )}
       {brief.stale && (
