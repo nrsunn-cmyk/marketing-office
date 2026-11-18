@@ -34,7 +34,7 @@ test("고객·프로필·프로젝트 준비 후 로고 작업 시작, 입력은
   await page.getByRole("button", { name: "새 버전으로 저장" }).click();
   await expect(page.getByRole("heading", { name: /현재 1번 버전/ })).toBeVisible();
 
-  await page.getByText("새 프로젝트").click();
+  await page.getByText("새 프로젝트", { exact: true }).click(); // 빈 상태 안내 문구에도 같은 글자가 있어 펼치기 이름만 정확히(QA-E2E-FULL-01 T1)
   await page.getByLabel("프로젝트 제목 (필수)").fill("C 로고");
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "C 로고" })).toBeVisible();

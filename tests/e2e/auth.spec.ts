@@ -29,7 +29,8 @@ async function fillSignup(page: Page, email: string, password: string, confirm =
 }
 
 test("비로그인: 업무 화면은 로그인으로, 가입·비밀번호 찾기는 열린다", async ({ page }) => {
-  for (const path of ["/", "/setup", "/reset-password"]) {
+  // "/"는 이제 공개 랜딩이다(7411d5b~). 랜딩은 아래 "비로그인 '/'는 공개 랜딩…" 시험이 따로 확인한다(QA-E2E-FULL-01 T2)
+  for (const path of ["/setup", "/reset-password"]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/login$/);
   }

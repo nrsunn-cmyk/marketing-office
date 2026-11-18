@@ -22,7 +22,7 @@ async function createClientNamed(page: Page, name: string, industry = "") {
 }
 
 async function createProject(page: Page, title: string) {
-  await page.getByText("새 프로젝트").click();
+  await page.getByText("새 프로젝트", { exact: true }).click(); // 빈 상태 안내 문구에도 같은 글자가 있어 펼치기 이름만 정확히(QA-E2E-FULL-01 T1)
   await page.getByLabel("프로젝트 제목 (필수)").fill(title);
   await page.getByLabel("예산 (원)").fill("1,500,000");
   await page.getByRole("button", { name: "프로젝트 만들기" }).click();
