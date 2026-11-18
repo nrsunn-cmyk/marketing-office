@@ -67,7 +67,7 @@ beforeAll(async () => {
     artifactB = rb.artifactId;
     vB1 = rb.versionId;
   });
-});
+}, 60_000); // 병렬 부하에서 PGlite 준비가 10초를 넘을 수 있다(QA-SEC-RELEASE-04 T1)
 
 afterAll(() => {
   // 보고서용 요약(SEC-REPRO-01.md에 옮김)
@@ -216,14 +216,16 @@ describe("3) 승인·감사 기록의 행위자(actor_id) 위조", () => {
     );
     expect(o.allowed).toBe(false);
     expect(o.code).toBe("42501");
-    expect(o.message).toMatch(/ACTOR_MISMATCH/);
+    // SEC-AUDIT-01 뒤로는 INSERT 권한 자체가 없어 행위자 검사(ACTOR_MISMATCH)보다 먼저 거절된다
+    expect(o.message).toMatch(/ACTOR_MISMATCH|permission denied for table audit_events/);
   });
 
-  it("[잔여위험] 본인은 자기 이름(actor = 본인)으로 감사 기록을 직접 추가할 수 있다 — 아직 허용됨(보안 통과 아님)", async () => {
+  it("[수정 후 거절, SEC-AUDIT-01] 본인도 자기 이름(actor = 본인)으로 감사 기록을 직접 추가할 수 없다", async () => {
     const o = record(
       "3-잔여 A audit insert(actor = A)",
       await attempt(db, a.userId, "insert into audit_events (workspace_id, entity_type, entity_id, actor_id, action) values ($1, 'artifact', $2, $3, 'approve')", [a.workspaceId, artifactId, a.userId]),
     );
-    expect(o.allowed).toBe(true);
+    expect(o.allowed).toBe(false);
+    expect(o.code).toBe("42501");
   });
 });

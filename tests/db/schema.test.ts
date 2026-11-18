@@ -267,14 +267,20 @@ describe("C04 추가 전용 기록은 수정·삭제 불가", () => {
       ),
     );
     await expectImmutable("approvals", "update approvals set decision = 'rejected' where artifact_version_id = $1", [versionId]);
-    await asOwner((tx) =>
+    // 감사 기록은 로그인 사용자가 직접 넣을 수 없다(SEC-AUDIT-01). 수정 불가 확인용 행은 관리자 권한으로 넣는다.
+    await asAdmin((tx) =>
       tx.query("insert into audit_events (workspace_id, entity_type, entity_id, actor_id, action) values ($1, 'artifact', $2, $3, 'approve')", [
         f.workspaceId,
         artifactId,
         f.userId,
       ]),
     );
-    await expectImmutable("audit_events", "delete from audit_events where entity_id = $1", [artifactId]);
+    // 감사 기록은 SEC-AUDIT-FIX-02(R-A)부터 본인 계정의 UPDATE·DELETE 권한 자체가 없다(0행이 아니라 권한 거절).
+    // 관리자 권한으로도 수정 불가 트리거가 막는지는 그대로 확인한다.
+    const auditBefore = (await db.query("select * from audit_events order by 1")).rows;
+    await expectDbError(asOwner((tx) => tx.query("delete from audit_events where entity_id = $1", [artifactId])), /permission denied/);
+    await expectDbError(db.query("delete from audit_events where entity_id = $1", [artifactId]), /IMMUTABLE_ROW/);
+    expect((await db.query("select * from audit_events order by 1")).rows).toEqual(auditBefore);
   });
 
   it("템플릿은 관리자 권한으로도 고칠 수 없다 (새 버전 행만 추가)", async () => {
