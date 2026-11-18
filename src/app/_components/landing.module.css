@@ -620,6 +620,8 @@
 }
 
 .sectionHeading {
+  word-break: keep-all; /* LANDING-FIX-01-R3(QA O2): '핵/심'·'에이/전시' 단어 중간 끊김 방지(I2 규칙 확장) */
+  overflow-wrap: break-word;
   font-size: clamp(26px, 4vw, 38px);
   font-weight: 800;
   color: var(--text-main);
