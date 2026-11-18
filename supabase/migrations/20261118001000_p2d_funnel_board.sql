@@ -24,9 +24,11 @@
 -- 0) 카드 값 규칙 (표 CHECK 와 RPC 가 함께 쓴다)
 -- ─────────────────────────────────────────────
 -- 앞뒤 공백류(공백·탭·줄바꿈 등)를 지운다. 앱 계약(zod trim)과 같게 맞춘다(R1 W2: btrim 은 공백만 지운다)
+--   [[:space:]] 에 들어가지 않는 NBSP(U+00A0)·BOM(U+FEFF)도 지운다(R2: RPC 직접 호출로 보이지 않는 제목 저장 방지).
+--   \u00a0·\ufeff 는 Postgres 정규식(ARE) 이스케이프다. 보이지 않는 문자를 파일에 직접 두지 않으려고 이렇게 쓴다
 create or replace function app.funnel_trim(p text) returns text
 language sql immutable set search_path = '' as $$
-  select regexp_replace(p, '^[[:space:]]+|[[:space:]]+$', '', 'g')
+  select regexp_replace(p, '^[[:space:]\u00a0\ufeff]+|[[:space:]\u00a0\ufeff]+$', '', 'g')
 $$;
 revoke execute on function app.funnel_trim(text) from public, anon;
 
