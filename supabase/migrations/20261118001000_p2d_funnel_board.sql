@@ -8,6 +8,11 @@
 --      쓰기는 정의자 RPC 6개만(create_funnel, rebase_funnel, update_funnel_stage,
 --      add_funnel_item, update_funnel_item, archive_funnel_item). RPC마다 감사 기록 1행.
 --
+-- R1 보완(QA-P2D-BACKEND-01)
+--   - 글 입력의 앞뒤 공백류(줄바꿈·탭 포함)는 app.funnel_trim 으로 지우고, 비면 null(설명 포함, W2).
+--   - 보관한 프로젝트의 퍼널은 읽기 전용(생성·편집 거절). 프로젝트를 다시 열면 고칠 수 있다(O3).
+--   - 보관한 카드는 단계 한도(활성 50)에 넣지 않는다(O1). 삭제·보관 취소가 없어서, 보관까지 세면 한도에 닿은 단계는
+--     영원히 카드를 더 넣을 수 없게 된다. 누적은 본인 업무실 안의 일이고, 보드는 활성 카드 부분 색인으로 읽는다.
 -- 바뀌지 않는 것: 기존 표·RPC, 유형 CHECK(logo_brief·quote·strategy), 전략 승인 흐름(decide_version).
 -- 결정하지 않는 것: DEC-P2-01-A(하위 결과물 승인 처리 — 퍼널에는 승인 흐름이 없다),
 --   N2(기준 프로필 철회 시 정책 — 퍼널 RPC는 프로필 승인 상태를 보지 않는다).
@@ -18,6 +23,13 @@
 -- ─────────────────────────────────────────────
 -- 0) 카드 값 규칙 (표 CHECK 와 RPC 가 함께 쓴다)
 -- ─────────────────────────────────────────────
+-- 앞뒤 공백류(공백·탭·줄바꿈 등)를 지운다. 앱 계약(zod trim)과 같게 맞춘다(R1 W2: btrim 은 공백만 지운다)
+create or replace function app.funnel_trim(p text) returns text
+language sql immutable set search_path = '' as $$
+  select regexp_replace(p, '^[[:space:]]+|[[:space:]]+$', '', 'g')
+$$;
+revoke execute on function app.funnel_trim(text) from public, anon;
+
 -- 리드마그넷 상세: null 또는 {deliverable?, leadFields?, outline?} 만 있는 객체.
 --   deliverable 200자 이하, leadFields 10개 이하(각 1~50자), outline 20개 이하(각 1~300자). 다른 유형은 null 만.
 create or replace function app.funnel_details_ok(p_kind text, p_details jsonb) returns boolean
@@ -32,12 +44,12 @@ language sql immutable set search_path = '' as $$
            jsonb_typeof(p_details -> 'leadFields') <> 'array'
         or jsonb_array_length(p_details -> 'leadFields') > 10
         or exists (select 1 from jsonb_array_elements(p_details -> 'leadFields') e
-                    where jsonb_typeof(e) <> 'string' or length(btrim(e #>> '{}')) not between 1 and 50)) then false
+                    where jsonb_typeof(e) <> 'string' or length(app.funnel_trim(e #>> '{}')) not between 1 and 50)) then false
     when p_details ? 'outline' and (
            jsonb_typeof(p_details -> 'outline') <> 'array'
         or jsonb_array_length(p_details -> 'outline') > 20
         or exists (select 1 from jsonb_array_elements(p_details -> 'outline') e
-                    where jsonb_typeof(e) <> 'string' or length(btrim(e #>> '{}')) not between 1 and 300)) then false
+                    where jsonb_typeof(e) <> 'string' or length(app.funnel_trim(e #>> '{}')) not between 1 and 300)) then false
     else true
   end
 $$;
@@ -69,7 +81,7 @@ create table public.funnel_stages (
   funnel_id    uuid not null,
   stage_key    text not null check (stage_key in ('inflow', 'awareness', 'consideration', 'conversion', 'retention')),
   position     integer not null,
-  focus        text check (focus is null or length(btrim(focus)) between 1 and 300),
+  focus        text check (focus is null or length(app.funnel_trim(focus)) between 1 and 300),
   revision     integer not null default 1,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
@@ -87,11 +99,11 @@ create table public.funnel_items (
   funnel_id    uuid not null,
   stage_id     uuid not null,
   kind         text not null check (kind in ('content', 'lead_magnet', 'cta')),
-  title        text not null check (length(btrim(title)) between 1 and 200),
-  description  text check (description is null or length(description) <= 2000),
-  channel      text check (channel is null or length(btrim(channel)) between 1 and 100),
+  title        text not null check (length(app.funnel_trim(title)) between 1 and 200),
+  description  text check (description is null or (length(description) <= 2000 and app.funnel_trim(description) <> '')),
+  channel      text check (channel is null or length(app.funnel_trim(channel)) between 1 and 100),
   status       text not null default 'planned' check (status in ('planned', 'drafting', 'reviewed', 'published')),
-  target_note  text check (target_note is null or length(btrim(target_note)) between 1 and 200),
+  target_note  text check (target_note is null or length(app.funnel_trim(target_note)) between 1 and 200),
   details      jsonb check (app.funnel_details_ok(kind, details)),
   position     integer not null check (position > 0),
   archived_at  timestamptz,
@@ -104,6 +116,8 @@ create table public.funnel_items (
   foreign key (funnel_id, stage_id) references public.funnel_stages (funnel_id, id)
 );
 create index funnel_items_stage on public.funnel_items (stage_id, position);
+-- 보드는 보관하지 않은 카드만 읽는다(보관 카드는 한도 없이 쌓일 수 있어 따로 둔다, R1 O1)
+create index funnel_items_active on public.funnel_items (funnel_id, stage_id, position) where archived_at is null;
 create index funnels_project on public.funnels (project_id);
 
 create trigger funnels_guard before update on public.funnels
@@ -129,19 +143,25 @@ revoke insert, update, delete, truncate on public.funnels, public.funnel_stages,
 -- ─────────────────────────────────────────────
 -- 3) 도우미 (정의자 RPC 안에서만 부른다)
 -- ─────────────────────────────────────────────
--- 퍼널의 전략 작업이 취소되지 않았는지
+-- 퍼널을 고칠 수 있는지: 전략 작업이 취소되지 않았고, 프로젝트가 보관 상태가 아니어야 한다.
+--   보관한 프로젝트의 퍼널은 읽기 전용이다(R1 O3). 프로젝트를 다시 열면(archived → active) 다시 고칠 수 있다.
 create or replace function app.assert_funnel_open(p_funnel_id uuid) returns void
 language plpgsql stable set search_path = '' as $$
 declare
   st text;
+  ps text;
 begin
-  select k.status into st
+  select k.status, p.status into st, ps
     from public.funnels f
     join public.artifacts a on a.id = f.strategy_artifact_id
     join public.tasks k on k.id = a.task_id
+    join public.projects p on p.id = f.project_id
    where f.id = p_funnel_id;
   if st = 'cancelled' then
     raise exception 'INVALID_TRANSITION: 취소된 작업의 퍼널은 고칠 수 없습니다' using errcode = 'P0001';
+  end if;
+  if ps = 'archived' then
+    raise exception 'INVALID_TRANSITION: 보관한 프로젝트의 퍼널은 고칠 수 없습니다. 프로젝트를 다시 열어 주세요' using errcode = 'P0001';
   end if;
 end $$;
 revoke execute on function app.assert_funnel_open(uuid) from public, anon, authenticated;
@@ -155,19 +175,19 @@ begin
   if p_kind is null or p_kind not in ('content', 'lead_magnet', 'cta') then
     raise exception 'VALIDATION: 알 수 없는 카드 유형입니다' using errcode = '22023';
   end if;
-  if coalesce(length(btrim(p_title)), 0) not between 1 and 200 then
+  if coalesce(length(app.funnel_trim(p_title)), 0) not between 1 and 200 then
     raise exception 'VALIDATION: 제목은 1~200자여야 합니다' using errcode = '22023';
   end if;
   if p_description is not null and length(p_description) > 2000 then
     raise exception 'VALIDATION: 설명은 2000자 이하여야 합니다' using errcode = '22023';
   end if;
-  if p_channel is not null and length(btrim(p_channel)) > 100 then
+  if p_channel is not null and length(app.funnel_trim(p_channel)) > 100 then
     raise exception 'VALIDATION: 채널은 100자 이하여야 합니다' using errcode = '22023';
   end if;
   if p_status is null or p_status not in ('planned', 'drafting', 'reviewed', 'published') then
     raise exception 'VALIDATION: 알 수 없는 진행 상태입니다' using errcode = '22023';
   end if;
-  if p_target_note is not null and length(btrim(p_target_note)) > 200 then
+  if p_target_note is not null and length(app.funnel_trim(p_target_note)) > 200 then
     raise exception 'VALIDATION: 목표 메모는 200자 이하여야 합니다' using errcode = '22023';
   end if;
   if not app.funnel_details_ok(p_kind, p_details) then
@@ -214,6 +234,9 @@ begin
   select k.status into st from public.tasks k where k.id = a.task_id;
   if st = 'cancelled' then
     raise exception 'INVALID_TRANSITION: 취소된 작업입니다' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.projects p where p.id = a.project_id and p.status = 'archived') then
+    raise exception 'INVALID_TRANSITION: 보관한 프로젝트에는 퍼널을 만들 수 없습니다. 프로젝트를 다시 열어 주세요' using errcode = 'P0001';
   end if;
   -- I6: 승인된 전략 버전만 참조한다. 프로필 승인 상태는 보지 않는다(N2 미결)
   if a.approved_version_id is null then
@@ -283,7 +306,7 @@ language plpgsql security definer set search_path = '' as $$
 declare
   uid uuid := auth.uid();
   s   public.funnel_stages%rowtype;
-  v   text := nullif(btrim(p_focus), '');
+  v   text := nullif(app.funnel_trim(p_focus), '');
   r   integer;
 begin
   if uid is null then
@@ -343,15 +366,15 @@ begin
     raise exception 'NOT_FOUND: 퍼널 단계를 찾을 수 없습니다' using errcode = 'P0002';
   end if;
   perform app.assert_funnel_open(s.funnel_id);
-  perform app.check_funnel_item(p_kind, p_title, p_description, nullif(btrim(p_channel), ''), p_status, nullif(btrim(p_target_note), ''), p_details);
+  perform app.check_funnel_item(p_kind, p_title, p_description, nullif(app.funnel_trim(p_channel), ''), p_status, nullif(app.funnel_trim(p_target_note), ''), p_details);
   select count(*) filter (where i.archived_at is null), coalesce(max(i.position), 0) + 1 into n, pos
     from public.funnel_items i where i.stage_id = s.id;
   if n >= 50 then
     raise exception 'VALIDATION: 한 단계에는 카드를 50개까지 둘 수 있습니다' using errcode = '22023';
   end if;
   insert into public.funnel_items (workspace_id, funnel_id, stage_id, kind, title, description, channel, status, target_note, details, position, created_by)
-  values (s.workspace_id, s.funnel_id, s.id, p_kind, btrim(p_title), nullif(p_description, ''), nullif(btrim(p_channel), ''),
-          p_status, nullif(btrim(p_target_note), ''), p_details, pos, uid)
+  values (s.workspace_id, s.funnel_id, s.id, p_kind, app.funnel_trim(p_title), nullif(app.funnel_trim(p_description), ''), nullif(app.funnel_trim(p_channel), ''),
+          p_status, nullif(app.funnel_trim(p_target_note), ''), p_details, pos, uid)
   returning id into i_id;
   insert into public.audit_events (workspace_id, entity_type, entity_id, actor_id, action, revision, details)
   values (s.workspace_id, 'funnel_item', i_id, uid, 'item_add', 1,
@@ -401,7 +424,7 @@ begin
     raise exception 'INVALID_TRANSITION: 보관한 카드는 고칠 수 없습니다' using errcode = 'P0001';
   end if;
   perform app.assert_funnel_open(it.funnel_id);
-  perform app.check_funnel_item(p_kind, p_title, p_description, nullif(btrim(p_channel), ''), p_status, nullif(btrim(p_target_note), ''), p_details);
+  perform app.check_funnel_item(p_kind, p_title, p_description, nullif(app.funnel_trim(p_channel), ''), p_status, nullif(app.funnel_trim(p_target_note), ''), p_details);
 
   pos := it.position;
   if p_stage_id is distinct from it.stage_id then
@@ -420,8 +443,8 @@ begin
   end if;
 
   update public.funnel_items
-     set stage_id = s.id, kind = p_kind, title = btrim(p_title), description = nullif(p_description, ''),
-         channel = nullif(btrim(p_channel), ''), status = p_status, target_note = nullif(btrim(p_target_note), ''),
+     set stage_id = s.id, kind = p_kind, title = app.funnel_trim(p_title), description = nullif(app.funnel_trim(p_description), ''),
+         channel = nullif(app.funnel_trim(p_channel), ''), status = p_status, target_note = nullif(app.funnel_trim(p_target_note), ''),
          details = p_details, position = pos
    where id = it.id
    returning revision into r;

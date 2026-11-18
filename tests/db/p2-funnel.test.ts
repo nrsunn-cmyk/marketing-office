@@ -347,3 +347,61 @@ describe("값 규칙·충돌", () => {
     await expectDbError(db.query("update funnel_items set created_by = $1 where id = $2", [b.userId, id]), /FROZEN_COLUMN/);
   });
 });
+
+describe("R1 보완 (QA-P2D-BACKEND-01 W2·O1·O3)", () => {
+  it("W2: 공백만 있는 설명은 null 로 저장(추가·수정), 표 CHECK 도 거절", async () => {
+    const s = await strategy(a);
+    const f = await asA((tx) => createFunnel(tx, s.artifactId));
+    const st = await stagesOf(f.funnel_id);
+    const id = await asA((tx) =>
+      one<{ id: string }>(tx, "select add_funnel_item($1, 'content', '카드', '   ', null, 'planned', null, null) as id", [st[0].id]).then((r) => r.id),
+    );
+    expect((await one<{ d: string | null }>(db, "select description as d from funnel_items where id = $1", [id])).d).toBeNull();
+    await asA((tx) => tx.query("select update_funnel_item($1, 1, $2, 'content', '카드', $3, null, 'planned', null, null)", [id, st[0].id, "  설명  "]));
+    expect((await one<{ d: string | null }>(db, "select description as d from funnel_items where id = $1", [id])).d).toBe("설명");
+    await asA((tx) => tx.query("select update_funnel_item($1, 2, $2, 'content', '카드', $3, null, 'planned', null, null)", [id, st[0].id, "\n\t "]));
+    expect((await one<{ d: string | null }>(db, "select description as d from funnel_items where id = $1", [id])).d).toBeNull();
+    await expectDbError(db.query("update funnel_items set description = '  ' where id = $1", [id]), /check constraint/);
+  });
+
+  it("O3: 보관한 프로젝트는 퍼널 생성·편집 거절(읽기는 됨), 다시 열면 고칠 수 있다", async () => {
+    const d = await seedOwner(db, "funnel-owner-d@example.test");
+    await asUser(db, d.userId, (tx) => approveProfile(tx, d.profileA1));
+    const s1 = await strategy(d);
+    const s2 = await strategy(d);
+    const f = await asUser(db, d.userId, (tx) => createFunnel(tx, s1.artifactId));
+    const st = await stagesOf(f.funnel_id);
+    const item = await asUser(db, d.userId, (tx) => addItem(tx, st[0].id));
+    await db.query("update projects set status = 'archived' where id = $1", [d.projectA]);
+
+    await expectDbError(asUser(db, d.userId, (tx) => createFunnel(tx, s2.artifactId)), /보관한 프로젝트에는 퍼널을 만들 수 없습니다/);
+    await expectDbError(asUser(db, d.userId, (tx) => addItem(tx, st[0].id)), /보관한 프로젝트의 퍼널은 고칠 수 없습니다/);
+    await expectDbError(asUser(db, d.userId, (tx) => updateItem(tx, item, 1, st[0].id)), /보관한 프로젝트/);
+    await expectDbError(asUser(db, d.userId, (tx) => tx.query("select archive_funnel_item($1, 1)", [item])), /보관한 프로젝트/);
+    await expectDbError(asUser(db, d.userId, (tx) => tx.query("select update_funnel_stage($1, 1, 'x')", [st[0].id])), /보관한 프로젝트/);
+    await expectDbError(asUser(db, d.userId, (tx) => tx.query("select rebase_funnel($1, 1)", [f.funnel_id])), /보관한 프로젝트/);
+    // 이미 있는 퍼널을 다시 요청하면(reused) 그대로 돌려준다 — 새로 쓰는 것이 없다
+    expect(await asUser(db, d.userId, (tx) => createFunnel(tx, s1.artifactId))).toEqual({ funnel_id: f.funnel_id, reused: true });
+    expect(await asUser(db, d.userId, (tx) => tx.query("select 1 from funnel_items where funnel_id = $1", [f.funnel_id]).then((r) => r.rows.length))).toBe(1);
+
+    await db.query("update projects set status = 'active' where id = $1", [d.projectA]);
+    await asUser(db, d.userId, (tx) => addItem(tx, st[0].id));
+    expect(await asUser(db, d.userId, (tx) => createFunnel(tx, s2.artifactId).then((r) => r.reused))).toBe(false);
+  });
+
+  it("O1: 보관한 카드는 한도에 넣지 않는다(활성 50 + 보관 누적 허용, 보드 조회는 활성만)", async () => {
+    const s = await strategy(a);
+    const f = await asA((tx) => createFunnel(tx, s.artifactId));
+    const st = await stagesOf(f.funnel_id);
+    await asA(async (tx) => {
+      for (let i = 0; i < 60; i++) {
+        const id = await addItem(tx, st[0].id, { title: `카드 ${i}` });
+        if (i < 20) await tx.query("select archive_funnel_item($1, 1)", [id]);
+      }
+    });
+    expect(await count("select 1 from funnel_items where stage_id = $1", [st[0].id])).toBe(60);
+    expect(await count("select 1 from funnel_items where stage_id = $1 and archived_at is null", [st[0].id])).toBe(40);
+    // 활성 카드 색인(부분 색인)이 있다
+    expect(await count("select 1 from pg_indexes where indexname = 'funnel_items_active' and indexdef like '%WHERE (archived_at IS NULL)%'")).toBe(1);
+  }, 60_000);
+});
