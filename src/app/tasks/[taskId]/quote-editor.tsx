@@ -74,7 +74,8 @@ export function QuoteEditor({ taskId, revision, initial }: { taskId: string; rev
       </div>
 
       <table className={styles.table}>
-        <caption className={styles.muted}>견적 항목 (단가는 원 단위, 수량은 소수 둘째 자리까지)</caption>
+        {/* 좁은 화면에서 '자리까/지'처럼 단어 중간에서 끊기지 않게(UI-RESP-04-R1, QA O4) */}
+        <caption className={`${styles.muted} ${styles.keepAll}`}>견적 항목 (단가는 원 단위, 수량은 소수 둘째 자리까지)</caption>
         <thead>
           <tr>
             <th scope="col">No</th>
