@@ -411,16 +411,16 @@ describe("R2 보완 (QA-P2D-BACKEND-01-R1 R1-a)", () => {
     const s = await strategy(a);
     const f = await asA((tx) => createFunnel(tx, s.artifactId));
     const st = await stagesOf(f.funnel_id);
-    const invisible = " ﻿  ";
+    const invisible = "\u00a0\ufeff \u00a0";
     await expectDbError(asA((tx) => addItem(tx, st[0].id, { title: invisible })), /제목은 1~200자/);
     const id = await asA((tx) =>
-      one<{ id: string }>(tx, "select add_funnel_item($1, 'content', $2, $3, $3, 'planned', $3, null) as id", [st[0].id, "﻿ 카드 ", invisible]).then((r) => r.id),
+      one<{ id: string }>(tx, "select add_funnel_item($1, 'content', $2, $3, $3, 'planned', $3, null) as id", [st[0].id, "\ufeff 카드\u00a0", invisible]).then((r) => r.id),
     );
     expect(await one(db, "select title, description, channel, target_note from funnel_items where id = $1", [id])).toEqual({
       title: "카드", description: null, channel: null, target_note: null,
     });
     // 가운데 NBSP 는 그대로 둔다(앞뒤만 정리)
-    expect((await one<{ t: string }>(db, "select app.funnel_trim($1) as t", [" 가 나﻿"])).t).toBe("가 나");
+    expect((await one<{ t: string }>(db, "select app.funnel_trim($1) as t", ["\u00a0가\u00a0나\ufeff"])).t).toBe("가\u00a0나");
     // 표 CHECK 도 같은 규칙(관리자 직접 쓰기)
     await expectDbError(db.query("update funnel_items set title = $1 where id = $2", [invisible, id]), /check constraint/);
     // 앱 계약(zod trim)도 같은 문자를 지운다
