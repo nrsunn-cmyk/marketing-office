@@ -191,6 +191,8 @@
 }
 
 .heroTitle {
+  word-break: keep-all; /* LANDING-FIX-01 I2: 한국어 단어 중간 쪼개짐 방지 */
+  overflow-wrap: break-word;
   font-size: clamp(32px, 5.2vw, 54px);
   font-weight: 800;
   line-height: 1.25;
@@ -206,6 +208,8 @@
 }
 
 .heroDesc {
+  word-break: keep-all; /* LANDING-FIX-01 I2 */
+  overflow-wrap: break-word;
   font-size: clamp(15px, 1.8vw, 19px);
   color: var(--text-muted);
   max-width: 760px;
@@ -426,7 +430,7 @@
 .mockupUrl {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: #334155; /* LANDING-FIX-01 E3: 슬레이트 700, #f1f5f9 배경 대비 8.2:1 (AGY DESIGN-LANDING-FIX-01 결정 2) */
   margin-left: 10px;
   font-family: monospace;
 }
@@ -616,6 +620,8 @@
 }
 
 .sectionHeading {
+  word-break: keep-all; /* LANDING-FIX-01-R3(QA O2): '핵/심'·'에이/전시' 단어 중간 끊김 방지(I2 규칙 확장) */
+  overflow-wrap: break-word;
   font-size: clamp(26px, 4vw, 38px);
   font-weight: 800;
   color: var(--text-main);
@@ -775,6 +781,8 @@
 }
 
 .ctaHeading {
+  word-break: keep-all; /* LANDING-FIX-01-R2: I2(제목·설명 keep-all)와 같은 규칙. "마케팅 업/무실" 단어 중간 끊김 방지 */
+  overflow-wrap: break-word;
   font-size: clamp(26px, 3.5vw, 40px);
   font-weight: 800;
   margin-bottom: 16px;
@@ -809,4 +817,69 @@
 
 .footerLoginLink:hover {
   text-decoration: underline;
+}
+
+/* ── LANDING-FIX-01 (AGY DESIGN-LANDING-FIX-01 결정 1·2) ── */
+
+/* E3: '● 계산 일치' 성공 색은 토큰(밝음 #065f46 · 어두움 #a7f3d0) */
+.quoteMatchBadge {
+  color: var(--success-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* E3: 어두운 화면 주소 줄. 앱 다크 방식 두 가지(버튼 선택 data-theme · OS 설정)를 모두 따른다(ui.module.css 와 같은 패턴) */
+[data-theme="dark"] .mockupUrl {
+  color: var(--text-muted);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mockupUrl {
+    color: var(--text-muted);
+  }
+}
+
+/* E2: 420px 이하 머리글 — 두 버튼 모두 유지, 여백·간격·로고 축소로 320px 에서도 잘림 없음 */
+@media (max-width: 420px) {
+  .landingHeader .container {
+    padding: 0 12px;
+  }
+  .logoImg {
+    height: 26px;
+    width: auto;
+  }
+  .headerActions {
+    gap: 6px;
+  }
+  .headerActions .btnSm {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 38px;
+    line-height: 1;
+  }
+
+  /* LANDING-FIX-01-R1 (AGY DESIGN-LANDING-FIX-02): 320px 에서 CTA 배너의 큰 버튼이 화면 밖(right 358)으로 나가던 문제.
+   * 배너 여백을 줄이고 큰 버튼은 폭 100%·단어 단위 줄바꿈·최소 44px, 히어로 버튼 묶음은 세로로 쌓는다. */
+  .ctaBanner {
+    padding: 40px 16px;
+  }
+  .ctaBanner .btnLg,
+  .heroActions .btnLg {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    text-align: center;
+    min-height: 44px;
+  }
+  .heroActions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
 }
