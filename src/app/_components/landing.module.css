@@ -852,4 +852,30 @@
     min-height: 38px;
     line-height: 1;
   }
+
+  /* LANDING-FIX-01-R1 (AGY DESIGN-LANDING-FIX-02): 320px 에서 CTA 배너의 큰 버튼이 화면 밖(right 358)으로 나가던 문제.
+   * 배너 여백을 줄이고 큰 버튼은 폭 100%·단어 단위 줄바꿈·최소 44px, 히어로 버튼 묶음은 세로로 쌓는다. */
+  .ctaBanner {
+    padding: 40px 16px;
+  }
+  .ctaBanner .btnLg,
+  .heroActions .btnLg {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.4;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    text-align: center;
+    min-height: 44px;
+  }
+  .heroActions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
 }

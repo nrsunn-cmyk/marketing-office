@@ -96,6 +96,9 @@ test("비로그인 '/'는 공개 랜딩(200)이고 로그인·가입으로 갈 �
   expect(res?.status()).toBe(200);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("고객 자료는 단 한 번 입력");
+  // LANDING-FIX-01-R1 T-a: 비로그인 '/'에 대시보드(현황 숫자·기준 시각)가 새어 나오지 않는다
+  await expect(page.getByRole("list", { name: "현황 숫자" })).toHaveCount(0);
+  await expect(page.getByText(/^기준 시각:/)).toHaveCount(0);
   await expect(page.getByRole("banner").getByRole("link", { name: "로그인" })).toHaveAttribute("href", "/login");
   await expect(page.getByRole("banner").getByRole("link", { name: "무료 시작하기" })).toHaveAttribute("href", "/signup");
   for (const path of ["/projects", "/clients", "/settings"]) {
