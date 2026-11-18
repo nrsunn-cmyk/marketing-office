@@ -1095,3 +1095,113 @@ a.secondaryButton {
   gap: 2px;
   overflow-wrap: anywhere;
 }
+
+/* ── 목록 화면 반응형 (UI-RESP-03: 고객·프로젝트·프로젝트 상세 작업 목록) ──
+ * 기존 .listItem 은 그대로 두고 덧붙이는 클래스만 쓴다. 색·간격은 토큰만. */
+
+/* 한 줄: 왼쪽(이름·보조 정보) 줄어들 수 있음, 오른쪽 배지는 고정 */
+.rowItem {
+  flex-wrap: nowrap;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 긴 이름은 한 줄 말줄임(전체는 title·상세 화면). 터치 높이 44px */
+.rowLink {
+  display: block;
+  min-height: 44px;
+  padding: 10px 0;
+  line-height: 24px;
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowSub {
+  display: block;
+  margin-top: -6px;
+  padding-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowItem > .badge {
+  flex: none;
+}
+
+/* 빈 상태: 메인 화면 A와 같은 구조(굵은 한 줄 + 설명 + 다음 행동) */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  overflow-wrap: anywhere;
+}
+
+.emptyState a,
+.touchTarget {
+  min-height: 44px;
+  justify-content: center;
+}
+
+/* 고객 검색: 좁은 화면에서 줄바꿈, 입력·버튼 터치 44px */
+.searchForm input:not([type="checkbox"]) {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.searchForm button {
+  min-height: 44px;
+}
+
+.searchForm label:has(input[type="checkbox"]) {
+  min-height: 44px;
+}
+
+/* 긴 제목이 화면을 밀지 않게 줄바꿈 */
+.titleWrap {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 빈 상태 회색 배경 위 보조 글자 대비 보강(.listItem .muted 와 같은 값, 6.91:1) */
+.emptyState .muted {
+  color: #475569;
+}
+[data-theme="dark"] .emptyState .muted,
+:global([data-theme="dark"]) .emptyState .muted {
+  color: var(--text-muted);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .emptyState .muted {
+    color: var(--text-muted);
+  }
+}
+
+/* 목록 화면 3개(고객·프로젝트·프로젝트 상세)의 버튼·입력·펼치기 터치 높이 44px.
+ * 공용 .button·.field 는 다른 화면에도 쓰이므로 이 화면들의 main 에만 붙인다(UI-RESP-03). */
+.touchPage .button,
+.touchPage .secondaryButton,
+.touchPage input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+.touchPage select,
+.touchPage textarea,
+.touchPage summary {
+  min-height: 44px;
+}
+.touchPage summary {
+  display: flex;
+  align-items: center;
+}

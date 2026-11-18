@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 import { MACHINES, type ProjectStatus } from "@/domain/state";
@@ -28,8 +28,14 @@ export default function ProjectPage({ params }: PageProps<"/projects/[projectId]
   return (
     <>
       <AppNav />
-      <main className={`${styles.page} ${styles.wide}`}>
-      <Suspense fallback={<p className={styles.muted}>불러오는 중…</p>}>
+      <main className={`${styles.page} ${styles.wide} ${styles.touchPage}`}>
+      <Suspense
+        fallback={
+          <p className={styles.muted} role="status">
+            프로젝트를 불러오는 중…
+          </p>
+        }
+      >
         <ProjectView params={params} />
       </Suspense>
       </main>
@@ -43,12 +49,19 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
   const project = await getProject(projectId);
   if (!project) notFound();
   const nextStates = MACHINES.project[project.status as ProjectStatus] ?? [];
-  const tasks = await listTasks(project.id);
+  // 작업 목록만 실패하면 프로젝트 정보는 보여 주고 작업 구역에 오류를 알린다(UI-RESP-03)
+  let tasks: Awaited<ReturnType<typeof listTasks>> | null = null;
+  try {
+    tasks = await listTasks(project.id);
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[project tasks]", e);
+  }
 
   return (
     <>
       <div className={styles.header}>
-        <h1 className={styles.title}>{project.title}</h1>
+        <h1 className={`${styles.title} ${styles.titleWrap}`}>{project.title}</h1>
         <span className={styles.badge}>{PROJECT_STATUS_LABELS[project.status] ?? project.status}</span>
       </div>
       <section className={styles.section} aria-labelledby="project-info">
@@ -95,13 +108,31 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
         <h2 id="tasks" className={styles.subtitle}>
           작업
         </h2>
-        {tasks.length === 0 ? (
-          <p className={styles.muted}>아직 작업이 없습니다.</p>
+        {tasks === null ? (
+          <>
+            <p className={styles.error} role="alert">
+              작업 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+            </p>
+            <p>
+              <Link href={`/projects/${project.id}`} className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+                다시 불러오기
+              </Link>
+            </p>
+          </>
+        ) : tasks.length === 0 ? (
+          <div className={styles.emptyState}>
+            <strong>아직 작업이 없습니다.</strong>
+            <p className={styles.muted}>아래 &lsquo;새 작업&rsquo;에서 로고 브리프·견적{project.kind === "client" ? "·마케팅 전략" : ""} 작업을 시작할 수 있습니다.</p>
+          </div>
         ) : (
           <ul className={styles.list} aria-label="작업 목록">
             {tasks.map((t) => (
-              <li key={t.id} className={styles.listItem}>
-                <Link href={`/tasks/${t.id}`}>{TASK_TYPE_LABELS[t.type]}</Link>
+              <li key={t.id} className={`${styles.listItem} ${styles.rowItem}`}>
+                <span className={styles.rowMain}>
+                  <Link href={`/tasks/${t.id}`} className={styles.rowLink}>
+                    {TASK_TYPE_LABELS[t.type]}
+                  </Link>
+                </span>
                 <span className={styles.badge}>{TASK_STATUS_LABELS[t.status] ?? t.status}</span>
               </li>
             ))}
