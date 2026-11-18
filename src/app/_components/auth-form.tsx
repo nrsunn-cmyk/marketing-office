@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import s from "./auth.module.css";
 import { EMPTY_FORM_STATE, type FormState } from "./form-state";
+import { useHydrationHint } from "./hydration-hint";
 import { useHydrated } from "./use-hydrated";
 
 /**
@@ -26,6 +27,7 @@ export function AuthForm({
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY_FORM_STATE);
   const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
+  const hintId = useHydrationHint(); // 준비 전에는 화면 공용 안내 하나를 가리킨다(BUNDLE-D-FRONT-01)
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export function AuthForm({
           {state.message}
         </p>
       )}
-      <button type="submit" className={s.submit} disabled={pending || !hydrated}>
+      <button type="submit" className={s.submit} disabled={pending || !hydrated} aria-describedby={hydrated ? undefined : (hintId ?? undefined)}>
         {pending ? pendingLabel : submitLabel}
         {!pending && arrow && <ArrowIcon />}
       </button>

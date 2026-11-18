@@ -19,6 +19,7 @@ import {
 import { STRATEGY_SECTION_LABELS } from "./labels";
 
 // 이름표는 labels.ts 에 있다(BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+// 새 이름표·상수는 labels.ts 에 둔다(화면 import 경계는 client-imports.test.ts 가 검사)
 export { STRATEGY_SECTION_LABELS };
 
 

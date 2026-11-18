@@ -23,6 +23,7 @@ import {
 } from "./p2-strategy-constants";
 
 // 상수는 p2-strategy-constants.ts 에 있다(화면 묶음에서 zod 를 빼려고, BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+// 새 상수는 p2-strategy-constants.ts 에 둔다(이 zod 파일 안에 새로 정의하지 않는다. 화면 import 경계는 client-imports.test.ts 가 검사)
 export { STRATEGY_LIMITS, STRATEGY_REQUIRED_SECTIONS, STRATEGY_SECTIONS, STRATEGY_TEMPLATE_VERSION, type StrategySection };
 
 

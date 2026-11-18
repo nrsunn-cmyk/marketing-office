@@ -8,6 +8,7 @@ import { funnelErrorFromDb, type FunnelStrategyBasis } from "@/domain/funnel";
 import { BRIEF_CHANNELS, BRIEF_STATUSES, CLAIM_KINDS, PROFILE_FIELDS, COPY_ORIGINS, BRIEF_LIMITS, type BriefChannel, type BriefStatus, type ClaimKind, type ProfileField } from "./constants";
 
 // 상수는 constants.ts 에 있다(BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+// 새 상수는 constants.ts 에 둔다(이 zod 파일 안에 새로 정의하지 않는다. 화면 import 경계는 client-imports.test.ts 가 검사)
 export { BRIEF_CHANNELS, BRIEF_STATUSES, CLAIM_KINDS, PROFILE_FIELDS, COPY_ORIGINS, BRIEF_LIMITS, type BriefChannel, type BriefStatus, type ClaimKind, type ProfileField };
 
 const L = BRIEF_LIMITS;

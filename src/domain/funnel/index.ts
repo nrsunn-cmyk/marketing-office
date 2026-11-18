@@ -7,6 +7,7 @@ import { z } from "zod";
 import { FUNNEL_STAGES, FUNNEL_STAGE_KEYS, funnelStageLabel, FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, FUNNEL_LIMITS, type FunnelStageKey, type FunnelItemKind, type FunnelItemStatus } from "./constants";
 
 // 상수는 constants.ts 에 있다(BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+// 새 상수는 constants.ts 에 둔다(이 zod 파일 안에 새로 정의하지 않는다. 화면 import 경계는 client-imports.test.ts 가 검사)
 export { FUNNEL_STAGES, FUNNEL_STAGE_KEYS, funnelStageLabel, FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, FUNNEL_LIMITS, type FunnelStageKey, type FunnelItemKind, type FunnelItemStatus };
 
 
