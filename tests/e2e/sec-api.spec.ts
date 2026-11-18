@@ -113,14 +113,22 @@ test("본인: 전달 기록 직접 insert → 42501", async () => {
   expect(r.error?.code).toBe("42501");
 });
 
-test("본인: 감사 기록 actor 위조 → 42501 ACTOR_MISMATCH, 본인 이름은 허용(잔여 위험 관찰)", async () => {
+// 18(20261117003000)에서 audit_events 의 INSERT 정책과 로그인 역할 INSERT 권한을 회수했다.
+// 그래서 행위자 확인 트리거(ACTOR_MISMATCH)까지 가기 전에 권한 검사에서 거절된다. 본인 이름으로 넣어도 같다(예전 잔여 위험 해소).
+// 감사 기록은 정의자 RPC 안에서만 쓰인다(아래 정상 경로의 decide_version·record_delivery).
+test("본인: 감사 기록 직접 insert → 다른 사용자 이름·본인 이름 모두 42501(INSERT 권한 없음), 기록 0건", async () => {
   const forged = await owner.from("audit_events").insert({ workspace_id: workspaceId, entity_type: "artifact", entity_id: artifactId, actor_id: otherId, action: "x" });
   log("본인 audit insert actor=다른 사용자", forged);
   expect(forged.error?.code).toBe("42501");
-  expect(forged.error?.message).toMatch(/ACTOR_MISMATCH/);
+  expect(forged.error?.message).toMatch(/permission denied for table audit_events/);
   const self = await owner.from("audit_events").insert({ workspace_id: workspaceId, entity_type: "artifact", entity_id: artifactId, actor_id: ownerId, action: "x" });
-  log("본인 audit insert actor=본인(잔여 위험)", self);
-  expect(self.error).toBeNull(); // 아직 허용됨. 보안 통과가 아니라 남은 위험의 관찰이다
+  log("본인 audit insert actor=본인", self);
+  expect(self.error?.code).toBe("42501");
+  expect(self.error?.message).toMatch(/permission denied for table audit_events/);
+  // 거절된 시도는 아무 기록도 남기지 않았다(본인은 자기 업무실 감사 기록을 읽을 수 있다)
+  const rows = await owner.from("audit_events").select("id").eq("workspace_id", workspaceId).eq("action", "x");
+  expect(rows.error).toBeNull();
+  expect(rows.data).toEqual([]);
 });
 
 test("다른 업무실 사용자: 본인 결과물 조회 0건, decide_version·record_delivery → P0002", async () => {
