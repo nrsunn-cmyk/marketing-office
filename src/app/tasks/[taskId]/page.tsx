@@ -14,6 +14,7 @@ import { CopyButton } from "../../_components/copy-button";
 import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveryPanel } from "./delivery-panel";
+import { FunnelSection } from "./funnel-section";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
 
@@ -79,7 +80,19 @@ async function TaskView({
           </div>
         </div>
       ) : detail.task.type === "strategy" ? (
-        <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
+        <>
+          <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
+          {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                퍼널 보드를 불러오는 중…
+              </p>
+            }
+          >
+            <FunnelSection detail={detail} />
+          </Suspense>
+        </>
       ) : (
         <QuoteSection detail={detail} />
       )}

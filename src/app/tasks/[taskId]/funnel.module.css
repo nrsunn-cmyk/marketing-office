@@ -1,0 +1,248 @@
+/* P2D-FRONT-01 퍼널 보드 전용. 색·간격은 기존 토큰만 쓴다(src/styles/tokens.css).
+ * 시안: Design/P2-next-concepts/funnel-board.html — 넓은 화면 5칸(200px 이상. 시안 220px은 1280px 화면에서 22px 넘쳐 줄임, 모자라면 보드 안 가로 스크롤), 900px 이하 한 칸. */
+
+/* 보드 안 조작부 터치 44px(이 화면의 main 에 공용 touchPage 가 없어도 맞도록 보드 안에서만) */
+.funnel button,
+.funnel input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+.funnel select,
+.funnel textarea,
+.funnel summary,
+.touch {
+  min-height: 44px;
+}
+.funnel details > summary {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  line-height: 24px;
+  cursor: pointer;
+}
+.touch {
+  display: inline-flex;
+  align-items: center;
+}
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.keep {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  margin: 0;
+}
+
+.refBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.warnBadge {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+.warnBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+.basis {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-4);
+}
+.basisGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  overflow-wrap: anywhere;
+}
+.basisList {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.2em;
+}
+
+/* 보드: 순서 있는 목록(ol)이지만 번호는 단계 머리글로 보인다 */
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(200px, 1fr));
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  overflow-x: auto;
+  align-items: start;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+/* 회색 칸 배경 위 흐린 글자 대비 보강: 목록 화면 .listItem .muted 와 같은 값(#475569, 6.91:1).
+ * 새 토큰을 만들지 않고 칸 안에서만 --text-muted 를 바꾼다. 어두운 화면은 원래 토큰을 그대로 쓴다. */
+.column {
+  --text-muted: #475569;
+}
+:global([data-theme="dark"]) .column {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .column {
+    --text-muted: inherit;
+  }
+}
+.columnMissing {
+  border: 2px dashed var(--warning-border);
+}
+.colHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.stepNum {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-muted);
+}
+.colTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 1rem;
+}
+.focus {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+.colEmpty {
+  margin: 0;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow-wrap: anywhere;
+}
+.cardLead {
+  border: 2px solid var(--primary-600);
+}
+.tag {
+  align-self: flex-start;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+}
+.tag_lead_magnet {
+  background: var(--primary-50);
+  border-color: var(--primary-100);
+  color: var(--primary-600);
+  font-weight: var(--font-weight-semibold);
+}
+.tag_cta {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.cardTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.cardDesc {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.leadView {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+}
+.leadView dt {
+  font-weight: var(--font-weight-semibold);
+}
+.leadView dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.inlineDetails > summary {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.form,
+.inlineForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.inlineForm {
+  align-items: flex-start;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.leadBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.leadBox legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 900px) {
+  .board {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: visible;
+  }
+}
