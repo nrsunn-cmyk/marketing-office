@@ -16,16 +16,11 @@ import {
   type StrategySection,
   type StrategySource,
 } from "@/contracts/p2-strategy";
+import { STRATEGY_SECTION_LABELS } from "./labels";
 
-export const STRATEGY_SECTION_LABELS: Record<StrategySection, string> = {
-  goals: "목표",
-  offers: "상품·제안",
-  audiences: "타깃 고객",
-  positioning: "포지셔닝",
-  problems: "고객 문제",
-  opportunities: "기회",
-  priorities: "우선순위",
-};
+// 이름표는 labels.ts 에 있다(BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+export { STRATEGY_SECTION_LABELS };
+
 
 /** 필수 영역이 비었을 때 묻는 고정 질문(입력 내용을 지어내지 않는다) */
 export const STRATEGY_MISSING_QUESTIONS: Record<StrategySection, string> = {

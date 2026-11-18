@@ -1,0 +1,31 @@
+/* 화면 준비 전 공용 안내(hydration-hint.tsx) 전용. 색은 안내(info) 토큰을 쓴다(BUNDLE-D-FRONT-01 ①). */
+.hintRegion {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  z-index: 39;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+/* 준비를 기다리는 버튼(공용 안내를 가리키는 버튼)이 화면에 있을 때만 보인다 */
+.hint {
+  display: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info-text);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-md);
+}
+:global(body:has([aria-describedby~="app-hydration-hint"])) .hint {
+  display: block;
+}
+@media (max-width: 640px) {
+  .hintRegion {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}

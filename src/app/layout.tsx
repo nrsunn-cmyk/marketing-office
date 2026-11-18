@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import { FlashProvider } from "./_components/flash";
+import { HydrationHintProvider } from "./_components/hydration-hint";
 
 /**
  * 브라우저 탭 아이콘(icon.svg)·아이폰 홈 화면 아이콘(apple-icon.png)·링크 미리보기 그림(opengraph-image.png)은
@@ -12,10 +13,10 @@ export const metadata: Metadata = {
   // 공유 이미지 주소도 로그인 복귀 주소와 같은 앱 주소 설정을 따른다.
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "마케팅 업무실",
-  description: "1인 운영 AI 마케팅 업무실",
+  description: "1인 마케터를 위한 마케팅 업무실",
   applicationName: "마케팅 업무실",
   robots: { index: false, follow: false },
-  openGraph: { title: "마케팅 업무실", description: "1인 운영 AI 마케팅 업무실", locale: "ko_KR", type: "website" },
+  openGraph: { title: "마케팅 업무실", description: "1인 마케터를 위한 마케팅 업무실", locale: "ko_KR", type: "website" },
 };
 
 /**
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         {/* 폼이 사라지는 동작의 성공 안내를 화면 아래에 남긴다(BUNDLE-C-PREP-01) */}
-        <FlashProvider>{children}</FlashProvider>
+        {/* 화면 준비 전 안내는 화면당 한 곳에서만 보인다(BUNDLE-D-FRONT-01) */}
+        <FlashProvider>
+          <HydrationHintProvider>{children}</HydrationHintProvider>
+        </FlashProvider>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
 import styles from "../ui.module.css";
+import { HYDRATION_HINT_TEXT, useHydrationHint } from "./hydration-hint";
 import { useHydrated } from "./use-hydrated";
 
 const QUERY = "(max-width: 640px)";
@@ -29,7 +30,9 @@ export function MobileActionSheet({ title, children }: { title: string; children
   const opener = useRef<HTMLButtonElement>(null);
   const startY = useRef<number | null>(null);
   const titleId = useId();
-  const hintId = useId();
+  const localHintId = useId();
+  const sharedHintId = useHydrationHint(); // 화면당 한 번만 보이는 공용 준비 안내(BUNDLE-D-FRONT-01)
+  const hintId = sharedHintId ?? localHintId;
 
   function close() {
     dialog.current?.close();
@@ -52,9 +55,9 @@ export function MobileActionSheet({ title, children }: { title: string; children
         >
           {title} 열기
         </button>
-        {!hydrated && (
-          <span id={hintId} className={styles.muted} role="status">
-            화면을 준비하는 중…
+        {!hydrated && !sharedHintId && (
+          <span id={localHintId} className={styles.muted} role="status">
+            {HYDRATION_HINT_TEXT}
           </span>
         )}
       </span>

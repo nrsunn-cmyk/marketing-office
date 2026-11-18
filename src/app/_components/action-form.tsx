@@ -6,6 +6,7 @@ import styles from "../ui.module.css";
 import { useState } from "react";
 import { useFlash } from "./flash";
 import { EMPTY_FORM_STATE, type FormState } from "./form-state";
+import { HYDRATION_HINT_TEXT, useHydrationHint } from "./hydration-hint";
 import { useHydrated } from "./use-hydrated";
 
 /**
@@ -34,7 +35,9 @@ export function ActionForm({
   const [state, formAction, pending] = useActionState(flash ? flash.wrap(flashKey, action) : action, EMPTY_FORM_STATE);
   const formRef = useRef<HTMLFormElement>(null);
   const hydrated = useHydrated(); // hydration 전 제출 차단(BUG-SESSION-HYDRATION-01)
-  const waitId = useId();
+  const localWaitId = useId();
+  const sharedHintId = useHydrationHint(); // 화면당 한 번만 보이는 공용 준비 안내(BUNDLE-D-FRONT-01)
+  const waitId = sharedHintId ?? localWaitId;
 
   // 저장에 성공하면 폼을 서버가 보낸 최신 값(정리된 저장 값)으로 다시 맞춘다.
   // 오류일 때는 그대로 두어 입력한 값이 남는다. 는 이전 호출과의 호환을 위해 남겨 둔다.
@@ -82,10 +85,11 @@ export function ActionForm({
       >
         {pending ? pendingLabel : submitLabel}
       </button>
-      {/* BUG-MOBILE-NEWTASK-01: 느린 연결에서는 준비 전 비활성 버튼이 몇 초 동안 '눌러도 반응 없음'으로 보인다. 이유를 글로 알린다(준비되면 사라짐) */}
-      {!hydrated && (
-        <span id={waitId} className={styles.muted}>
-          화면을 준비하는 중…
+      {/* BUG-MOBILE-NEWTASK-01: 느린 연결에서는 준비 전 비활성 버튼이 몇 초 동안 '눌러도 반응 없음'으로 보인다. 이유를 글로 알린다(준비되면 사라짐).
+          공용 안내(hydration-hint.tsx)가 있으면 그 하나를 가리키고, 없을 때만 여기 그린다 */}
+      {!hydrated && !sharedHintId && (
+        <span id={localWaitId} className={styles.muted}>
+          {HYDRATION_HINT_TEXT}
         </span>
       )}
     </form>

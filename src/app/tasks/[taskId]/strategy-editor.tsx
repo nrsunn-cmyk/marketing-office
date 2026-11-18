@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { STRATEGY_LIMITS, STRATEGY_REQUIRED_SECTIONS, STRATEGY_SECTIONS, type StrategySection } from "@/contracts/p2-strategy";
+import { STRATEGY_LIMITS, STRATEGY_REQUIRED_SECTIONS, STRATEGY_SECTIONS, type StrategySection } from "@/contracts/p2-strategy-constants";
 import type { StrategyFormPayload, StrategyFormSource } from "@/contracts/p2-strategy-form";
-import { STRATEGY_SECTION_LABELS } from "@/domain/strategy/build";
+import { STRATEGY_SECTION_LABELS } from "@/domain/strategy/labels";
 import type { FormState } from "../../_components/form-state";
 import { ActionForm } from "../../_components/action-form";
 import styles from "../../ui.module.css";

@@ -14,23 +14,17 @@
  */
 import { z } from "zod";
 import { PROJECT_KINDS } from "./index";
+import {
+  STRATEGY_LIMITS,
+  STRATEGY_REQUIRED_SECTIONS,
+  STRATEGY_SECTIONS,
+  STRATEGY_TEMPLATE_VERSION,
+  type StrategySection,
+} from "./p2-strategy-constants";
 
-export const STRATEGY_TEMPLATE_VERSION = "strategy-template@1";
+// 상수는 p2-strategy-constants.ts 에 있다(화면 묶음에서 zod 를 빼려고, BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+export { STRATEGY_LIMITS, STRATEGY_REQUIRED_SECTIONS, STRATEGY_SECTIONS, STRATEGY_TEMPLATE_VERSION, type StrategySection };
 
-export const STRATEGY_SECTIONS = ["goals", "offers", "audiences", "positioning", "problems", "opportunities", "priorities"] as const;
-export type StrategySection = (typeof STRATEGY_SECTIONS)[number];
-
-/** 비어 있으면 확인 질문을 만드는 영역(전략의 뼈대). 나머지는 비어 있어도 질문하지 않는다 */
-export const STRATEGY_REQUIRED_SECTIONS: readonly StrategySection[] = ["goals", "offers", "audiences", "positioning"];
-
-export const STRATEGY_LIMITS = {
-  textMax: 500,
-  topicMax: 200,
-  questionMax: 300,
-  itemsPerKind: 20,
-  sourcesPerFact: 10,
-  unknownsMax: 30,
-} as const;
 
 const text = (max: number) =>
   z.string().trim().min(1, "내용을 입력해 주세요.").max(max, `${max}자 이내로 입력해 주세요.`);

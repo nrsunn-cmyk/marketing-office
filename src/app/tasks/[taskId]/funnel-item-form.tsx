@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, FUNNEL_LIMITS, type FunnelItemKind, type FunnelItemStatus } from "@/domain/funnel";
+import { FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, FUNNEL_LIMITS, type FunnelItemKind, type FunnelItemStatus } from "@/domain/funnel/constants";
 import { toFunnelPayload, type FunnelItemFormValue } from "./funnel-form";
 import { ActionForm } from "../../_components/action-form";
 import type { FormState } from "../../_components/form-state";

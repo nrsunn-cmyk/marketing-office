@@ -2,6 +2,7 @@ import { createElement, type ComponentType, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ActionForm } from "./action-form";
+import { HYDRATION_HINT_ID, HydrationHintProvider } from "./hydration-hint";
 import { MobileActionSheet } from "./mobile-action-sheet";
 import { useHydrated } from "./use-hydrated";
 
@@ -40,5 +41,18 @@ describe("hydration 전 제출 차단", () => {
     expect(html.match(/id="task-type"/g)).toHaveLength(1);
     expect(html).toMatch(/<dialog[^>]*role="none"[^>]*>[\s\S]*id="task-type"[\s\S]*<\/dialog>/);
     expect(html).not.toMatch(/<dialog[^>]*aria-labelledby/);
+  });
+
+  it("BUNDLE-D-FRONT-01: 공용 안내가 있으면 폼이 여러 개여도 준비 안내 문장은 화면에 한 번, 모든 비활성 버튼이 그 하나를 가리킨다", () => {
+    const form = (label: string) => createElement(ActionForm, { key: label, action: async () => ({}), submitLabel: label });
+    const sheet = createElement(MobileActionSheet as ComponentType<{ title: string; children?: ReactNode }>, { key: "s", title: "새 작업" }, form("작업 시작"));
+    const html = renderToString(createElement(HydrationHintProvider, null, [form("저장"), form("보관"), form("승인"), sheet]));
+    expect(html.match(/화면을 준비하는 중…/g)).toHaveLength(1);
+    const ids = [...html.matchAll(/aria-describedby="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(5); // 폼 4개의 제출 버튼 + 열기 버튼 1개
+    expect(new Set(ids)).toEqual(new Set([HYDRATION_HINT_ID]));
+    expect(html.match(new RegExp(`id="${HYDRATION_HINT_ID}"`, "g"))).toHaveLength(1);
+    // 안내를 담는 role=status 영역은 늘 있다
+    expect(html).toMatch(new RegExp(`<div[^>]*role="status"[^>]*><p id="${HYDRATION_HINT_ID}"`));
   });
 });

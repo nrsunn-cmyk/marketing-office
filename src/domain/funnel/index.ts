@@ -4,36 +4,11 @@
  * DB 규칙: supabase/migrations/20261118001000_p2d_funnel_board.sql (값 범위는 DB와 같게 둔다)
  */
 import { z } from "zod";
+import { FUNNEL_STAGES, FUNNEL_STAGE_KEYS, funnelStageLabel, FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, FUNNEL_LIMITS, type FunnelStageKey, type FunnelItemKind, type FunnelItemStatus } from "./constants";
 
-export const FUNNEL_STAGES = [
-  { key: "inflow", position: 1, label: "유입" },
-  { key: "awareness", position: 2, label: "인지" },
-  { key: "consideration", position: 3, label: "고려" },
-  { key: "conversion", position: 4, label: "전환" },
-  { key: "retention", position: 5, label: "유지" },
-] as const;
-export type FunnelStageKey = (typeof FUNNEL_STAGES)[number]["key"];
-export const FUNNEL_STAGE_KEYS = FUNNEL_STAGES.map((s) => s.key) as unknown as readonly [FunnelStageKey, ...FunnelStageKey[]];
-export const funnelStageLabel = (key: string) => FUNNEL_STAGES.find((s) => s.key === key)?.label ?? key;
+// 상수는 constants.ts 에 있다(BUNDLE-D-FRONT-01). 기존 import 경로는 그대로 쓸 수 있다
+export { FUNNEL_STAGES, FUNNEL_STAGE_KEYS, funnelStageLabel, FUNNEL_ITEM_KINDS, FUNNEL_ITEM_STATUSES, FUNNEL_LIMITS, type FunnelStageKey, type FunnelItemKind, type FunnelItemStatus };
 
-export const FUNNEL_ITEM_KINDS = { content: "콘텐츠", lead_magnet: "리드마그넷", cta: "전환 오퍼" } as const;
-export type FunnelItemKind = keyof typeof FUNNEL_ITEM_KINDS;
-export const FUNNEL_ITEM_STATUSES = { planned: "기획 완료", drafting: "작성 중", reviewed: "검토 완료", published: "발행 완료" } as const;
-export type FunnelItemStatus = keyof typeof FUNNEL_ITEM_STATUSES;
-
-export const FUNNEL_LIMITS = {
-  title: 200,
-  description: 2000,
-  channel: 100,
-  targetNote: 200,
-  focus: 300,
-  deliverable: 200,
-  leadFields: 10,
-  leadField: 50,
-  outline: 20,
-  outlineLine: 300,
-  itemsPerStage: 50,
-} as const;
 
 const L = FUNNEL_LIMITS;
 const optionalText = (max: number, label: string) =>

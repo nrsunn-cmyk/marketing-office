@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { BRIEF_LIMITS, BRIEF_STATUSES, type BriefChannel, type BriefStatus } from "@/domain/brief";
+import { BRIEF_LIMITS, BRIEF_STATUSES, type BriefChannel, type BriefStatus } from "@/domain/brief/constants";
 import { ActionForm } from "../../_components/action-form";
 import type { FormState } from "../../_components/form-state";
 import styles from "../../ui.module.css";
