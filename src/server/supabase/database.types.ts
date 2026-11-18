@@ -283,6 +283,87 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"funnel_items": {
+                  Row: {
+                    "archived_at": string | null,"channel": string | null,"created_at": string,"created_by": string,"description": string | null,"details": Json | null,"funnel_id": string,"id": string,"kind": string,"position": number,"revision": number,"stage_id": string,"status": string,"target_note": string | null,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"channel"?: string | null,"created_at"?: string,"created_by": string,"description"?: string | null,"details"?: Json | null,"funnel_id": string,"id"?: string,"kind": string,"position": number,"revision"?: number,"stage_id": string,"status"?: string,"target_note"?: string | null,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"channel"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"details"?: Json | null,"funnel_id"?: string,"id"?: string,"kind"?: string,"position"?: number,"revision"?: number,"stage_id"?: string,"status"?: string,"target_note"?: string | null,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "funnel_items_workspace_id_funnel_id_fkey"
+      columns: ["workspace_id","funnel_id"]
+isOneToOne: false
+      referencedRelation: "funnels"
+      referencedColumns: ["workspace_id","id"]
+    },
+                    {
+      foreignKeyName: "funnel_items_funnel_id_stage_id_fkey"
+      columns: ["funnel_id","stage_id"]
+isOneToOne: false
+      referencedRelation: "funnel_stages"
+      referencedColumns: ["funnel_id","id"]
+    }
+                  ]
+                },"funnel_stages": {
+                  Row: {
+                    "created_at": string,"focus": string | null,"funnel_id": string,"id": string,"position": number,"revision": number,"stage_key": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"focus"?: string | null,"funnel_id": string,"id"?: string,"position": number,"revision"?: number,"stage_key": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"focus"?: string | null,"funnel_id"?: string,"id"?: string,"position"?: number,"revision"?: number,"stage_key"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "funnel_stages_workspace_id_funnel_id_fkey"
+      columns: ["workspace_id","funnel_id"]
+isOneToOne: false
+      referencedRelation: "funnels"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"funnels": {
+                  Row: {
+                    "created_at": string,"created_by": string,"id": string,"project_id": string,"revision": number,"strategy_artifact_id": string,"strategy_version_id": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"id"?: string,"project_id": string,"revision"?: number,"strategy_artifact_id": string,"strategy_version_id": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"id"?: string,"project_id"?: string,"revision"?: number,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "funnels_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    },
+                    {
+      foreignKeyName: "funnels_workspace_id_strategy_artifact_id_fkey"
+      columns: ["workspace_id","strategy_artifact_id"]
+isOneToOne: false
+      referencedRelation: "artifacts"
+      referencedColumns: ["workspace_id","id"]
+    },
+                    {
+      foreignKeyName: "funnels_strategy_artifact_id_strategy_version_id_fkey"
+      columns: ["strategy_artifact_id","strategy_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["artifact_id","id"]
+    }
+                  ]
                 },"generation_runs": {
                   Row: {
                     "action": string,"artifact_version_id": string | null,"attempt": number,"created_at": string,"error_code": string | null,"finished_at": string | null,"id": string,"idempotency_key": string,"input_hash": string,"mode": string | null,"model_id": string | null,"provider": string | null,"revision": number,"started_at": string | null,"status": string,"task_id": string,"updated_at": string,"workspace_id": string
@@ -653,6 +734,26 @@ isOneToOne: false
 { Args: { "p_artifact_id": string,"p_customer_snapshot": Json,"p_issue_date": string,"p_items": Json,"p_notes": string,"p_payment_terms": string,"p_subtotal_won": number,"p_supplier_profile_id": string,"p_supplier_snapshot": Json,"p_tax_mode": string,"p_tax_rate_bp": number,"p_tax_won": number,"p_total_won": number,"p_valid_until": string,"p_version_id": string }; Returns: {
               "quote_id": string,"quote_number": string,"quote_version_id": string,"reused": boolean
             }[]
+                           },
+"add_funnel_item":
+{ Args: { "p_channel"?: string,"p_description"?: string,"p_details"?: Json,"p_kind": string,"p_stage_id": string,"p_status"?: string,"p_target_note"?: string,"p_title": string }; Returns: string
+                           },
+"archive_funnel_item":
+{ Args: { "p_expected_revision": number,"p_item_id": string }; Returns: number
+                           },
+"create_funnel":
+{ Args: { "p_strategy_artifact_id": string }; Returns: {
+              "funnel_id": string,"reused": boolean
+            }[]
+                           },
+"rebase_funnel":
+{ Args: { "p_expected_revision": number,"p_funnel_id": string }; Returns: number
+                           },
+"update_funnel_item":
+{ Args: { "p_channel": string,"p_description": string,"p_details": Json,"p_expected_revision": number,"p_item_id": string,"p_kind": string,"p_stage_id": string,"p_status": string,"p_target_note": string,"p_title": string }; Returns: number
+                           },
+"update_funnel_stage":
+{ Args: { "p_expected_revision": number,"p_focus": string,"p_stage_id": string }; Returns: number
                            },
 "generate_strategy":
 { Args: { "p_content": Json,"p_extra_inputs": Json,"p_idempotency_key": string,"p_profile_version_id": string,"p_task_id": string }; Returns: {
