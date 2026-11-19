@@ -1,5 +1,5 @@
 /**
- * SOURCE-UPLOAD-FIX-01: 자료 파일 직접 업로드 DB(20261121005000_source_upload_direct) 시험.
+ * SOURCE-UPLOAD-FIX-01: 자료 파일 직접 업로드 DB(20261121001500_source_upload_direct, 원래 32번) 시험.
  * 저장소는 shim 의 storage.objects(RLS 켜짐, metadata 칸)로 흉내 낸다. 모든 값은 합성이다.
  */
 import { createHmac } from "node:crypto";
