@@ -83,7 +83,7 @@ test("AUTH-UI-01 OS가 다크 모드여도 밝게 고정한 인증 화면의 링
   const ctx = await browser.newContext({ channel: "chrome", colorScheme: "dark", viewport: { width: 390, height: 844 } } as never);
   const page = await ctx.newPage();
   for (const [path, linkName] of [
-    ["/login", "비밀번호 찾기?"],
+    ["/login", "비밀번호 찾기"], // SITE-FIX-01: 물음표 뺀 확정 문구
     ["/forgot-password", "← 로그인 화면으로 돌아가기"],
   ] as const) {
     await page.goto(path);

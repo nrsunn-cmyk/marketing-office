@@ -103,7 +103,7 @@ test("T19 키보드만으로 로그인할 수 있다", async ({ browser }) => {
   const page = await ctx.newPage();
   await page.goto("/login");
   await page.waitForLoadState("networkidle");
-  // 순서: 로그인 탭 → 회원가입 탭 → 이메일 → 비밀번호 찾기? 링크 → 비밀번호 → 보기 단추 → 로그인 버튼
+  // 순서: 로그인 탭 → 회원가입 탭 → 이메일 → 비밀번호 찾기 링크 → 비밀번호 → 보기 단추 → 로그인 버튼
   const tabTo = async (target: ReturnType<typeof page.getByLabel>) => {
     for (let i = 0; i < 6; i += 1) {
       await page.keyboard.press("Tab");

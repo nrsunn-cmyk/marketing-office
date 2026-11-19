@@ -28,7 +28,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           label="비밀번호"
           autoComplete="current-password"
           placeholder="비밀번호"
-          labelLink={{ href: "/forgot-password", text: "비밀번호 찾기?" }}
+          labelLink={{ href: "/forgot-password", text: "비밀번호 찾기" }}
         />
       </AuthForm>
     </AuthShell>
