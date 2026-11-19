@@ -3,6 +3,7 @@
  * 이름·인자·한도는 ./qa-p3b-names.ts 한곳. migration 29 가 없으면 전체를 건너뛴다. 모든 값은 합성이다.
  * 한계: PGlite 는 연결 하나라 동시성(같은 브리프 동시 만들기·동시 저장 20)은 PG 17 에서 따로 본다.
  */
+import { appendFileSync } from "node:fs";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
 import { buildStrategyDraft } from "@/domain/strategy";
@@ -1092,6 +1093,161 @@ describe.skipIf(!present)(
           ),
         ).toBe(0);
         expect(await audits(id)).toBe(4);
+      });
+    });
+
+    // QA-P3B-BACKEND-01 추가: 칸 빠뜨리기 15가지(app.jt), Q4 브리프 보관·작성 중, Q5 되돌릴 때 출처
+    describe("칸 빠뜨리기 15가지(CHECK 가 NULL 로 빠지지 않음)", () => {
+      it("섹션 9칸·페이지 4칸(id 말고)을 하나씩 빼면 모두 VALIDATION, 판 0 / id 를 빼면 새 id", async () => {
+        const id = await createDoc(a, (await ctx(a)).briefId);
+        const n0 = await versions(id);
+        // id 칸은 빠지면 null(새것)로 본다(설계 2-3: null 또는 현재 판의 id) — 아래 따로 기록
+        const secKeys = [
+          "section_name",
+          "purpose",
+          "headline",
+          "body",
+          "cta_label",
+          "cta_target",
+          "citation_ids",
+          "sort_order",
+          "excluded",
+        ];
+        const pageKeys = ["title", "slug", "sort_order", "sections"];
+        const passed: string[] = [];
+        for (const k of secKeys) {
+          const s = newSection(1) as Record<string, unknown>;
+          delete s[k];
+          await save(a, id, [newPage(1, "/", [s as Section])]).then(
+            () => passed.push(`섹션.${k}`),
+            (e: Error) => expect(e.message).toMatch(P3B.err.validation),
+          );
+        }
+        for (const k of pageKeys) {
+          const p = newPage(1, "/") as Record<string, unknown>;
+          delete p[k];
+          await save(a, id, [p]).then(
+            () => passed.push(`페이지.${k}`),
+            (e: Error) => expect(e.message).toMatch(P3B.err.validation),
+          );
+        }
+        for (const bad of [[{}], [newPage(1, "/", [{} as Section])]]) {
+          await save(a, id, bad).then(
+            () => passed.push(JSON.stringify(bad).slice(0, 30)),
+            (e: Error) => expect(e.message).toMatch(P3B.err.validation),
+          );
+        }
+        expect(passed, "빠진 칸이 통과함").toEqual([]);
+        expect(await versions(id)).toBe(n0);
+        // id 를 뺀 섹션은 새 id 를 받는다(기존 섹션 id 는 이어지지 않음 → 화면은 id 를 빠뜨리지 말아야 함)
+        const cur = (await current(id)).pages;
+        const p = clone(cur);
+        delete (p[0]!.sections[0] as Record<string, unknown>).id;
+        await save(
+          a,
+          id,
+          p.map((x, i) =>
+            i === 0
+              ? {
+                  ...x,
+                  sections: x.sections.map((s, j) =>
+                    j === 0 ? { ...s, headline: "id 뺌" } : s,
+                  ),
+                }
+              : x,
+          ),
+        );
+        expect((await current(id)).pages[0]!.sections[0]!.id).not.toBe(
+          cur[0]!.sections[0]!.id,
+        );
+      });
+    });
+
+    describe("Q4·Q5 결정 동작", () => {
+      it("브리프 보관 뒤: 문서 편집은 되고, stale 계산(revision 비교)과 맞추기 거절 문구(보관)를 기록", async () => {
+        const c = await ctx(a);
+        const id = await createDoc(a, c.briefId);
+        const br0 = (
+          await one<{ revision: number }>(
+            db,
+            `select revision from public.${P3B.brief.table} where id = $1`,
+            [c.briefId],
+          )
+        ).revision;
+        await asU(a, (tx) =>
+          tx.query(`select ${P3B.brief.archive}($1, $2)`, [c.briefId, br0]),
+        );
+        const br1 = (
+          await one<{ revision: number }>(
+            db,
+            `select revision from public.${P3B.brief.table} where id = $1`,
+            [c.briefId],
+          )
+        ).revision;
+        const d = await docRow(id);
+        // 서버 stale = source_brief_revision !== brief.revision (server.ts). 보관이 revision 을 올리면 true 가 된다
+        const seen = {
+          보관전: br0,
+          보관후: br1,
+          문서기준: d.source_brief_revision,
+          stale: d.source_brief_revision !== br1,
+        };
+        if (process.env.QA_OUT)
+          appendFileSync(
+            process.env.QA_OUT,
+            `Q4 브리프 보관 뒤 ${JSON.stringify(seen)}
+`,
+          );
+        let msg = "";
+        await act(a, id, (rev) => sql.rebase(id, rev)).catch(
+          (e: Error) => (msg = e.message),
+        );
+        expect(msg).toMatch(/보관한 제작 브리프라 맞출 수 없습니다/);
+        const p = clone((await current(id)).pages);
+        p[0]!.sections[0]!.headline = "보관 브리프 뒤 편집";
+        await save(a, id, p);
+      });
+      it("브리프 작성 중: 맞추기 거절 문구(작성 중) 갈래", async () => {
+        const c = await ctx(a);
+        const id = await createDoc(a, c.briefId);
+        await asU(a, (tx) =>
+          tx.query(
+            `select ${P3B.brief.update}($1, 2, '작성 중으로', '대상', '메시지', $2::text[], '범위', null, null, 'drafting')`,
+            [c.briefId, ["web_copy"]],
+          ),
+        );
+        let msg = "";
+        await act(a, id, (rev) => sql.rebase(id, rev)).catch(
+          (e: Error) => (msg = e.message),
+        );
+        expect(msg).toMatch(/작성 중이라 맞출 수 없습니다/);
+      });
+      it("Q5: 출처를 단 판(v2) → 출처 뺀 판(v3) → v2 로 되돌리면 출처가 그대로 돌아오고, 출처를 지우는 경로가 없다", async () => {
+        const c = await ctx(a);
+        const id = await createDoc(a, c.briefId);
+        const src = await source(a, c.projectId, 1);
+        const p = clone((await current(id)).pages);
+        p[0]!.sections[0]!.citation_ids = [src];
+        await save(a, id, p);
+        p[0]!.sections[0]!.citation_ids = [];
+        await save(a, id, p);
+        await act(a, id, (rev) => sql.restore(id, rev, 2));
+        expect((await current(id)).pages[0]!.sections[0]!.citation_ids).toEqual(
+          [src],
+        );
+        // 직접 지우기는 RLS(select 정책만)에 걸려 0행 — 출처는 남는다
+        await asU(a, (tx) =>
+          tx.query("delete from public.research_sources where id = $1", [src]),
+        );
+        expect(
+          await count("select 1 from public.research_sources where id = $1", [
+            src,
+          ]),
+        ).toBe(1);
+        const delFns = await count(
+          "select 1 from pg_proc where proname ~ '(delete|remove|archive)_research_source'",
+        );
+        expect(delFns).toBe(0);
       });
     });
   },
