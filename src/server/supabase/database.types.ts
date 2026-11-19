@@ -959,6 +959,58 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"web_copy_docs": {
+                  Row: {
+                    "archived_at": string | null,"created_at": string,"created_by": string,"current_version_no": number,"id": string,"production_brief_id": string,"project_id": string,"revision": number,"source_brief_revision": number,"status": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"created_at"?: string,"created_by": string,"current_version_no": number,"id"?: string,"production_brief_id": string,"project_id": string,"revision"?: number,"source_brief_revision": number,"status"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"created_at"?: string,"created_by"?: string,"current_version_no"?: number,"id"?: string,"production_brief_id"?: string,"project_id"?: string,"revision"?: number,"source_brief_revision"?: number,"status"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "web_copy_docs_current_version_fkey"
+      columns: ["id","current_version_no"]
+isOneToOne: false
+      referencedRelation: "web_copy_versions"
+      referencedColumns: ["doc_id","version_no"]
+    },{
+      foreignKeyName: "web_copy_docs_project_id_production_brief_id_fkey"
+      columns: ["project_id","production_brief_id"]
+isOneToOne: false
+      referencedRelation: "production_briefs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "web_copy_docs_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"web_copy_versions": {
+                  Row: {
+                    "content": NonNullable<Json>,"created_at": string,"created_by": string,"doc_id": string,"id": string,"kind": string,"restored_from_version_no": number | null,"source_brief_revision": number,"status": string,"version_no": number,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "content": NonNullable<Json>,"created_at"?: string,"created_by": string,"doc_id": string,"id"?: string,"kind": string,"restored_from_version_no"?: number | null,"source_brief_revision": number,"status": string,"version_no": number,"workspace_id": string
+                  }
+                  Update: {
+                    "content"?: NonNullable<Json>,"created_at"?: string,"created_by"?: string,"doc_id"?: string,"id"?: string,"kind"?: string,"restored_from_version_no"?: number | null,"source_brief_revision"?: number,"status"?: string,"version_no"?: number,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "web_copy_versions_workspace_id_doc_id_fkey"
+      columns: ["workspace_id","doc_id"]
+isOneToOne: false
+      referencedRelation: "web_copy_docs"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"workspaces": {
                   Row: {
                     "created_at": string,"currency": string,"id": string,"name": string,"owner_user_id": string,"revision": number,"timezone": string,"updated_at": string
@@ -1035,6 +1087,9 @@ isOneToOne: false
 "archive_production_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
+"archive_web_copy":
+{ Args: { "p_doc_id": string,"p_expected_revision": number }; Returns: number
+                           },
 "assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
                            },
@@ -1048,6 +1103,9 @@ isOneToOne: false
                            },
 "create_production_brief":
 { Args: { "p_brand_tone_constraints"?: string,"p_core_message": string,"p_deliverable_types": string[],"p_project_id": string,"p_reference_notes"?: string,"p_scope_summary": string,"p_strategy_artifact_id": string,"p_target_audience": string,"p_title": string }; Returns: string
+                           },
+"create_web_copy_doc":
+{ Args: { "p_copy_from_doc_id"?: string,"p_production_brief_id": string }; Returns: string
                            },
 "create_funnel":
 { Args: { "p_strategy_artifact_id": string }; Returns: {
@@ -1084,6 +1142,15 @@ isOneToOne: false
                            },
 "rebase_production_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"save_web_copy":
+{ Args: { "p_doc_id": string,"p_expected_revision": number,"p_pages": Json,"p_status": string }; Returns: number
+                           },
+"restore_web_copy_version":
+{ Args: { "p_doc_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
+                           },
+"rebase_web_copy":
+{ Args: { "p_doc_id": string,"p_expected_revision": number }; Returns: number
                            },
 "rebase_funnel":
 { Args: { "p_expected_revision": number,"p_funnel_id": string }; Returns: number
