@@ -12,13 +12,14 @@ import {
   formatKstMinute,
   isValidSlug,
   moveSection,
-  rebaseLabel,
   restoreHint,
   secKey,
   setExcluded,
-  staleWebCopyText,
   toWebCopyPayload,
   toggleCitation,
+  webCopyBriefNotice,
+  WC_COPY,
+  restoreMissingCitationsText,
   type WebCopyPageView,
   type WebCopySectionView,
 } from "./web-copy-model";
@@ -33,7 +34,7 @@ const four = (): WebCopyPageView[] => [
 ];
 
 describe("P3-b 홈페이지 구조·문구 화면 모델(인계표 P3B-HANDOFF.md)", () => {
-  it("한도는 인계표 1·2절과 같다", () => {
+  it("한도는 인계표 1·2절·서버 도메인 상수와 같다", () => {
     expect(WEB_COPY_LIMITS).toEqual({
       pagesMax: 10,
       sectionsPerPageMax: 12,
@@ -47,17 +48,22 @@ describe("P3-b 홈페이지 구조·문구 화면 모델(인계표 P3B-HANDOFF.m
       body: 2000,
       ctaLabel: 60,
       ctaTarget: 200,
+      versionsMax: 100,
+      docsPerBrief: 10,
     });
   });
 
-  it("경로: / 로 시작, 영소문자·숫자·- 만", () => {
-    for (const ok of ["/", "/about", "/services/web-design", "/a1-b2"]) expect(isValidSlug(ok), ok).toBe(true);
-    for (const bad of ["", "about", "/About", "/a_b", "/a/", "/-a", "/a--b", "/한글", `/${"a".repeat(80)}`]) expect(isValidSlug(bad), bad).toBe(false);
-    expect(ctaTargetLooksOk("")).toBe(true);
-    expect(ctaTargetLooksOk("/contact")).toBe(true);
-    expect(ctaTargetLooksOk("https://example.com/x")).toBe(true);
-    expect(ctaTargetLooksOk("http://example.com")).toBe(false);
-    expect(ctaTargetLooksOk("javascript:alert(1)")).toBe(false);
+  it("경로: 홈 / 또는 한 단계만(서버 SLUG_RE, Tester Q1), 영소문자·숫자·- 만", () => {
+    for (const ok of ["/", "/about", "/a1-b2", "/web-design"]) expect(isValidSlug(ok), ok).toBe(true);
+    for (const bad of ["", "about", "/About", "/a_b", "/a/", "/-a", "/a--b", "/한글", "/services/web-design", "//", `/${"a".repeat(80)}`]) expect(isValidSlug(bad), bad).toBe(false);
+  });
+
+  it("CTA 이동 대상: /경로(하위·#조각 허용) 또는 https 주소, // 로 시작은 거절(Tester Q2)", () => {
+    for (const ok of ["", "/contact", "/services/web-design", "/contact#form", "https://example.com/x", "https://example.co.kr"]) expect(ctaTargetLooksOk(ok), ok).toBe(true);
+    for (const bad of ["//evil.com", "//evil.com/path", "///x", "/\\evil.com", "http://example.com", "javascript:alert(1)", "https://", "https:///x", "/Contact", "contact"]) expect(ctaTargetLooksOk(bad), bad).toBe(false);
+    const pages = four();
+    pages[0] = { ...pages[0], sections: [sec("히어로", 1, { ctaTarget: "//evil.com" })] };
+    expect(checkWebCopy(pages, [])[secKey(0, 0, "ctaTarget")]).toBe("CTA 이동 대상은 /경로 또는 https:// 주소로 적어 주세요.");
   });
 
   it("섹션 순서 이동: 위·아래, 끝에서는 그대로, 번호는 1부터 다시", () => {
@@ -143,19 +149,65 @@ describe("P3-b 홈페이지 구조·문구 화면 모델(인계표 P3B-HANDOFF.m
     expect(Object.keys(p.pages[0].sections[0])).toEqual(["id", "sectionName", "purpose", "headline", "body", "ctaLabel", "ctaTarget", "citationIds", "sortOrder", "excluded"]);
   });
 
-  it("보기 → 편집 값: 정렬, 보관 상태는 작성 중으로", () => {
-    const doc = { id: "d", status: "archived" as const, revision: 1, version: 1, briefVersion: 1, stale: false, pages: [page("b", "/b", 5, [sec("y", 9), sec("x", 3)]), page("a", "/", 2, [sec("z", 1)])], versions: [] };
+  // 서버 보기(빈 칸 null, id 필수)
+  const srvSec = (id: string, name: string, sortOrder: number) => ({ id, sectionName: name, purpose: null, headline: `${name} 헤드라인`, body: null, ctaLabel: null, ctaTarget: null, citationIds: [], sortOrder, excluded: false });
+
+  it("보기 → 편집 값: 정렬, 빈 칸 null 은 '', 검토 완료는 그대로", () => {
+    const doc = { status: "reviewed" as const, pages: [{ id: "pb", title: "b", slug: "/b", sortOrder: 5, sections: [srvSec("y", "y", 9), srvSec("x", "x", 3)] }, { id: "pa", title: "a", slug: "/", sortOrder: 2, sections: [srvSec("z", "z", 1)] }] };
     const e = docToEditor(doc);
-    expect(e.status).toBe("drafting");
+    expect(e.status).toBe("reviewed");
     expect(e.pages.map((p) => `${p.sortOrder}${p.slug}`)).toEqual(["1/", "2/b"]);
     expect(e.pages[1].sections.map((s) => `${s.sortOrder}${s.sectionName}`)).toEqual(["1x", "2y"]);
+    expect(e.pages[1].sections[0]).toMatchObject({ purpose: "", body: "", ctaLabel: "", ctaTarget: "" });
+    expect(docToEditor({ ...doc, status: "drafting" }).status).toBe("drafting");
+  });
+
+  it("저장 값(O2): 기존 페이지·섹션은 id 를 그대로 보내고(순서 바꿈·제외·추가 뒤에도), 새로 추가한 것만 id = null", () => {
+    const doc = {
+      status: "drafting" as const,
+      pages: [
+        { id: "11111111-1111-4111-8111-000000000001", title: "홈", slug: "/", sortOrder: 1, sections: [srvSec("aaaaaaaa-aaaa-4aaa-8aaa-000000000001", "히어로", 1), srvSec("aaaaaaaa-aaaa-4aaa-8aaa-000000000002", "신뢰", 2)] },
+        { id: "11111111-1111-4111-8111-000000000002", title: "소개", slug: "/about", sortOrder: 2, sections: [srvSec("aaaaaaaa-aaaa-4aaa-8aaa-000000000003", "소개", 1)] },
+      ],
+    };
+    const e = docToEditor(doc);
+    let pages = e.pages.map((p, i) => (i === 0 ? { ...p, sections: setExcluded(moveSection(p.sections, 0, 1), 0, true) } : p));
+    pages = addSection(pages, 1);
+    pages = addPage(pages);
+    const out = toWebCopyPayload(e.status, pages);
+    const ids = out.pages.map((p) => [p.id, ...p.sections.map((x) => x.id)]);
+    expect(ids).toEqual([
+      ["11111111-1111-4111-8111-000000000001", "aaaaaaaa-aaaa-4aaa-8aaa-000000000002", "aaaaaaaa-aaaa-4aaa-8aaa-000000000001"],
+      ["11111111-1111-4111-8111-000000000002", "aaaaaaaa-aaaa-4aaa-8aaa-000000000003", null],
+      [null, null],
+    ]);
+    expect(out.pages[0].sections.map((x) => `${x.sortOrder}${x.sectionName}${x.excluded ? "x" : ""}`)).toEqual(["1신뢰x", "2히어로"]);
+    // 한 번 저장한 문서를 다시 불러와도 기존 id 가 모두 남는다(빠지면 서버가 새 섹션으로 본다)
+    expect(toWebCopyPayload(e.status, e.pages).pages.flatMap((p) => p.sections.map((x) => x.id)).every((x) => typeof x === "string")).toBe(true);
+  });
+
+  it("바탕 브리프 안내(Master O1 결정): 원인별로 하나만, 브리프 보관이면 staleBanner 없이 briefArchivedNotice", () => {
+    const d = (x: Partial<{ stale: boolean; canRebase: boolean; rebaseBlockedReason: string | null; readOnlyReason: string | null }>) => ({ stale: true, canRebase: false, rebaseBlockedReason: null, readOnlyReason: null, ...x });
+    const ready = { archived: false, status: "ready" };
+    expect(webCopyBriefNotice(d({ stale: false }), ready)).toBeNull();
+    expect(webCopyBriefNotice(d({ canRebase: true }), ready)).toEqual({ kind: "stale", text: WC_COPY.staleBanner, canRebase: true });
+    expect(webCopyBriefNotice(d({ rebaseBlockedReason: "보관한 제작 브리프라 맞출 수 없습니다." }), { archived: true, status: "ready" })).toEqual({ kind: "archived", text: WC_COPY.briefArchivedNotice, canRebase: false });
+    expect(webCopyBriefNotice(d({ rebaseBlockedReason: "제작 브리프가 작성 중이라 맞출 수 없습니다." }), { archived: false, status: "drafting" })).toEqual({ kind: "notConfirmed", text: WC_COPY.briefNotConfirmedNotice, canRebase: false });
+    const full = "판이 100개라 맞출 수 없습니다. 문서를 보관하고 마지막 판을 복사해 새 문서를 만들어 주세요.";
+    expect(webCopyBriefNotice(d({ rebaseBlockedReason: full }), ready)).toEqual({ kind: "other", text: full, canRebase: false });
+    // 고칠 수 없는 문서(프로젝트 보관·작업 취소)는 맞추기 안내 없음
+    expect(webCopyBriefNotice(d({ readOnlyReason: "보관한 프로젝트입니다." }), { archived: true, status: "ready" })).toBeNull();
   });
 
   it("문구: 시각·이전 브리프·맞추기·되돌리기 안내", () => {
     expect(formatKstMinute("2026-11-19T18:20:00Z")).toBe("2026-11-20 03:20 KST");
     expect(formatKstMinute("x")).toBe("시각 알 수 없음");
-    expect(staleWebCopyText(3)).toBe("공통 제작 브리프가 v3로 새로 확정되었습니다. 페이지 구조와 문구가 최신 제작 브리프와 맞는지 확인해 주세요. 맞추지 않아도 고칠 수 있습니다.");
-    expect(rebaseLabel(3)).toBe("최신 제작 브리프(v3) 기준으로 맞추기");
+    // AGY P3-COPY-FINAL.md 6절 글자 그대로
+    expect(WC_COPY.briefArchivedNotice).toBe("바탕이 된 공통 제작 브리프가 보관되었습니다. 이 문서는 계속 고칠 수 있지만 최신 기준으로 맞추기는 할 수 없습니다.");
+    expect(WC_COPY.staleBanner).toBe("바탕이 된 공통 제작 브리프가 새 버전으로 바뀌었습니다. 페이지 문구와 연결된 근거가 최신 기준과 맞는지 확인해 주세요.");
+    expect(WC_COPY.briefNotConfirmedNotice).toBe("바탕이 된 공통 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다. 브리프 확정 후 다시 시도해 주세요.");
+    expect(restoreMissingCitationsText(2)).toBe("되돌리려는 판에 지금은 없는 근거 출처가 2개 있어 되돌릴 수 없습니다. 출처를 먼저 확인해 주세요.");
+    expect(WC_COPY.rebase).toBe("최신 제작 브리프 기준으로 맞추기");
     expect(restoreHint(4)).toBe("되돌리기를 누르면 과거 기록을 지우지 않고, 선택한 판의 내용을 새 편집본(v4)으로 복원합니다.");
   });
 });

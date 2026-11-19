@@ -367,3 +367,44 @@
     min-width: 0;
   }
 }
+
+/* P3B-UI-CONNECT-01: 제작 브리프마다 한 블록(프로젝트에 브리프가 여럿일 수 있음) */
+.wcBrief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.wcBrief:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* 작업 상세 상단 빠른 이동(#production-brief · #web-copy), 링크 44px */
+.wcJump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.wcJump a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+.wcJump a:hover,
+.wcJump a:focus-visible {
+  border-color: var(--primary-600);
+  color: var(--primary-600);
+}
+:global([data-theme="dark"]) .wcJump a:hover,
+:global([data-theme="dark"]) .wcJump a:focus-visible {
+  color: var(--header-nav-text, #f8fafc);
+}

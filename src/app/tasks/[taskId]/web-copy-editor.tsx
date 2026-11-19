@@ -86,7 +86,7 @@ export function WebCopyEditor({
       <div className={wc.wcWorkspace}>
         <nav className={wc.wcPages} aria-label="페이지 목록">
           <div className={wc.wcPagesHead}>
-            <h3 className={wc.wcSubhead}>{`페이지 (${pages.length} / ${L.pagesMax})`}</h3>
+            <h4 className={wc.wcSubhead}>{`페이지 (${pages.length} / ${L.pagesMax})`}</h4>
             <button
               type="button"
               className={`${styles.secondaryButton} ${f.touch}`}
@@ -118,9 +118,9 @@ export function WebCopyEditor({
         {page && (
           <div className={wc.wcPagePanel}>
             <div className={wc.wcPanelHead}>
-              <h3 className={wc.wcSubhead} id={`${id}-page-h`}>
+              <h4 className={wc.wcSubhead} id={`${id}-page-h`}>
                 {`${pi + 1}. ${page.title || "이름 없음"} (${page.slug}) · 섹션 ${page.sections.length} / ${L.sectionsPerPageMax}개`}
-              </h3>
+              </h4>
               <p className={`${styles.muted} ${f.keep}`}>{WC_COPY.pageHint}</p>
             </div>
             <div className={wc.wcGrid2}>
@@ -275,10 +275,10 @@ function SectionCard({
   return (
     <li className={`${wc.wcSection} ${s.excluded ? wc.wcSectionExcluded : ""}`} aria-labelledby={hId}>
       <div className={wc.wcSectionHead}>
-        <h4 id={hId} className={wc.wcSectionTitle}>
+        <h5 id={hId} className={wc.wcSectionTitle}>
           {title}
           {s.excluded && <span className={`${f.tag} ${wc.wcExcludedTag}`}>제외됨</span>}
-        </h4>
+        </h5>
         <div className={wc.wcSectionTools} role="group" aria-label={`${title} 순서·제외`}>
           <button type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={si === 0} onClick={() => onMove(-1)} aria-label={`${title} 위로`}>
             {WC_COPY.up}

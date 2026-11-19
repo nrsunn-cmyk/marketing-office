@@ -1,29 +1,17 @@
 /**
- * P3B-UI-PREP-01 홈페이지 구조·문구 — 화면 쪽 모델(서버 없이 먼저 만든 자리).
- * 근거: AGY Design/p3-production/P3B-HANDOFF.md(엔티티 한도·필드·상태·되돌리기), web-copy.html.
- *
- * 서버(Backend P3B)가 오면: 한도·허용값은 서버 도메인 상수로, 보기 타입은 서버 보기 타입으로,
- * toWebCopyPayload 의 칸 이름은 서버 입력 계약에 맞춘다. zod·서버 모듈은 가져오지 않는다.
+ * P3B 홈페이지 구조·문구 — 화면 쪽 모델(P3B-UI-PREP-01 → P3B-UI-CONNECT-01 서버 연결).
+ * 근거: AGY Design/p3-production/P3B-HANDOFF.md, web-copy.html, P3-COPY-FINAL.md 6절.
+ * 한도·경로·CTA 규칙은 서버 도메인 상수(@/domain/web-copy/constants, DB 와 같은 값)를 그대로 쓴다.
+ * 보기 타입은 서버(src/features/web-copy/server.ts) 것, 편집 값은 빈 칸을 ""로 둔 화면용 타입.
+ * zod·서버 모듈은 가져오지 않는다(type 만).
  */
+import { PUBLICATION_URL_RE } from "@/domain/channel-draft/constants";
+import { CTA_PATH_RE, SLUG_RE, WEB_COPY_LIMITS } from "@/domain/web-copy/constants";
+import type { WebCopyDocView } from "@/features/web-copy/server";
 import { charLength } from "./production-brief-model";
 
 export { charLength, counterText } from "./production-brief-model";
-
-/** 한도(인계표 1·2절, 글자 수는 코드 포인트) */
-export const WEB_COPY_LIMITS = {
-  pagesMax: 10,
-  sectionsPerPageMax: 12,
-  sectionsTotalMax: 60,
-  citationsMax: 10,
-  pageTitle: 60,
-  slug: 80,
-  sectionName: 80,
-  purpose: 200,
-  headline: 160,
-  body: 2000,
-  ctaLabel: 60,
-  ctaTarget: 200,
-} as const;
+export { SLUG_RE, WEB_COPY_LIMITS };
 
 export const WEB_COPY_STATUSES = {
   drafting: "작성 중",
@@ -34,9 +22,9 @@ export type WebCopyStatus = keyof typeof WEB_COPY_STATUSES;
 export const WEB_COPY_EDITABLE_STATUSES = ["drafting", "reviewed"] as const satisfies readonly WebCopyStatus[];
 export type WebCopyEditableStatus = (typeof WEB_COPY_EDITABLE_STATUSES)[number];
 
-// ── 자리용 보기 타입(서버 보기 타입이 오면 바꾼다) ──
+// ── 편집 값(서버 보기에서 빈 칸 null 을 ""로 바꾼 것). 새로 추가해 아직 저장 안 한 페이지·섹션은 id = null ──
 export interface WebCopySectionView {
-  id: string | null; // 새로 추가해 아직 저장 안 한 섹션은 null
+  id: string | null;
   sectionName: string;
   purpose: string;
   headline: string;
@@ -54,38 +42,10 @@ export interface WebCopyPageView {
   sortOrder: number;
   sections: WebCopySectionView[];
 }
-export interface WebCopyVersionView {
-  version: number;
-  status: WebCopyStatus;
-  savedAt: string; // ISO
-  note: string;
-  current: boolean;
-}
-export interface WebCopyDocView {
-  id: string;
-  status: WebCopyStatus;
-  revision: number;
-  /** 지금 편집본의 버전 번호(v3 등) */
-  version: number;
-  /** 기준 제작 브리프 버전 */
-  briefVersion: number | null;
-  /** 계산: 기준 제작 브리프가 최신 확정본보다 앞섬 */
-  stale: boolean;
-  pages: WebCopyPageView[];
-  versions: WebCopyVersionView[];
-}
 /** 근거 출처 고르기 목록(P2 리서치 출처) */
 export interface WebCopySourceOption {
   id: string;
   label: string;
-}
-export interface WebCopySectionData {
-  doc: WebCopyDocView | null;
-  canCreate: boolean;
-  createBlockedReason: string | null;
-  /** 최신 확정 제작 브리프 버전 */
-  latestBriefVersion: number | null;
-  sources: WebCopySourceOption[];
 }
 
 // ── 섹션 칸(화면 순서) ──
@@ -99,15 +59,18 @@ export const SECTION_FIELDS = [
 ] as const satisfies ReadonlyArray<{ key: keyof WebCopySectionView & keyof typeof WEB_COPY_LIMITS; label: string; required: boolean; multiline: boolean; rows: number; placeholder: string }>;
 export type SectionFieldKey = (typeof SECTION_FIELDS)[number]["key"];
 
-/** 경로: / 로 시작, 영소문자·숫자·- 와 / 로 나눈 조각. 홈은 "/" */
-export const SLUG_RE = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/;
+/** 경로: 홈 "/" 또는 한 단계 "/영소문자-숫자"(서버 SLUG_RE, Tester QA-P3B-PREP-01 Q1) */
 export function isValidSlug(s: string): boolean {
   return SLUG_RE.test(s) && charLength(s) <= WEB_COPY_LIMITS.slug;
 }
-/** CTA 이동 대상 권장 형식(/경로 또는 https://) — 경고만, 막지 않는다 */
+/**
+ * CTA 이동 대상: 비우거나, 서버와 같은 '/경로'(CTA_PATH_RE) 또는 https 주소(PUBLICATION_URL_RE).
+ * '//evil.com' 처럼 // 로 시작하는 주소(다른 사이트로 가는 상대 주소)는 거절(Tester QA-P3B-PREP-01 Q2). 최종 판단은 서버
+ */
 export function ctaTargetLooksOk(s: string): boolean {
-  if (!s.trim()) return true;
-  return /^\/\S*$/.test(s) || /^https:\/\/\S+$/.test(s);
+  const v = s.trim();
+  if (!v) return true;
+  return CTA_PATH_RE.test(v) || PUBLICATION_URL_RE.test(v);
 }
 
 // ── 편집 조작(새 배열을 돌려준다, sortOrder 는 1부터 다시 매김) ──
@@ -222,11 +185,28 @@ export function toWebCopyPayload(status: WebCopyEditableStatus, pages: readonly 
     })),
   };
 }
-/** 보기 → 편집 값(정렬해서 번호를 1부터) */
-export function docToEditor(doc: WebCopyDocView): { status: WebCopyEditableStatus; pages: WebCopyPageView[] } {
+/** 서버 보기 → 편집 값(정렬해서 번호를 1부터, 빈 칸 null 은 ""). 페이지·섹션 id 는 그대로 둔다 — 빠지면 서버가 새 섹션으로 본다(Tester QA-P3B-BACKEND-01 O2) */
+export function docToEditor(doc: Pick<WebCopyDocView, "status" | "pages">): { status: WebCopyEditableStatus; pages: WebCopyPageView[] } {
   return {
     status: doc.status === "reviewed" ? "reviewed" : "drafting",
-    pages: renumber(bySort(doc.pages)).map((p) => ({ ...p, sections: renumber(bySort(p.sections)) })),
+    pages: renumber(bySort(doc.pages)).map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      sortOrder: p.sortOrder,
+      sections: renumber(bySort(p.sections)).map((x) => ({
+        id: x.id,
+        sectionName: x.sectionName,
+        purpose: x.purpose ?? "",
+        headline: x.headline,
+        body: x.body ?? "",
+        ctaLabel: x.ctaLabel ?? "",
+        ctaTarget: x.ctaTarget ?? "",
+        citationIds: [...x.citationIds],
+        sortOrder: x.sortOrder,
+        excluded: x.excluded,
+      })),
+    })),
   };
 }
 export const sortedPages = (pages: readonly WebCopyPageView[]) => bySort(pages);
@@ -265,11 +245,33 @@ export const WC_COPY = {
   restore: "이 판으로 되돌리기",
   currentVersion: "현재 판",
   loadError: "홈페이지 구조·문구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  // 원인별 안내(AGY P3-COPY-FINAL.md 6절, DESIGN-P3B-COPY-02)
+  briefArchivedNotice: "바탕이 된 공통 제작 브리프가 보관되었습니다. 이 문서는 계속 고칠 수 있지만 최신 기준으로 맞추기는 할 수 없습니다.",
+  staleBanner: "바탕이 된 공통 제작 브리프가 새 버전으로 바뀌었습니다. 페이지 문구와 연결된 근거가 최신 기준과 맞는지 확인해 주세요.",
+  briefNotConfirmedNotice: "바탕이 된 공통 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다. 브리프 확정 후 다시 시도해 주세요.",
+  rebase: "최신 제작 브리프 기준으로 맞추기",
 } as const;
 
-export function staleWebCopyText(latestBriefVersion: number | null): string {
-  const v = latestBriefVersion ? `v${latestBriefVersion}로 ` : "";
-  return `공통 제작 브리프가 ${v}새로 확정되었습니다. 페이지 구조와 문구가 최신 제작 브리프와 맞는지 확인해 주세요. 맞추지 않아도 고칠 수 있습니다.`;
+/** 되돌리려는 판에 지금 없는 출처가 n개(AGY 6절). 서버가 출처 재검사를 하게 되면 쓴다(Master: 출처 삭제 경로가 없어 지금은 검사 안 함) */
+export const restoreMissingCitationsText = (n: number) => `되돌리려는 판에 지금은 없는 근거 출처가 ${n}개 있어 되돌릴 수 없습니다. 출처를 먼저 확인해 주세요.`;
+
+/**
+ * 바탕 브리프 안내(Master 최종 결정, Tester QA-P3B-BACKEND-01 O1): 서버 doc.stale·canRebase·rebaseBlockedReason 기준.
+ * - 맞출 수 있음 → staleBanner + 맞추기 단추
+ * - 막힘: 바탕 브리프 보관 → briefArchivedNotice 만(staleBanner 없음), 브리프 작성 중 → briefNotConfirmedNotice, 그 밖(판 100개) → 서버 문구
+ * - 고칠 수 없는 문서(readOnlyReason)나 이전 기준이 아니면 없음
+ */
+export type WebCopyBriefNotice = { kind: "stale"; text: string; canRebase: true } | { kind: "archived" | "notConfirmed" | "other"; text: string; canRebase: false } | null;
+export function webCopyBriefNotice(
+  doc: Pick<WebCopyDocView, "stale" | "canRebase" | "rebaseBlockedReason" | "readOnlyReason">,
+  brief: { archived: boolean; status: string },
+): WebCopyBriefNotice {
+  if (!doc.stale || doc.readOnlyReason !== null) return null;
+  if (doc.canRebase) return { kind: "stale", text: WC_COPY.staleBanner, canRebase: true };
+  if (!doc.rebaseBlockedReason) return null;
+  if (brief.archived) return { kind: "archived", text: WC_COPY.briefArchivedNotice, canRebase: false };
+  if (brief.status !== "ready") return { kind: "notConfirmed", text: WC_COPY.briefNotConfirmedNotice, canRebase: false };
+  return { kind: "other", text: doc.rebaseBlockedReason, canRebase: false };
 }
-export const rebaseLabel = (latestBriefVersion: number | null) => (latestBriefVersion ? `최신 제작 브리프(v${latestBriefVersion}) 기준으로 맞추기` : "최신 제작 브리프 기준으로 맞추기");
+
 export const restoreHint = (nextVersion: number) => `되돌리기를 누르면 과거 기록을 지우지 않고, 선택한 판의 내용을 새 편집본(v${nextVersion})으로 복원합니다.`;
