@@ -1,0 +1,139 @@
+/* P2E-UI-01 리드마그넷 영역(퍼널 보드 아래). 시안 Design/P2-next-concepts/lead-magnet.html(R1).
+ * 색·간격은 기존 토큰만 쓴다(src/styles/tokens.css). 넓은 화면은 카드 2~3열, 좁은 화면은 한 열. 44px 규칙은 funnel.module.css 의 .funnel 범위를 같이 쓴다. */
+
+.lmSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.lmHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.lmTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.lmSubhead {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+
+.lmAddBox {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3) var(--space-1);
+}
+.lmAddBox[open] {
+  padding-bottom: var(--space-3);
+}
+
+.lmFormGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+
+.lmGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lmCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow-wrap: anywhere;
+}
+/* 회색 배지(#64748b/#f1f5f9 4.34:1) 대비 보강. 퍼널 칸(.column)·QA-SOURCES-UI-01 O4 와 같은 방식:
+ * 밝은 화면에서만 카드 안 --text-muted 를 #475569(6.91:1)로, 어두운 화면은 원래 토큰 */
+.lmCard {
+  --text-muted: #475569;
+}
+:global([data-theme="dark"]) .lmCard {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .lmCard {
+    --text-muted: inherit;
+  }
+}
+.lmCardStale {
+  border: 2px solid var(--warning-border);
+}
+.lmCardArchived {
+  border-style: dashed;
+  background: var(--bg-subtle);
+}
+.lmBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+}
+.lmCardTitle {
+  margin: 0;
+  font-size: 1rem;
+  word-break: keep-all;
+}
+.lmMeta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+.lmMeta dt {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+}
+.lmMeta dd {
+  margin: 0;
+  min-width: 0;
+  white-space: pre-wrap;
+}
+.lmLinked {
+  margin: 0;
+  padding-left: 1.1em;
+}
+.lmActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.lmArchived {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* 퍼널 카드 안 리드마그넷 연결(전환 오퍼·리드마그넷 카드) */
+.lmCardLink {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+/* 좁은 화면: 이름·값을 위아래로 */
+@media (max-width: 480px) {
+  .lmMeta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .lmMeta dd {
+    margin-bottom: var(--space-2);
+  }
+}
