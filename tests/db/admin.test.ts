@@ -163,13 +163,14 @@ describe("열람 기록 보호·회수", () => {
     await asA((tx) => tx.query("select * from admin_list_audit(null, null, null, null, 1)"));
   });
 
-  it("정의자 함수 5개: search_path 고정, authenticated 만 실행", async () => {
+  it("정의자 함수 6개: search_path 고정, authenticated 만 실행", async () => {
     const fns = (await db.query<{ name: string; secdef: boolean; cfg: string[]; anon: boolean; auth: boolean }>(
       `select p.proname as name, p.prosecdef as secdef, p.proconfig as cfg,
               has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth
          from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname like 'admin\\_%' order by 1`,
     )).rows;
-    expect(fns.map((f) => f.name)).toEqual(["admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_usage_summary", "admin_whoami"]);
+    // admin_p3_progress 는 ADMIN-P3-01(migration 30)에서 더했다
+    expect(fns.map((f) => f.name)).toEqual(["admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_p3_progress", "admin_usage_summary", "admin_whoami"]);
     for (const f of fns) expect(f).toEqual({ name: f.name, secdef: true, cfg: ['search_path=""'], anon: false, auth: true });
     // app 보조 함수 5개(트리거 함수 포함)는 로그인·익명·public 모두 실행 불가
     const helpers = (await db.query<{ name: string; anon: boolean; auth: boolean }>(
