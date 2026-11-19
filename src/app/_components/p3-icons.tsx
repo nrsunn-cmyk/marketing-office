@@ -31,6 +31,42 @@ export function P3AssetsIcon({ width = 24, height = 24, ...p }: P) {
   );
 }
 
+/** icons/p3-video.svg — 영상 구성·파일 아이콘 */
+export function P3VideoIcon({ width = 24, height = 24, ...p }: P) {
+  return (
+    <svg {...base24} width={width} height={height} {...p}>
+      <rect x="3" y="5" width="14" height="14" rx="2" />
+      <path d="M17 10l4-2v8l-4-2z" />
+      <path d="M8 10l4 2-4 2z" />
+    </svg>
+  );
+}
+
+/** empty/empty-brief.svg — 아직 작성된 문서가 없음을 나타내는 문서 그림(P3-a·b·d·e·f 빈 상태, ASSETS-HANDOFF 4절) */
+export function EmptyBriefArt({ width = 96, height = 72, ...p }: P) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 96 72"
+      width={width}
+      height={height}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable={false}
+      {...p}
+    >
+      <rect x="24" y="10" width="48" height="52" rx="6" strokeOpacity="0.45" />
+      <path d="M34 24h28M34 34h20M34 44h14" strokeOpacity="0.7" />
+      <circle cx="66" cy="50" r="10" fill="currentColor" fillOpacity="0.12" />
+      <path d="M66 46v8M62 50h8" />
+    </svg>
+  );
+}
+
 /** empty/empty-assets.svg — 등록된 디자인 자산이 없음을 나타내는 이미지 프레임 그림 */
 export function EmptyAssetsArt({ width = 96, height = 72, ...p }: P) {
   return (
