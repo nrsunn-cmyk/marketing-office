@@ -129,11 +129,16 @@ export async function unlinkClaimSourceAction(_prev: FormState, fd: FormData): P
 /** DEC08-AI-COPY-01: AI 초안 결과(화면이 변형을 보여 주고 고르게 한다). 브리프에는 아직 저장되지 않은 상태 */
 export interface BriefCopyFormState extends FormState {
   runId?: string;
+  provider?: string;
+  model?: string;
   reused?: boolean;
   variants?: BriefCopyVariant[];
 }
 
-/** AI 문구 초안 만들기. 폼 필드: taskId, briefId, revision, (선택) variants 1~3, maxChars 50~5000. 키가 없으면 꺼짐 문구 */
+/**
+ * AI 문구 초안 만들기. 폼 필드: taskId, briefId, revision, (선택) provider(anthropic|openai|google)·model(서버 목록의 모델 ID),
+ * variants 1~3, maxChars 50~5000. 선택지는 listBriefCopyChoices()(키가 있는 공급자만). 키가 없으면 꺼짐 문구
+ */
 export async function generateBriefCopyAction(_prev: BriefCopyFormState, fd: FormData): Promise<BriefCopyFormState> {
   const taskId = uuid.safeParse(fd.get("taskId"));
   const briefId = uuid.safeParse(fd.get("briefId"));
@@ -148,7 +153,11 @@ export async function generateBriefCopyAction(_prev: BriefCopyFormState, fd: For
   const variants = opt("variants", 1, 3);
   const maxChars = opt("maxChars", 50, 5000);
   if (variants === null || maxChars === null) return BAD;
-  const r = await generateBriefCopy(taskId.data, briefId.data, rev.data, { variants, maxChars });
+  const pick = (name: string) => {
+    const v = fd.get(name);
+    return typeof v === "string" && v !== "" ? v.slice(0, 100) : undefined;
+  };
+  const r = await generateBriefCopy(taskId.data, briefId.data, rev.data, { provider: pick("provider"), model: pick("model"), variants, maxChars });
   if (!r.ok) return { message: r.message };
   return {
     ok: true,

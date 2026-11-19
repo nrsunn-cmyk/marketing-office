@@ -1,11 +1,11 @@
 /**
  * DEC08-AI-COPY-01: 브리프 AI 문구 초안 — 순수 함수(네트워크·키 없음). 호출은 src/features/brief/ai-copy.ts.
- * 주인님 결정 DEC-08 B: 서버에서 Claude Sonnet 5.5 호출, 외부로는 브리프 문장·주장·근거 "이름"만(자료 원문·파일·고객 연락처 없음).
+ * 주인님 결정 DEC-08 B(+R1: 공급자·모델 선택): 서버에서 호출, 외부로는 브리프 문장·주장·근거 "이름"만(자료 원문·파일·고객 연락처 없음).
  */
 import type { BriefCopyRequest } from "./ai-contract";
+import { BRIEF_COPY_MODELS } from "./ai-models";
 import type { BriefChannel } from "./constants";
 
-export const BRIEF_COPY_MODEL = "claude-sonnet-5-5";
 
 /** 채널별 기본 최대 글자 수(변형 1개). 계약 범위 50~5000 */
 export const BRIEF_COPY_MAX_CHARS: Record<BriefChannel, number> = {
@@ -99,18 +99,16 @@ export const BRIEF_COPY_SYSTEM = [
   "6. 출력은 지정된 JSON 형식만 씁니다.",
 ].join("\n");
 
-/** 공개 요금표(2026-11-03 사본) 기준 100만 토큰당 달러 → 토큰당 마이크로달러. 모르는 모델은 보수적으로 높은 값 */
-const PRICE: Record<string, { input: number; output: number }> = {
-  "claude-sonnet-5-5": { input: 2, output: 10 },
-  "claude-sonnet-5": { input: 2, output: 10 },
-  "claude-opus-5-5": { input: 4, output: 20 },
-  "claude-opus-5": { input: 5, output: 25 },
-  "claude-opus-4-8": { input: 5, output: 25 },
-};
-const FALLBACK_PRICE = { input: 5, output: 25 };
-
-/** 추정 비용(마이크로달러, 반올림). 대체 모델로 넘어간 경우 응답의 model 로 계산한다 */
+/**
+ * 추정 비용(마이크로달러, 반올림). 요금은 서버 고정 목록(ai-models.ts)에서 찾는다.
+ * 목록에 없는 모델(예: 거절 뒤 서버 쪽 대체 모델로 응답한 경우)은 목록에서 가장 비싼 요금으로 잡는다(보수적).
+ */
 export function estimateCostUsdMicro(model: string, usage: { inputTokens: number; outputTokens: number }): number {
-  const p = PRICE[model] ?? FALLBACK_PRICE;
+  const m = BRIEF_COPY_MODELS.find((x) => x.id === model);
+  const p = m ? { input: m.inputUsd, output: m.outputUsd } : MAX_PRICE;
   return Math.round(Math.max(0, usage.inputTokens) * p.input + Math.max(0, usage.outputTokens) * p.output);
 }
+const MAX_PRICE = {
+  input: Math.max(...BRIEF_COPY_MODELS.map((m) => m.inputUsd)),
+  output: Math.max(...BRIEF_COPY_MODELS.map((m) => m.outputUsd)),
+};

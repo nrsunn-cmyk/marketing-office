@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { briefCopyRequestSchema } from "./ai-contract";
-import { BRIEF_COPY_MODEL, buildBriefCopyRequest, canonicalJson, estimateCostUsdMicro } from "./ai-copy";
+import { buildBriefCopyRequest, canonicalJson, estimateCostUsdMicro } from "./ai-copy";
 
 const C1 = "11111111-1111-4111-8111-111111111111";
 const base = {
@@ -29,9 +29,10 @@ describe("DEC08 순수 함수", () => {
     expect(canonicalJson({ b: 1, a: [{ y: 2, x: null }] })).toBe(canonicalJson({ a: [{ x: null, y: 2 }], b: 1 }));
   });
 
-  it("비용: Sonnet 5.5 는 입력 2·출력 10 마이크로달러/토큰, 모르는 모델은 보수적으로 5·25", () => {
-    expect(BRIEF_COPY_MODEL).toBe("claude-sonnet-5-5");
+  it("비용: 모델 목록 요금(Sonnet 2·10, Luna 0.1·0.5, Argon 4·20), 목록 밖 모델은 목록 최고가(8·40)", () => {
     expect(estimateCostUsdMicro("claude-sonnet-5-5", { inputTokens: 3000, outputTokens: 5000 })).toBe(56000);
-    expect(estimateCostUsdMicro("unknown-model", { inputTokens: 1000, outputTokens: 1000 })).toBe(30000);
+    expect(estimateCostUsdMicro("gpt-6-luna", { inputTokens: 1000, outputTokens: 1000 })).toBe(600);
+    expect(estimateCostUsdMicro("gemini-4-argon", { inputTokens: 1000, outputTokens: 1000 })).toBe(24000);
+    expect(estimateCostUsdMicro("claude-opus-4-8", { inputTokens: 1000, outputTokens: 1000 })).toBe(48000);
   });
 });

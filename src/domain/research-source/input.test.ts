@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RESEARCH_SOURCE_LIMITS, researchSourceErrorFromDb, researchSourceInputSchema, reviewStatusSchema } from "./input";
+import { RESEARCH_SOURCE_LIMITS, researchSourceErrorFromDb, researchSourceInputSchema, reviewStatusSchema, topicParticle } from "./input";
 
 const NOW = new Date("2026-11-17T09:00:00Z"); // 한국 시각 18:00
 const schema = researchSourceInputSchema(() => NOW);
@@ -41,9 +41,9 @@ describe("출처 입력 규칙", () => {
     expect(firstMessage({ ...base, url: longUrl(RESEARCH_SOURCE_LIMITS.url + 1) })).toMatch(/^url:/);
     expect(schema.safeParse({ ...base, title: "가".repeat(300) }).success).toBe(true);
     expect(firstMessage({ ...base, title: "가".repeat(301) })).toMatch(/^title: 제목은 300자/);
-    expect(firstMessage({ ...base, publisher: "가".repeat(201) })).toMatch(/^publisher: 발행처/);
+    expect(firstMessage({ ...base, publisher: "가".repeat(201) })).toBe("publisher: 발행처는 200자까지 입력할 수 있습니다.");
     expect(schema.safeParse({ ...base, quotedExcerpt: "가".repeat(1000) }).success).toBe(true);
-    expect(firstMessage({ ...base, quotedExcerpt: "가".repeat(1001) })).toMatch(/^quotedExcerpt: 인용문/);
+    expect(firstMessage({ ...base, quotedExcerpt: "가".repeat(1001) })).toBe("quotedExcerpt: 인용문은 1000자까지 입력할 수 있습니다.");
   });
 
   it("빈 제목·공백뿐인 제목은 거절", () => {
@@ -64,6 +64,12 @@ describe("출처 입력 규칙", () => {
   it("검토 상태는 unverified·verified 만", () => {
     expect(reviewStatusSchema.safeParse("verified").success).toBe(true);
     expect(reviewStatusSchema.safeParse("approved").success).toBe(false);
+  });
+});
+
+describe("주제 조사(QA-SOURCES-UI-01 O1)", () => {
+  it("받침 있으면 은, 없으면 는, 한글이 아니면 은(는)", () => {
+    expect(["발행처", "인용문", "제목", "주소", "URL"].map(topicParticle)).toEqual(["발행처는", "인용문은", "제목은", "주소는", "URL은(는)"]);
   });
 });
 

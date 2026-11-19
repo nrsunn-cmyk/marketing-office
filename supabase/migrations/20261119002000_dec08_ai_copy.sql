@@ -6,7 +6,10 @@
 --      외부로 보낸 프롬프트 원문은 저장하지 않는다. 결과 변형(variants)만 저장해 채택·재사용에 쓴다.
 --      select 만 본인 업무실, 쓰기는 정의자 RPC 3개만(INSERT·UPDATE·DELETE·TRUNCATE 회수).
 --   3) 한도(app.brief_copy_limits): 업무실당 하루(업무실 시간대) 30번, 같은 브리프 60초에 1번,
---      월 추정 비용 상한 20,000,000 마이크로달러(20달러, 약 2.9만 원). 마감 전 예약은 1번당 250,000 마이크로달러로 계산.
+--      월 추정 비용 상한 20,000,000 마이크로달러(20달러, 약 2.9만 원, 공급자 합계).
+--      마감 전 예약은 그 모델 요금으로 최대치(입력 12,000 + 출력 20,000 토큰)를 잡아 계산한다(DEC-08-R1).
+--   3-1) 허용 공급자·모델(app.brief_copy_models, DEC-08-R1 주인님 지시 "OpenAI / Claude / Gemini 중 선택, 모델도 선택"):
+--      서버 목록(src/domain/brief/ai-models.ts)과 같아야 한다(시험으로 대조). 목록 밖 공급자·모델은 예약에서 거절.
 --      같은 브리프·같은 입력이 10분 안에 성공했으면 새로 부르지 않고 그 결과를 다시 쓴다(중복 과금 방지).
 --   4) RPC: reserve_brief_copy_run · finish_brief_copy_run · accept_brief_copy. 감사: copy_generate(마감), copy_accept(채택).
 --   5) update_content_brief: 'ai' 를 직접 보낼 수 없다. 지금 AI 초안이고 카피 글을 바꾸지 않으면 'ai' 유지, 바꾸면 보낸 값.
@@ -29,7 +32,9 @@ create table public.brief_copy_runs (
   workspace_id     uuid not null,
   brief_id         uuid not null,
   brief_revision   integer not null check (brief_revision > 0),
+  provider         text not null check (provider in ('anthropic', 'openai', 'google')),
   model            text not null check (length(model) between 1 and 100),
+  cost_estimate_usd_micro bigint not null check (cost_estimate_usd_micro between 0 and 5000000),
   input_hash       text not null check (input_hash ~ '^[0-9a-f]{64}$'),
   claim_ids        uuid[] not null default '{}' check (cardinality(claim_ids) <= 30),
   status           text not null default 'reserved' check (status in ('reserved', 'succeeded', 'rejected', 'refused', 'failed')),
@@ -62,11 +67,30 @@ revoke insert, update, delete, truncate on public.brief_copy_runs from authentic
 -- 3) 한도
 -- ─────────────────────────────────────────────
 create or replace function app.brief_copy_limits(
-  out daily_runs integer, out brief_interval interval, out monthly_cap_usd_micro bigint, out reserved_estimate_usd_micro bigint, out reuse_window interval
+  out daily_runs integer, out brief_interval interval, out monthly_cap_usd_micro bigint, out reuse_window interval,
+  out estimate_input_tokens integer, out estimate_output_tokens integer
 ) language sql immutable set search_path = '' as $$
-  select 30, interval '60 seconds', 20000000::bigint, 250000::bigint, interval '10 minutes'
+  select 30, interval '60 seconds', 20000000::bigint, interval '10 minutes', 12000, 20000
 $$;
 revoke execute on function app.brief_copy_limits() from public, anon, authenticated;
+
+-- 허용 공급자·모델과 요금(100만 토큰당 달러 = 토큰당 마이크로달러). 소개 할인 기간이 있는 모델은 할인 뒤(높은) 요금으로 둔다(상한을 넘지 않게).
+-- 출처: Anthropic 공개 요금표(2026-11-03 사본), OpenAI developers.openai.com/api/docs/pricing(2026-11-19), Google ai.google.dev/gemini-api/docs/pricing(2026-11-19)
+create or replace function app.brief_copy_models()
+returns table (provider text, model text, input_usd numeric, output_usd numeric)
+language sql immutable set search_path = '' as $$
+  values
+    ('anthropic', 'claude-sonnet-5-5', 2.00, 10.00),
+    ('anthropic', 'claude-haiku-5-5', 0.10, 0.50),
+    ('anthropic', 'claude-opus-5-5', 4.00, 20.00),
+    ('openai', 'gpt-6.2-sol', 2.00, 10.00),
+    ('openai', 'gpt-6-luna', 0.10, 0.50),
+    ('openai', 'gpt-6.2-astra', 8.00, 40.00),
+    ('google', 'gemini-3.8-flash', 1.50, 7.50),
+    ('google', 'gemini-3.5-flash-lite', 0.30, 2.50),
+    ('google', 'gemini-4-argon', 4.00, 20.00)
+$$;
+revoke execute on function app.brief_copy_models() from public, anon, authenticated;
 
 -- ─────────────────────────────────────────────
 -- 4) RPC
@@ -77,6 +101,7 @@ create or replace function public.reserve_brief_copy_run(
   p_brief_id          uuid,
   p_expected_revision integer,
   p_input_hash        text,
+  p_provider          text,
   p_model             text,
   p_claim_ids         uuid[]
 ) returns table (run_id uuid, reused boolean)
@@ -89,6 +114,7 @@ declare
   prev uuid;
   n    integer;
   cost bigint;
+  est  bigint;
   ids  uuid[] := coalesce(p_claim_ids, '{}');
 begin
   if uid is null then
@@ -109,8 +135,12 @@ begin
   if p_input_hash is null or p_input_hash !~ '^[0-9a-f]{64}$' then
     raise exception 'VALIDATION: 입력 확인값 형식이 올바르지 않습니다' using errcode = '22023';
   end if;
-  if p_model is null or length(p_model) not between 1 and 100 then
-    raise exception 'VALIDATION: 모델 이름이 올바르지 않습니다' using errcode = '22023';
+  select * into lim from app.brief_copy_limits();
+  -- 허용 목록 밖 공급자·모델은 거절(임의 모델 이름 불가). 예약 비용은 그 모델 요금으로 최대치를 잡는다
+  select round(lim.estimate_input_tokens * m.input_usd + lim.estimate_output_tokens * m.output_usd)::bigint into est
+    from app.brief_copy_models() m where m.provider = p_provider and m.model = p_model;
+  if est is null then
+    raise exception 'VALIDATION: 고를 수 없는 AI 모델입니다' using errcode = '22023';
   end if;
   if cardinality(ids) > 30 or exists (
     select 1 from unnest(ids) i
@@ -119,10 +149,9 @@ begin
     raise exception 'VALIDATION: 이 브리프의 주장만 보낼 수 있습니다' using errcode = '22023';
   end if;
 
-  select * into lim from app.brief_copy_limits();
   select r.id into prev
     from public.brief_copy_runs r
-   where r.brief_id = b.id and r.status = 'succeeded' and r.input_hash = p_input_hash
+   where r.brief_id = b.id and r.status = 'succeeded' and r.input_hash = p_input_hash and r.provider = p_provider and r.model = p_model
      and r.created_at > now() - lim.reuse_window
    order by r.created_at desc limit 1;
   if prev is not null then
@@ -141,21 +170,21 @@ begin
   if n >= lim.daily_runs then
     raise exception 'RATE_LIMITED: 오늘 AI 문구 생성 횟수(%번)를 다 썼습니다. 내일 다시 쓸 수 있습니다', lim.daily_runs using errcode = 'P0001';
   end if;
-  select coalesce(sum(case when r.status = 'reserved' then lim.reserved_estimate_usd_micro else coalesce(r.cost_usd_micro, 0) end), 0) into cost
+  select coalesce(sum(case when r.status = 'reserved' then r.cost_estimate_usd_micro else coalesce(r.cost_usd_micro, 0) end), 0) into cost
     from public.brief_copy_runs r
    where r.workspace_id = b.workspace_id
      and r.created_at >= (date_trunc('month', now() at time zone tz) at time zone tz);
-  if cost + lim.reserved_estimate_usd_micro > lim.monthly_cap_usd_micro then
+  if cost + est > lim.monthly_cap_usd_micro then
     raise exception 'BUDGET_EXCEEDED: 이번 달 AI 문구 생성 비용 상한에 닿았습니다. 다음 달에 다시 쓸 수 있습니다' using errcode = 'P0001';
   end if;
 
-  insert into public.brief_copy_runs (workspace_id, brief_id, brief_revision, model, input_hash, claim_ids, created_by)
-  values (b.workspace_id, b.id, b.revision, p_model, p_input_hash, ids, uid)
+  insert into public.brief_copy_runs (workspace_id, brief_id, brief_revision, provider, model, cost_estimate_usd_micro, input_hash, claim_ids, created_by)
+  values (b.workspace_id, b.id, b.revision, p_provider, p_model, est, p_input_hash, ids, uid)
   returning id into prev;
   return query select prev, false;
 end $$;
-revoke execute on function public.reserve_brief_copy_run(uuid, integer, text, text, uuid[]) from public, anon;
-grant execute on function public.reserve_brief_copy_run(uuid, integer, text, text, uuid[]) to authenticated;
+revoke execute on function public.reserve_brief_copy_run(uuid, integer, text, text, text, uuid[]) from public, anon;
+grant execute on function public.reserve_brief_copy_run(uuid, integer, text, text, text, uuid[]) to authenticated;
 
 -- 4-2) 마감: 예약 행에 결과를 한 번만 적는다. 성공이면 변형 1~3개(글 1~5000자, 쓴 주장 id 는 예약 때 보낸 것 안에서).
 create or replace function public.finish_brief_copy_run(
@@ -220,7 +249,7 @@ begin
          input_tokens = p_input_tokens, output_tokens = p_output_tokens, cost_usd_micro = p_cost_usd_micro, finished_at = now()
    where id = r.id;
   perform app.brief_audit(r.workspace_id, r.brief_id, 'copy_generate', null,
-    jsonb_build_object('run_id', r.id, 'status', p_status, 'model', r.model, 'input_tokens', p_input_tokens,
+    jsonb_build_object('run_id', r.id, 'status', p_status, 'provider', r.provider, 'model', r.model, 'input_tokens', p_input_tokens,
                        'output_tokens', p_output_tokens, 'cost_usd_micro', p_cost_usd_micro));
 end $$;
 revoke execute on function public.finish_brief_copy_run(uuid, text, jsonb, jsonb, text, integer, integer, bigint) from public, anon;

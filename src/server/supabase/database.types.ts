@@ -167,14 +167,14 @@ isOneToOne: false
                   ]
                 },"brief_copy_runs": {
                   Row: {
-                    "accepted_at": string | null,"accepted_variant": number | null,"brief_id": string,"brief_revision": number,"claim_ids": (string)[],"cost_usd_micro": number | null,"created_at": string,"created_by": string,"error_code": string | null,"finished_at": string | null,"id": string,"input_hash": string,"input_tokens": number | null,"model": string,"output_tokens": number | null,"problems": Json | null,"status": string,"variants": Json | null,"workspace_id": string
+                    "accepted_at": string | null,"accepted_variant": number | null,"brief_id": string,"brief_revision": number,"claim_ids": (string)[],"cost_estimate_usd_micro": number,"cost_usd_micro": number | null,"created_at": string,"created_by": string,"error_code": string | null,"finished_at": string | null,"id": string,"input_hash": string,"input_tokens": number | null,"model": string,"output_tokens": number | null,"problems": Json | null,"provider": string,"status": string,"variants": Json | null,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"accepted_variant"?: number | null,"brief_id": string,"brief_revision": number,"claim_ids"?: (string)[],"cost_usd_micro"?: number | null,"created_at"?: string,"created_by": string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input_hash": string,"input_tokens"?: number | null,"model": string,"output_tokens"?: number | null,"problems"?: Json | null,"status"?: string,"variants"?: Json | null,"workspace_id": string
+                    "accepted_at"?: string | null,"accepted_variant"?: number | null,"brief_id": string,"brief_revision": number,"claim_ids"?: (string)[],"cost_estimate_usd_micro": number,"cost_usd_micro"?: number | null,"created_at"?: string,"created_by": string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input_hash": string,"input_tokens"?: number | null,"model": string,"output_tokens"?: number | null,"problems"?: Json | null,"provider": string,"status"?: string,"variants"?: Json | null,"workspace_id": string
                   }
                   Update: {
-                    "accepted_at"?: string | null,"accepted_variant"?: number | null,"brief_id"?: string,"brief_revision"?: number,"claim_ids"?: (string)[],"cost_usd_micro"?: number | null,"created_at"?: string,"created_by"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input_hash"?: string,"input_tokens"?: number | null,"model"?: string,"output_tokens"?: number | null,"problems"?: Json | null,"status"?: string,"variants"?: Json | null,"workspace_id"?: string
+                    "accepted_at"?: string | null,"accepted_variant"?: number | null,"brief_id"?: string,"brief_revision"?: number,"claim_ids"?: (string)[],"cost_estimate_usd_micro"?: number,"cost_usd_micro"?: number | null,"created_at"?: string,"created_by"?: string,"error_code"?: string | null,"finished_at"?: string | null,"id"?: string,"input_hash"?: string,"input_tokens"?: number | null,"model"?: string,"output_tokens"?: number | null,"problems"?: Json | null,"provider"?: string,"status"?: string,"variants"?: Json | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -902,7 +902,7 @@ isOneToOne: false
             }[]
                            },
 "reserve_brief_copy_run":
-{ Args: { "p_brief_id": string,"p_claim_ids": (string)[],"p_expected_revision": number,"p_input_hash": string,"p_model": string }; Returns: {
+{ Args: { "p_brief_id": string,"p_claim_ids": (string)[],"p_expected_revision": number,"p_input_hash": string,"p_model": string,"p_provider": string }; Returns: {
               "reused": boolean,"run_id": string
             }[]
                            },

@@ -15,12 +15,19 @@ const CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const WITH_OFFSET = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
+/** 주제 조사: 마지막 글자 받침이 있으면 "은", 없으면 "는"(한글이 아니면 "은(는)") — QA-SOURCES-UI-01 O1 */
+export function topicParticle(word: string): string {
+  const c = word.trim().slice(-1).charCodeAt(0);
+  if (!(c >= 0xac00 && c <= 0xd7a3)) return `${word}은(는)`;
+  return `${word}${(c - 0xac00) % 28 === 0 ? "는" : "은"}`;
+}
+
 /** 빈 칸은 null 로 */
 const optionalText = (max: number, label: string) =>
   z
     .string()
     .trim()
-    .max(max, `${label}은(는) ${max}자까지 입력할 수 있습니다.`)
+    .max(max, `${topicParticle(label)} ${max}자까지 입력할 수 있습니다.`)
     .transform((v) => (v === "" ? null : v))
     .nullable()
     .optional()

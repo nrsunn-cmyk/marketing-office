@@ -4,6 +4,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
+import { BRIEF_COPY_MODELS } from "@/domain/brief/ai-models";
 import { buildStrategyDraft } from "@/domain/strategy";
 import { asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture, type Tx } from "./harness";
 
@@ -56,8 +57,8 @@ async function setup(f: Fixture = a) {
 /** 트랜잭션 안에서는 같은 tx 로 읽는다(관리자 연결을 쓰면 PGlite 단일 연결이 서로 기다린다) */
 const revIn = async (tx: Tx, briefId: string) => (await one<{ revision: number }>(tx, "select revision from content_briefs where id = $1", [briefId])).revision;
 const rev = async (briefId: string) => (await one<{ revision: number }>(db, "select revision from content_briefs where id = $1", [briefId])).revision;
-const reserve = (tx: Tx, briefId: string, revision: number, h: string, claims: string[]) =>
-  one<{ run_id: string; reused: boolean }>(tx, "select * from reserve_brief_copy_run($1, $2, $3, 'claude-sonnet-5-5', $4::uuid[])", [briefId, revision, h, claims]);
+const reserve = (tx: Tx, briefId: string, revision: number, h: string, claims: string[], provider = "anthropic", model = "claude-sonnet-5-5") =>
+  one<{ run_id: string; reused: boolean }>(tx, "select * from reserve_brief_copy_run($1, $2, $3, $4, $5, $6::uuid[])", [briefId, revision, h, provider, model, claims]);
 const finish = (tx: Tx, runId: string, status: string, variants: unknown, o: { problems?: unknown; err?: string | null; inT?: number; outT?: number; cost?: number } = {}) =>
   tx.query("select finish_brief_copy_run($1, $2, $3, $4, $5, $6, $7, $8)", [
     runId, status, variants === null ? null : JSON.stringify(variants), o.problems === undefined ? null : JSON.stringify(o.problems), o.err ?? null, o.inT ?? 3000, o.outT ?? 5000, o.cost ?? 56000,
@@ -74,8 +75,9 @@ describe("정상 흐름", () => {
     const r0 = await rev(s.briefId);
     const res = await asA((tx) => reserve(tx, s.briefId, r0, hash(1), [s.c1]));
     expect(res.reused).toBe(false);
-    const row = await one(db, "select status, brief_revision, model, claim_ids, created_by from brief_copy_runs where id = $1", [res.run_id]);
-    expect(row).toEqual({ status: "reserved", brief_revision: r0, model: "claude-sonnet-5-5", claim_ids: [s.c1], created_by: a.userId });
+    const row = await one(db, "select status, brief_revision, provider, model, cost_estimate_usd_micro::int as est, claim_ids, created_by from brief_copy_runs where id = $1", [res.run_id]);
+    // 예약 비용 = 그 모델 요금 × 최대치(입력 12,000·출력 20,000 토큰) = 12000×2 + 20000×10
+    expect(row).toEqual({ status: "reserved", brief_revision: r0, provider: "anthropic", model: "claude-sonnet-5-5", est: 224000, claim_ids: [s.c1], created_by: a.userId });
 
     const variants = [{ text: "첫 변형 문구", usedClaimIds: [s.c1] }, { text: "둘째 변형 문구", usedClaimIds: [] }];
     await asA((tx) => finish(tx, res.run_id, "succeeded", variants));
@@ -101,7 +103,7 @@ describe("정상 흐름", () => {
       "select action, details from audit_events where entity_type = 'content_brief' and entity_id = $1 and action like 'copy_%' order by seq", [s.briefId],
     )).rows;
     expect(acts.map((x) => x.action)).toEqual(["copy_generate", "copy_accept"]);
-    expect(acts[0].details).toMatchObject({ run_id: res.run_id, status: "succeeded", model: "claude-sonnet-5-5", cost_usd_micro: 56000 });
+    expect(acts[0].details).toMatchObject({ run_id: res.run_id, status: "succeeded", provider: "anthropic", model: "claude-sonnet-5-5", cost_usd_micro: 56000 });
     expect(acts[1].details).toEqual({ run_id: res.run_id, variant: 2, used_claim_ids: [] });
   });
 
@@ -149,10 +151,36 @@ describe("입력 검사", () => {
   });
 });
 
+describe("공급자·모델 허용 목록(DEC-08-R1)", () => {
+  it("DB 목록(app.brief_copy_models)과 서버 목록(ai-models.ts)이 같다(공급자·모델·요금)", async () => {
+    const rows = (await db.query<{ provider: string; model: string; input_usd: string; output_usd: string }>("select * from app.brief_copy_models()")).rows;
+    const dbList = rows.map((r) => `${r.provider}/${r.model}/${Number(r.input_usd)}/${Number(r.output_usd)}`).sort();
+    const tsList = BRIEF_COPY_MODELS.map((m) => `${m.provider}/${m.id}/${m.inputUsd}/${m.outputUsd}`).sort();
+    expect(dbList).toEqual(tsList);
+    expect(dbList).toHaveLength(9);
+  });
+
+  it("목록 밖 공급자·모델·섞인 조합은 거절, 모델별 예약 비용·기록, 재사용은 같은 공급자·모델만", async () => {
+    const s = await setup();
+    const r0 = await rev(s.briefId);
+    for (const [p, m] of [["openai", "gpt-4o"], ["mistral", "claude-sonnet-5-5"], ["openai", "claude-sonnet-5-5"], ["google", "gemini-2.5-pro"], ["anthropic", ""]])
+      await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(40), [], p, m)), /고를 수 없는 AI 모델/);
+    const astra = await asA((tx) => reserve(tx, s.briefId, r0, hash(41), [], "openai", "gpt-6.2-astra"));
+    expect(await one(db, "select provider, model, cost_estimate_usd_micro::int as est from brief_copy_runs where id = $1", [astra.run_id]))
+      .toEqual({ provider: "openai", model: "gpt-6.2-astra", est: 12000 * 8 + 20000 * 40 });
+    await asA((tx) => finish(tx, astra.run_id, "succeeded", [{ text: "문구", usedClaimIds: [] }]));
+    await age(s.briefId);
+    // 같은 확인값이라도 모델이 다르면 재사용하지 않는다
+    const luna = await asA((tx) => reserve(tx, s.briefId, r0, hash(41), [], "openai", "gpt-6-luna"));
+    expect(luna.reused).toBe(false);
+    expect(await asA((tx) => reserve(tx, s.briefId, r0, hash(41), [], "openai", "gpt-6.2-astra"))).toEqual({ run_id: astra.run_id, reused: true });
+  });
+});
+
 describe("한도", () => {
   /** 이 업무실의 기존 기록을 40일 전으로 밀어 오늘·이번 달 계산에서 뺀다(다른 시험과 섞이지 않게) */
   const clear = () => db.query("update brief_copy_runs set created_at = now() - interval '40 days' where workspace_id = $1", [a.workspaceId]);
-  it("같은 브리프 1분 1번, 업무실 하루 30번, 월 비용 상한(예약 중은 25만 마이크로달러로 계산)", async () => {
+  it("같은 브리프 1분 1번, 업무실 하루 30번, 월 비용 상한(공급자 합계, 예약 중은 모델별 최대치로 계산)", async () => {
     await clear();
     const s = await setup();
     const t = await setup();
@@ -164,8 +192,8 @@ describe("한도", () => {
 
     // 하루 30번: 오늘 기록 28개를 더해 30개로 만든다(관리자 연결, 2분 전 시각)
     await db.query(
-      `insert into brief_copy_runs (workspace_id, brief_id, brief_revision, model, input_hash, status, finished_at, error_code, cost_usd_micro, created_by, created_at)
-       select $1, $2, 1, 'claude-sonnet-5-5', lpad(to_hex(g), 64, '0'), 'failed', now(), 'TIMEOUT', 0, $3, now() - interval '2 minutes'
+      `insert into brief_copy_runs (workspace_id, brief_id, brief_revision, provider, model, cost_estimate_usd_micro, input_hash, status, finished_at, error_code, cost_usd_micro, created_by, created_at)
+       select $1, $2, 1, 'openai', 'gpt-6.2-sol', 224000, lpad(to_hex(g), 64, '0'), 'failed', now(), 'TIMEOUT', 0, $3, now() - interval '2 minutes'
          from generate_series(1000, 1027) g`,
       [a.workspaceId, t.briefId, a.userId],
     );
@@ -174,19 +202,19 @@ describe("한도", () => {
     // 하루 기록 28개를 지우면 다시 예약할 수 있는 상태(이 시험이 넣은 것만)
     await db.query("delete from brief_copy_runs where brief_id = $1 and status = 'failed' and error_code = 'TIMEOUT' and cost_usd_micro = 0", [t.briefId]);
 
-    // 월 상한 2천만 마이크로달러: 이번 달 실패 4개(각 4,937,500 = 1,975만)를 더한다
+    // 월 상한 2천만 마이크로달러(공급자 합계): 이번 달 Gemini 실패 4개(각 4,944,000 = 1,977.6만)를 더한다
     await db.query(
-      `insert into brief_copy_runs (workspace_id, brief_id, brief_revision, model, input_hash, status, finished_at, cost_usd_micro, created_by, created_at)
-       select $1, $2, 1, 'claude-sonnet-5-5', lpad(to_hex(g), 64, '0'), 'failed', now(), 4937500, $3, now() - interval '2 minutes' from generate_series(2000, 2003) g`,
+      `insert into brief_copy_runs (workspace_id, brief_id, brief_revision, provider, model, cost_estimate_usd_micro, input_hash, status, finished_at, cost_usd_micro, created_by, created_at)
+       select $1, $2, 1, 'google', 'gemini-4-argon', 448000, lpad(to_hex(g), 64, '0'), 'failed', now(), 4944000, $3, now() - interval '2 minutes' from generate_series(2000, 2003) g`,
       [a.workspaceId, t.briefId, a.userId],
     );
-    // 지금 이번 달 기록: 예약 2개(s, t: 각 25만) + 실패 4개(각 4,937,500) = 50만 + 1,975만 = 2,025만 → 예약 불가
+    // 지금 이번 달: 예약 2개(s, t: Sonnet 각 22.4만) + 실패 4개 1,977.6만 = 2,022.4만, 새 예약 22.4만 → 넘침
     await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(14), [])), /BUDGET_EXCEEDED/);
-    // 예약 하나를 0원 실패로 마감하면 1,975만 + 25만 = 2,000만, 새 예약 25만을 더하면 넘침 → 여전히 거절
+    // 예약 하나를 0원 실패로 마감: 1,977.6만 + 22.4만 = 2,000만, 새 예약 22.4만을 더하면 넘침 → 여전히 거절
     const reserved = (await db.query<{ id: string }>("select id from brief_copy_runs where brief_id = any($1::uuid[]) and status = 'reserved' order by created_at limit 1", [[s.briefId, t.briefId]])).rows[0].id;
     await asA((tx) => finish(tx, reserved, "failed", null, { cost: 0 }));
     await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(15), [])), /BUDGET_EXCEEDED/);
-    // 하나를 더 0원으로 바꾸면 1,975만 + 0 + 25만(새) = 2,000만 ≤ 상한 → 허용
+    // 하나를 더 0원으로: 1,977.6만 + 22.4만(새) = 2,000만 ≤ 상한(경계) → 허용
     const reserved2 = (await db.query<{ id: string }>("select id from brief_copy_runs where brief_id = any($1::uuid[]) and status = 'reserved' limit 1", [[s.briefId, t.briefId]])).rows[0].id;
     await asA((tx) => finish(tx, reserved2, "failed", null, { cost: 0 }));
     expect((await asA((tx) => reserve(tx, s.briefId, r0, hash(16), []))).reused).toBe(false);
@@ -206,10 +234,11 @@ describe("업무실 경계 (P0)", () => {
     expect(await asB((tx) => tx.query("select 1 from brief_copy_runs").then((r) => r.rows.length))).toBe(0);
     expect(await asA((tx) => tx.query("select 1 from brief_copy_runs where id = $1", [res.run_id]).then((r) => r.rows.length))).toBe(1);
     await expectDbError(asA((tx) => tx.query("update brief_copy_runs set status = 'reserved' where id = $1", [res.run_id])), /permission denied/);
-    await expectDbError(asA((tx) => tx.query("insert into brief_copy_runs (workspace_id, brief_id, brief_revision, model, input_hash, created_by) values ($1, $2, 1, 'm', $3, $4)", [a.workspaceId, s.briefId, hash(22), a.userId])), /permission denied/);
+    await expectDbError(asA((tx) => tx.query("insert into brief_copy_runs (workspace_id, brief_id, brief_revision, provider, model, cost_estimate_usd_micro, input_hash, created_by) values ($1, $2, 1, 'openai', 'gpt-6.2-sol', 0, $3, $4)", [a.workspaceId, s.briefId, hash(22), a.userId])), /permission denied/);
     await expectDbError(asA((tx) => tx.query("delete from brief_copy_runs where id = $1", [res.run_id])), /permission denied/);
-    await expectDbError(asAnon((tx) => tx.query("select * from reserve_brief_copy_run($1, 1, $2, 'm', '{}')", [s.briefId, hash(23)])), /permission denied/);
+    await expectDbError(asAnon((tx) => tx.query("select * from reserve_brief_copy_run($1, 1, $2, 'anthropic', 'claude-sonnet-5-5', '{}')", [s.briefId, hash(23)])), /permission denied/);
     await expectDbError(asA((tx) => tx.query("select * from app.brief_copy_limits()")), /permission denied/);
+    await expectDbError(asA((tx) => tx.query("select * from app.brief_copy_models()")), /permission denied/);
 
     const fns = (await db.query<{ name: string; secdef: boolean; cfg: string[]; anon: boolean; auth: boolean }>(
       `select p.proname as name, p.prosecdef as secdef, p.proconfig as cfg,
