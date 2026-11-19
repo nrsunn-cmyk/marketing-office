@@ -599,8 +599,12 @@ begin
   end if;
   perform app.assert_web_copy_open(d);
   select x.* into b from public.production_briefs x where x.id = d.production_brief_id;
-  if b.archived_at is not null or b.status <> 'ready' then
-    raise exception 'INVALID_TRANSITION: 제작 브리프가 확정 상태가 아니어서 맞출 수 없습니다' using errcode = 'P0001';
+  -- 원인별 문구(Tester QA-P3B-PREP-01 Q4). 보관·작성 중 브리프로는 맞출 수 없지만, 문서는 지난 브리프 기준 그대로 고칠 수 있다
+  if b.archived_at is not null then
+    raise exception 'INVALID_TRANSITION: 보관한 제작 브리프라 맞출 수 없습니다. 이 문서는 지난 브리프 기준 그대로 고칠 수 있습니다' using errcode = 'P0001';
+  end if;
+  if b.status <> 'ready' then
+    raise exception 'INVALID_TRANSITION: 제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요' using errcode = 'P0001';
   end if;
   if b.revision = d.source_brief_revision then
     raise exception 'VALIDATION: 이미 지금 제작 브리프 기준입니다' using errcode = '22023';

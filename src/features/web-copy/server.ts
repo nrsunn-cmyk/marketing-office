@@ -57,6 +57,8 @@ export interface WebCopyDocView {
   staleLabel: string | null;
   /** 맞추기를 누를 수 있는지(브리프가 확정·보관 안 됨이고 문서를 고칠 수 있을 때) */
   canRebase: boolean;
+  /** 이전 브리프 기준인데 맞출 수 없는 이유(브리프 보관·작성 중·판 100). 맞출 수 있거나 경고가 없으면 null */
+  rebaseBlockedReason: string | null;
   /** 판 100개가 차서 저장·되돌리기·맞추기를 할 수 없는지(보관 뒤 마지막 판 복사로 새 문서) */
   versionsFull: boolean;
   /** 고칠 수 없는 이유. null 이면 고칠 수 있음 */
@@ -170,6 +172,16 @@ export async function getWebCopyFor(productionBriefId: string): Promise<Result<W
       stale,
       staleLabel: stale ? BRIEF_STALE_LABEL : null,
       canRebase: stale && b.status === "ready" && !briefArchived && readOnlyReason === null && !versionsFull,
+      rebaseBlockedReason:
+        !stale || readOnlyReason !== null
+          ? null
+          : briefArchived
+            ? "보관한 제작 브리프라 맞출 수 없습니다. 이 문서는 지난 브리프 기준 그대로 고칠 수 있습니다."
+            : b.status !== "ready"
+              ? "제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요."
+              : versionsFull
+                ? "판이 100개라 맞출 수 없습니다. 문서를 보관하고 마지막 판을 복사해 새 문서를 만들어 주세요."
+                : null,
       versionsFull,
       readOnlyReason,
       createdAt: active.created_at,

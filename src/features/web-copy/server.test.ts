@@ -77,11 +77,27 @@ describe("getWebCopyFor", () => {
     ];
     const r = await getWebCopyFor("b1");
     if (!r.ok) throw new Error(r.message);
-    expect(r.data.doc).toMatchObject({ id: "d1", displayLabel: "검토 완료", revision: 4, currentVersionNo: 2, currentVersionId: "v2", stale: true, staleLabel: "이전 브리프 기준", canRebase: true, versionsFull: false, readOnlyReason: null });
+    expect(r.data.doc).toMatchObject({ id: "d1", displayLabel: "검토 완료", revision: 4, currentVersionNo: 2, currentVersionId: "v2", stale: true, staleLabel: "이전 브리프 기준", canRebase: true, rebaseBlockedReason: null, versionsFull: false, readOnlyReason: null });
     expect(r.data.doc?.pages[0].sections[0]).toMatchObject({ id: "s1", sectionName: "첫 화면", citationIds: [] });
     expect(r.data.versions.map((v) => [v.versionNo, v.kindLabel, v.current])).toEqual([[2, "되돌림", true], [1, "처음 만듦", false]]);
     expect(r.data.versions[0]).not.toHaveProperty("content");
     expect(r.data).toMatchObject({ canCreate: false, createBlockedReason: expect.stringMatching(/작업 중인 홈페이지 문서가 이미/) });
+  });
+
+  it("맞출 수 없는 이유(Q4): 브리프 보관·작성 중은 원인별 문구, 경고가 없으면 null", async () => {
+    ROWS.web_copy_docs = [{ id: "d1", status: "drafting", archived_at: null, revision: 1, current_version_no: 1, source_brief_revision: 3, created_at: "c", updated_at: "u", production_brief_id: "b1" }];
+    ROWS.web_copy_versions = [{ id: "v1", doc_id: "d1", version_no: 1, kind: "create", status: "drafting", source_brief_revision: 3, restored_from_version_no: null, created_at: "c1", content }];
+    const doc = async () => {
+      const r = await getWebCopyFor("b1");
+      if (!r.ok) throw new Error(r.message);
+      return r.data.doc;
+    };
+    ROWS.production_briefs = [{ ...(ROWS.production_briefs[0] as object), status: "drafting" }];
+    expect(await doc()).toMatchObject({ stale: true, canRebase: false, rebaseBlockedReason: expect.stringMatching(/작성 중이라 맞출 수 없습니다/) });
+    ROWS.production_briefs = [{ ...(ROWS.production_briefs[0] as object), status: "ready", archived_at: "x" }];
+    expect(await doc()).toMatchObject({ canRebase: false, rebaseBlockedReason: expect.stringMatching(/보관한 제작 브리프라 맞출 수 없습니다/) });
+    ROWS.production_briefs = [{ ...(ROWS.production_briefs[0] as object), archived_at: null, revision: 3 }];
+    expect(await doc()).toMatchObject({ stale: false, rebaseBlockedReason: null });
   });
 
   it("만들 수 없는 이유 순서와 읽기 전용: 프로젝트 보관 > 전략 작업 취소 > 브리프 보관 > 확정 아님 > web_copy 없음", async () => {

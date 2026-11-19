@@ -232,9 +232,14 @@ describe("저장·되돌리기·맞추기·보관", () => {
     expect(v).toEqual({ kind: "rebase", source_brief_revision: br.revision + 1 });
     // 브리프를 drafting 으로 돌리면 맞추기는 안 되지만 저장은 된다
     await asA((tx) => tx.query("select update_production_brief($1, $2, '새 제목', '대상', '메시지', array['web_copy'], '범위', null, null, 'drafting')", [br.id, br.revision + 1]));
-    await expectDbError(asA((tx) => tx.query("select rebase_web_copy($1, 3)", [id])), /INVALID_TRANSITION: 제작 브리프가 확정 상태가 아니어서/);
+    await expectDbError(asA((tx) => tx.query("select rebase_web_copy($1, 3)", [id])), /INVALID_TRANSITION: 제작 브리프가 작성 중이라 맞출 수 없습니다/);
     p[1].title = "소개2";
     expect(await asA((tx) => save(tx, id, 3, p))).toBe(4);
+    // 브리프를 보관하면 원인이 다른 문구(Q4). 문서는 계속 고칠 수 있다
+    await asA((tx) => tx.query("select archive_production_brief($1, $2)", [br.id, br.revision + 2]));
+    await expectDbError(asA((tx) => tx.query("select rebase_web_copy($1, 4)", [id])), /INVALID_TRANSITION: 보관한 제작 브리프라 맞출 수 없습니다/);
+    p[1].title = "소개3";
+    expect(await asA((tx) => save(tx, id, 4, p))).toBe(5);
   });
 
   it("읽기 전용: 문서 보관·프로젝트 보관·전략 작업 취소면 쓰기 5개 거절, 보관 문서·판은 슈퍼유저도 못 바꿈", async () => {
