@@ -31,7 +31,7 @@ export function aiFailureText(serverMessage: string): string {
  * - 기본: 'AI 문구 생성' 단추와 전송 범위 안내 / 생성 중: 단추·선택 칸 끔 + 상태 안내 / 완료: 변형마다 '초안' 표시와 '이 초안 쓰기'
  * - 실패·한도: 서버가 준 한국어 문구(role=alert)와 '다시 시도'. 생성은 브리프를 바꾸지 않으므로 입력 내용은 그대로다
  * - 채택하면 서버가 카피 초안에 넣고 화면을 새로 그린다(이 부품은 부르는 쪽이 revision 으로 다시 만든다)
- * 전송 범위 안내·주의는 AGY 확정 문구 COPY-DEC08-01(13:12 최종판) 그대로({공급자} = 고른 공급자 이름).
+ * 전송 범위 안내·주의는 AGY 확정 문구 COPY-DEC08-01(COPY-DEC08-02 갱신판) 그대로({공급자} = 고른 공급자 이름).
  */
 export function BriefAiCopy({ taskId, briefId, revision, choices }: { taskId: string; briefId: string; revision: number; choices: BriefCopyChoice[] }) {
   const [state, formAction, pending] = useActionState(generateBriefCopyAction, EMPTY);
@@ -74,7 +74,7 @@ export function BriefAiCopy({ taskId, briefId, revision, choices }: { taskId: st
         <p className={styles.muted}>
           {`외부 AI(${providerName})로 이 브리프의 입력 내용(채널·제목·대상·훅·핵심 메시지·CTA·채널 항목)과 근거가 연결된 주장 문장·근거 이름이 전송됩니다. 근거 메모·자료 원문·고객 연락처·회사 프로필 원문은 보내지 않습니다.`}
         </p>
-        <p className={a.caution}>※ 제목·본문·주장에 고객명을 직접 쓰면 그대로 전송되니 주의하세요.</p>
+        <p className={a.caution}>※ 제목·본문·주장·근거 파일 이름에 고객명을 직접 쓰면 그대로 전송되니 주의하세요.</p>
       </div>
       <form action={formAction} onSubmit={submit} className={a.form} noValidate>
         <input type="hidden" name="taskId" value={taskId} />

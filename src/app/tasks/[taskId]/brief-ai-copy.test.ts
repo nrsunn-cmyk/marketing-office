@@ -51,7 +51,7 @@ const render = (choices = ONE) => renderToString(createElement(BriefAiCopy, { ta
 const button = (html: string) => /<button type="submit" class="button"([^>]*)>([^<]*)<\/button>/.exec(html);
 const NOTE = (p: string) =>
   `외부 AI(${p})로 이 브리프의 입력 내용(채널·제목·대상·훅·핵심 메시지·CTA·채널 항목)과 근거가 연결된 주장 문장·근거 이름이 전송됩니다. 근거 메모·자료 원문·고객 연락처·회사 프로필 원문은 보내지 않습니다.`;
-const CAUTION = "※ 제목·본문·주장에 고객명을 직접 쓰면 그대로 전송되니 주의하세요.";
+const CAUTION = "※ 제목·본문·주장·근거 파일 이름에 고객명을 직접 쓰면 그대로 전송되니 주의하세요.";
 
 const STATES: Record<string, { state: BriefCopyFormState; pending: boolean }> = {
   기본: { state: {}, pending: false },
