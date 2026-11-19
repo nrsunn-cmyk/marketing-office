@@ -28,7 +28,7 @@ let LEAD = "";
 test("준비: 승인한 전략까지(화면)", async ({ page }) => {
   s = await setupApprovedStrategy(page, "퍼널E2E");
   CARD = `${s.label} 합성 카드: 출근길 할인 안내 글`;
-  LEAD = `${s.label} 합성 리드마그넷: 원두 고르는 법 체크리스트`;
+  LEAD = `${s.label} 합성 전환 오퍼: 정기 배송 첫 달 할인`;
 });
 
 test("보드 만들기: 만들기 전 안내 → 5단계 보드, 빈 보드 안내", async ({ page }) => {
@@ -55,7 +55,7 @@ test("단계 타깃 문구 적기", async ({ page }) => {
   await expect(col.getByText("타깃: 합성: 출근길 커피 할인 검색")).toBeVisible();
 });
 
-test("카드 추가(콘텐츠·리드마그넷) → 병목 경고 → 단계 옮기기 → 보관", async ({ page }) => {
+test("카드 추가(콘텐츠·전환 오퍼) → 병목 경고 → 단계 옮기기 → 보관", async ({ page }) => {
   await loginWithWorkspace(page);
   await page.goto(s.taskUrl);
   const funnel = funnelRegion(page);
@@ -72,18 +72,17 @@ test("카드 추가(콘텐츠·리드마그넷) → 병목 경고 → 단계 옮
   // 고려·전환이 비어 병목 경고
   await expect(funnel.getByRole("note").filter({ hasText: "병목 경고" })).toContainText("고려·전환");
 
-  // 유입에 리드마그넷 카드(기획 칸 포함)
+  // 유입에 전환 오퍼 카드. 새 카드에는 '리드마그넷' 유형이 없다(P2E-UI-01: 리드마그넷 영역에서 만들고 연결한다)
   add = await openDetails(stageColumn(page, "유입"), "+ 카드 추가");
-  await add.getByLabel("카드 유형").selectOption("lead_magnet");
+  await expect(add.getByLabel("카드 유형").locator("option")).toHaveText(["콘텐츠", "전환 오퍼"]);
+  await add.getByLabel("카드 유형").selectOption("cta");
   await add.getByLabel("제목 (필수)").fill(LEAD);
-  await add.getByLabel("전달물 형태").fill("PDF 체크리스트");
-  await add.getByLabel(/^받을 정보/).fill("이메일\n회사명");
   await add.getByRole("button", { name: "카드 추가" }).click();
   const lead = cardIn(stageColumn(page, "유입"), LEAD);
   await expect(lead).toBeVisible();
-  await (await openDetails(lead, "리드마그넷 기획 보기")).getByText("이메일, 회사명").waitFor();
+  await expect(lead.locator("p", { hasText: "연결 리드마그넷:" })).toHaveText("연결 리드마그넷: 없음");
 
-  // 리드마그넷을 고려로 옮긴다(옮긴 단계 맨 끝) → 병목은 전환만
+  // 전환 오퍼를 고려로 옮긴다(옮긴 단계 맨 끝) → 병목은 전환만
   const edit = await openDetails(lead, "고치기·옮기기");
   await edit.getByLabel("단계").selectOption({ label: "3단계 · 고려" });
   await edit.getByRole("button", { name: "카드 저장" }).click();

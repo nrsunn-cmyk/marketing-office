@@ -415,14 +415,14 @@ isOneToOne: false
                   ]
                 },"funnel_items": {
                   Row: {
-                    "archived_at": string | null,"channel": string | null,"created_at": string,"created_by": string,"description": string | null,"details": Json | null,"funnel_id": string,"id": string,"kind": string,"position": number,"revision": number,"stage_id": string,"status": string,"target_note": string | null,"title": string,"updated_at": string,"workspace_id": string
+                    "archived_at": string | null,"channel": string | null,"created_at": string,"created_by": string,"description": string | null,"details": Json | null,"funnel_id": string,"id": string,"kind": string,"lead_magnet_id": string | null,"position": number,"revision": number,"stage_id": string,"status": string,"target_note": string | null,"title": string,"updated_at": string,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"channel"?: string | null,"created_at"?: string,"created_by": string,"description"?: string | null,"details"?: Json | null,"funnel_id": string,"id"?: string,"kind": string,"position": number,"revision"?: number,"stage_id": string,"status"?: string,"target_note"?: string | null,"title": string,"updated_at"?: string,"workspace_id": string
+                    "archived_at"?: string | null,"channel"?: string | null,"created_at"?: string,"created_by": string,"description"?: string | null,"details"?: Json | null,"funnel_id": string,"id"?: string,"kind": string,"lead_magnet_id"?: string | null,"position": number,"revision"?: number,"stage_id": string,"status"?: string,"target_note"?: string | null,"title": string,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "archived_at"?: string | null,"channel"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"details"?: Json | null,"funnel_id"?: string,"id"?: string,"kind"?: string,"position"?: number,"revision"?: number,"stage_id"?: string,"status"?: string,"target_note"?: string | null,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                    "archived_at"?: string | null,"channel"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"details"?: Json | null,"funnel_id"?: string,"id"?: string,"kind"?: string,"lead_magnet_id"?: string | null,"position"?: number,"revision"?: number,"stage_id"?: string,"status"?: string,"target_note"?: string | null,"title"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -430,6 +430,12 @@ isOneToOne: false
       columns: ["funnel_id","stage_id"]
 isOneToOne: false
       referencedRelation: "funnel_stages"
+      referencedColumns: ["funnel_id","id"]
+    },{
+      foreignKeyName: "funnel_items_lead_magnet_fk"
+      columns: ["funnel_id","lead_magnet_id"]
+isOneToOne: false
+      referencedRelation: "lead_magnets"
       referencedColumns: ["funnel_id","id"]
     },{
       foreignKeyName: "funnel_items_workspace_id_funnel_id_fkey"
@@ -514,6 +520,44 @@ isOneToOne: false
       columns: ["workspace_id","task_id"]
 isOneToOne: false
       referencedRelation: "tasks"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"lead_magnets": {
+                  Row: {
+                    "archived_at": string | null,"audience": string | null,"created_at": string,"created_by": string,"delivery": string | null,"format": string,"funnel_id": string,"id": string,"lead_fields": Json,"outline": Json,"project_id": string,"promise": string | null,"revision": number,"stage_id": string,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"audience"?: string | null,"created_at"?: string,"created_by": string,"delivery"?: string | null,"format": string,"funnel_id": string,"id"?: string,"lead_fields"?: Json,"outline"?: Json,"project_id": string,"promise"?: string | null,"revision"?: number,"stage_id": string,"status"?: string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"audience"?: string | null,"created_at"?: string,"created_by"?: string,"delivery"?: string | null,"format"?: string,"funnel_id"?: string,"id"?: string,"lead_fields"?: Json,"outline"?: Json,"project_id"?: string,"promise"?: string | null,"revision"?: number,"stage_id"?: string,"status"?: string,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lead_magnets_funnel_id_stage_id_fkey"
+      columns: ["funnel_id","stage_id"]
+isOneToOne: false
+      referencedRelation: "funnel_stages"
+      referencedColumns: ["funnel_id","id"]
+    },{
+      foreignKeyName: "lead_magnets_strategy_artifact_id_strategy_version_id_fkey"
+      columns: ["strategy_artifact_id","strategy_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["artifact_id","id"]
+    },{
+      foreignKeyName: "lead_magnets_workspace_id_funnel_id_fkey"
+      columns: ["workspace_id","funnel_id"]
+isOneToOne: false
+      referencedRelation: "funnels"
+      referencedColumns: ["workspace_id","id"]
+    },{
+      foreignKeyName: "lead_magnets_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
       referencedColumns: ["workspace_id","id"]
     }
                   ]
@@ -892,6 +936,9 @@ isOneToOne: false
 "archive_funnel_item":
 { Args: { "p_expected_revision": number,"p_item_id": string }; Returns: number
                            },
+"archive_lead_magnet":
+{ Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
+                           },
 "assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
                            },
@@ -904,6 +951,9 @@ isOneToOne: false
 { Args: { "p_strategy_artifact_id": string }; Returns: {
               "funnel_id": string,"reused": boolean
             }[]
+                           },
+"create_lead_magnet":
+{ Args: { "p_audience"?: string,"p_delivery"?: string,"p_format": string,"p_lead_fields"?: Json,"p_outline"?: Json,"p_promise"?: string,"p_stage_id": string,"p_status"?: string,"p_title": string }; Returns: string
                            },
 "decide_version":
 { Args: { "p_artifact_id": string,"p_comment"?: string,"p_decision": string,"p_version_id": string }; Returns: undefined
@@ -929,6 +979,9 @@ isOneToOne: false
                            },
 "rebase_funnel":
 { Args: { "p_expected_revision": number,"p_funnel_id": string }; Returns: number
+                           },
+"rebase_lead_magnet":
+{ Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
                            },
 "record_delivery":
 { Args: { "p_artifact_id": string,"p_delivered_at": string,"p_method": string,"p_note"?: string }; Returns: string
@@ -958,6 +1011,9 @@ isOneToOne: false
               "version": number,"version_id": string
             }[]
                            },
+"set_funnel_item_lead_magnet":
+{ Args: { "p_expected_revision": number,"p_item_id": string,"p_lead_magnet_id": string | null }; Returns: number
+                           },
 "set_research_source_review":
 { Args: { "p_expected_revision": number,"p_source_id": string,"p_status": string }; Returns: number
                            },
@@ -978,6 +1034,9 @@ isOneToOne: false
                            },
 "update_funnel_stage":
 { Args: { "p_expected_revision": number,"p_focus": string,"p_stage_id": string }; Returns: number
+                           },
+"update_lead_magnet":
+{ Args: { "p_audience": string,"p_delivery": string,"p_expected_revision": number,"p_format": string,"p_lead_fields": Json,"p_lead_magnet_id": string,"p_outline": Json,"p_promise": string,"p_stage_id": string,"p_status": string,"p_title": string }; Returns: number
                            }
           }
           Enums: {

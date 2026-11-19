@@ -19,6 +19,7 @@ export function FunnelItemForm({
   submitLabel,
   stages,
   stageId,
+  linked = false,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
   hidden: Record<string, string | number>;
@@ -27,8 +28,16 @@ export function FunnelItemForm({
   /** 고치기에서만: 옮길 수 있는 단계 목록 */
   stages?: Array<{ id: string; label: string }>;
   stageId?: string;
+  /** 리드마그넷이 연결된 카드: '콘텐츠'로 바꿀 수 없다(서버도 거절, P2E-BACKEND-01) */
+  linked?: boolean;
 }) {
   const id = useId();
+  // P2E-UI-01(AGY 결정): 새 '리드마그넷' 카드는 만들지 않는다. 리드마그넷 영역에서 만들고 전환 오퍼 카드로 연결한다.
+  // 원래 리드마그넷 카드였던 것만 그 유형을 그대로 보인다(표시·연결 유지)
+  const kinds = (Object.keys(FUNNEL_ITEM_KINDS) as FunnelItemKind[]).filter(
+    (k) => (k !== "lead_magnet" || initial.kind === "lead_magnet") && (k !== "content" || !linked),
+  );
+  const leadHidden = !kinds.includes("lead_magnet");
   const [v, setV] = useState<FunnelItemFormValue>(initial);
   const [toStage, setToStage] = useState(stageId ?? "");
   const set = <K extends keyof FunnelItemFormValue>(k: K, value: FunnelItemFormValue[K]) => setV((p) => ({ ...p, [k]: value }));
@@ -50,13 +59,25 @@ export function FunnelItemForm({
       <div className={f.formGrid}>
         <div className={styles.field}>
           <label htmlFor={`${id}-kind`}>카드 유형</label>
-          <select id={`${id}-kind`} value={v.kind} onChange={(e) => set("kind", e.target.value as FunnelItemKind)}>
-            {Object.entries(FUNNEL_ITEM_KINDS).map(([k, label]) => (
+          <select
+            id={`${id}-kind`}
+            value={v.kind}
+            onChange={(e) => set("kind", e.target.value as FunnelItemKind)}
+            aria-describedby={leadHidden || linked ? `${id}-kind-help` : undefined}
+          >
+            {kinds.map((k) => (
               <option key={k} value={k}>
-                {label}
+                {FUNNEL_ITEM_KINDS[k]}
               </option>
             ))}
           </select>
+          {(leadHidden || linked) && (
+            <span id={`${id}-kind-help`} className={styles.muted}>
+              {leadHidden && "리드마그넷은 리드마그넷 영역에서 만들고 전환(CTA) 카드로 연결하세요."}
+              {leadHidden && linked && " "}
+              {linked && "리드마그넷이 연결된 카드는 콘텐츠로 바꿀 수 없습니다(연결을 먼저 푸세요)."}
+            </span>
+          )}
         </div>
         <div className={styles.field}>
           <label htmlFor={`${id}-status`}>진행 상태</label>

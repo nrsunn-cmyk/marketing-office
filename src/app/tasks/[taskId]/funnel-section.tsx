@@ -14,6 +14,8 @@ import {
   updateFunnelStageAction,
 } from "@/features/funnel/actions";
 import { getFunnelBoardFor, type FunnelBoard, type FunnelItemView, type FunnelStageView } from "@/features/funnel/server";
+import { LEAD_MAGNET_LINKABLE_KINDS } from "@/domain/lead-magnet/constants";
+import { getLeadMagnetsFor } from "@/features/lead-magnet/server";
 import { getProject } from "@/features/projects/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { ActionForm } from "../../_components/action-form";
@@ -22,6 +24,8 @@ import f from "./funnel.module.css";
 import { EMPTY_FUNNEL_ITEM, type FunnelItemFormValue } from "./funnel-form";
 import { FunnelItemForm } from "./funnel-item-form";
 import { BriefPanel } from "./brief-panel";
+import { CardLeadMagnet, type LeadMagnetCtx } from "./card-lead-magnet";
+import { LeadMagnetSection } from "./lead-magnet-section";
 
 /** 카드마다 보여 줄 브리프 목록(P2F-FRONT-01). error = 목록을 못 읽음(보드는 그대로 보인다) */
 interface BriefCtx {
@@ -74,6 +78,17 @@ export async function FunnelSection({ detail, briefId = null }: { detail: TaskDe
       briefs.error = true;
     }
   }
+  // 리드마그넷도 따로 읽는다. 실패해도 보드는 보이고 리드마그넷 영역에만 오류를 알린다(P2E-UI-01)
+  let leadMagnets: LeadMagnetCtx = [];
+  if (board.state === "board") {
+    try {
+      leadMagnets = await getLeadMagnetsFor(board);
+    } catch (e) {
+      unstable_rethrow(e);
+      console.error("[lead-magnet-list]", e);
+      leadMagnets = null;
+    }
+  }
 
   return (
     <>
@@ -93,8 +108,9 @@ export async function FunnelSection({ detail, briefId = null }: { detail: TaskDe
           )}
         </div>
       )}
-      <BoardBody board={board} taskId={detail.task.id} readOnly={readOnly} briefs={briefs} />
+      <BoardBody board={board} taskId={detail.task.id} readOnly={readOnly} briefs={briefs} leadMagnets={leadMagnets} />
     </Shell>
+    {board.state === "board" && <LeadMagnetSection board={board} list={leadMagnets} readOnly={readOnly} taskId={detail.task.id} />}
     {board.state === "board" && briefId && (
       <Suspense
         fallback={
@@ -124,7 +140,7 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-function BoardBody({ board, taskId, readOnly, briefs }: { board: FunnelBoard; taskId: string; readOnly: boolean; briefs: BriefCtx }) {
+function BoardBody({ board, taskId, readOnly, briefs, leadMagnets }: { board: FunnelBoard; taskId: string; readOnly: boolean; briefs: BriefCtx; leadMagnets: LeadMagnetCtx }) {
   if (board.state === "no_artifact") {
     return (
       <div className={styles.emptyState}>
@@ -199,7 +215,7 @@ function BoardBody({ board, taskId, readOnly, briefs }: { board: FunnelBoard; ta
       {board.warnings.some((w) => w.kind === "empty") && (
         <div className={styles.emptyState}>
           <strong>아직 카드가 없습니다.</strong>
-          <p className={styles.muted}>단계마다 &lsquo;카드 추가&rsquo;를 펼쳐 콘텐츠·리드마그넷·전환 오퍼를 넣어 보세요. 고려·전환 단계부터 채우면 병목을 먼저 막을 수 있습니다.</p>
+          <p className={styles.muted}>단계마다 &lsquo;카드 추가&rsquo;를 펼쳐 콘텐츠·전환 오퍼를 넣어 보세요. 리드마그넷은 아래 리드마그넷 영역에서 만들어 전환 오퍼 카드에 연결합니다. 고려·전환 단계부터 채우면 병목을 먼저 막을 수 있습니다.</p>
         </div>
       )}
       {bottleneck && bottleneck.kind === "bottleneck" && (
@@ -217,6 +233,7 @@ function BoardBody({ board, taskId, readOnly, briefs }: { board: FunnelBoard; ta
             key={stage.id}
             stage={stage}
             briefs={briefs}
+            leadMagnets={leadMagnets}
             readOnly={readOnly}
             stageOptions={stageOptions}
             missing={!!bottleneck && bottleneck.kind === "bottleneck" && bottleneck.stages.includes(stage.key)}
@@ -257,12 +274,14 @@ function Basis({ board }: { board: FunnelBoard }) {
 function StageColumn({
   stage,
   briefs,
+  leadMagnets,
   readOnly,
   stageOptions,
   missing,
 }: {
   stage: FunnelStageView;
   briefs: BriefCtx;
+  leadMagnets: LeadMagnetCtx;
   readOnly: boolean;
   stageOptions: Array<{ id: string; label: string }>;
   missing: boolean;
@@ -298,7 +317,7 @@ function StageColumn({
       ) : (
         <ul className={f.cards} aria-label={`${stage.label} 단계 카드`}>
           {stage.items.map((item) => (
-            <ItemCard key={item.id} item={item} stage={stage} readOnly={readOnly} stageOptions={stageOptions} briefs={briefs} />
+            <ItemCard key={item.id} item={item} stage={stage} readOnly={readOnly} stageOptions={stageOptions} briefs={briefs} leadMagnets={leadMagnets} />
           ))}
         </ul>
       )}
@@ -343,9 +362,11 @@ function ItemCard({
   readOnly,
   stageOptions,
   briefs,
+  leadMagnets,
 }: {
   item: FunnelItemView;
   briefs: BriefCtx;
+  leadMagnets: LeadMagnetCtx;
   stage: FunnelStageView;
   readOnly: boolean;
   stageOptions: Array<{ id: string; label: string }>;
@@ -393,6 +414,7 @@ function ItemCard({
           </dl>
         </details>
       )}
+      {(LEAD_MAGNET_LINKABLE_KINDS as readonly string[]).includes(item.kind) && <CardLeadMagnet item={item} leadMagnets={leadMagnets} readOnly={readOnly} />}
       <CardBriefs item={item} briefs={briefs} readOnly={readOnly} />
       {!readOnly && (
         <details className={f.inlineDetails}>
@@ -406,6 +428,7 @@ function ItemCard({
             submitLabel="카드 저장"
             stages={stageOptions}
             stageId={stage.id}
+            linked={item.leadMagnetId !== null}
           />
           <ActionForm action={archiveFunnelItemAction} submitLabel="이 카드 보관" pendingLabel="보관 중…" variant="secondary" className={f.inlineForm}>
             <input type="hidden" name="itemId" value={item.id} />
