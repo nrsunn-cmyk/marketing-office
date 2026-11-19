@@ -297,7 +297,7 @@ language plpgsql security definer set search_path = '' as $$
 declare
   b       public.production_briefs%rowtype;
   nv      public.production_briefs%rowtype;
-  changed text[] := '{}';
+  changed text[] := '{}'::text[];
   r       integer;
 begin
   if auth.uid() is null then
