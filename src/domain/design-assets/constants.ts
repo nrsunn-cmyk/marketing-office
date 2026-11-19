@@ -53,12 +53,12 @@ export const DESIGN_SIGNED_URL_SECONDS = { download: 60, preview: 300 } as const
 
 /**
  * 업로드 실패 코드 → AGY DA_COPY 문구 키(P3-COPY-FINAL 1절 upload* 12키). 화면은 이 키로 확정 문구를 고른다.
- * UNSAFE_SVG 는 확정 문구가 따로 없어 형식 오류(uploadErrType)로 보인다(AGY 에 전용 문구 요청).
+ * UNSAFE_SVG 는 AGY 가 확정한 전용 키 unsafeSvg(P3-COPY-FINAL 1절, Front P3C-UI-CONNECT-01 제안).
  */
 export const DESIGN_UPLOAD_ERROR_COPY_KEY = {
   TOO_LARGE: "uploadErrSize",
   UNSUPPORTED_TYPE: "uploadErrType",
-  UNSAFE_SVG: "uploadErrType",
+  UNSAFE_SVG: "unsafeSvg",
   TYPE_MISMATCH: "uploadErrMismatch",
   UPLOAD_MISSING: "uploadErrNetwork",
   NETWORK: "uploadErrNetwork",

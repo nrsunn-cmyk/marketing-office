@@ -106,8 +106,9 @@ describe("DB 오류 → 문구·DA_COPY 키", () => {
     expect(designErrorFromDb("CONFLICT: x").code).toBe("CONFLICT");
     expect(designErrorFromDb("BAD_SIGNATURE: x")).toMatchObject({ code: "ERROR" });
     expect(designErrorFromDb("INVALID_TRANSITION: 보관한 디자인 자산은 고칠 수 없습니다")).toEqual({ code: "INVALID_TRANSITION", message: "보관한 디자인 자산은 고칠 수 없습니다" });
-    // 문구 키는 AGY DA_COPY upload* 키만
-    for (const k of Object.values(DESIGN_UPLOAD_ERROR_COPY_KEY)) expect(k).toMatch(/^uploadErr(Size|Type|Mismatch|Network|Expired)$/);
+    // 문구 키는 AGY DA_COPY 확정 키만(upload* 5개 + unsafeSvg)
+    for (const k of Object.values(DESIGN_UPLOAD_ERROR_COPY_KEY)) expect(k).toMatch(/^(uploadErr(Size|Type|Mismatch|Network|Expired)|unsafeSvg)$/);
+    expect(designErrorFromDb("UNSAFE_SVG: x")).toMatchObject({ copyKey: "unsafeSvg", message: expect.stringContaining("위험한 요소") });
   });
 
   it("사용처 이름표: 페이지 · 섹션, 없으면 null", () => {

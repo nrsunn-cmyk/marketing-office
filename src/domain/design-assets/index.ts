@@ -63,7 +63,7 @@ export const toDbUsages = (u: z.infer<typeof designAssetUsagesSchema>) => u.map(
 export const DESIGN_UPLOAD_ERROR_MESSAGES: Record<DesignUploadErrorCode, string> = {
   TOO_LARGE: "파일 크기가 한도(10MB)를 넘어 올릴 수 없습니다.",
   UNSUPPORTED_TYPE: "허용되지 않는 파일 형식입니다. 안내된 형식만 올려 주세요.",
-  UNSAFE_SVG: "허용되지 않는 파일 형식입니다. 안내된 형식만 올려 주세요.",
+  UNSAFE_SVG: "보안상 위험한 요소(스크립트·외부 연결 등)가 들어 있는 SVG 파일은 올릴 수 없습니다. 위험 요소를 빼고 다시 저장하거나 PNG 파일로 올려 주세요.",
   TYPE_MISMATCH: "파일 실제 내용이 확장자와 달라 올릴 수 없습니다.",
   UPLOAD_MISSING: "네트워크 연결이 끊겨 올리기를 마칠 수 없습니다. 잠시 후 다시 시도해 주세요.",
   NETWORK: "네트워크 연결이 끊겨 올리기를 마칠 수 없습니다. 잠시 후 다시 시도해 주세요.",

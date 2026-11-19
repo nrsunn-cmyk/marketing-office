@@ -129,7 +129,7 @@ describe("3단계 확정", () => {
   it("위험한 SVG 는 예약을 닫고(UNSAFE_SVG) 확정하지 않는다", async () => {
     S.file = new TextEncoder().encode('<svg onload="alert(1)"></svg>');
     const r = await confirmDesignAssetCreate(path, body);
-    expect(r).toMatchObject({ ok: false, code: "UPLOAD_FAILED", errors: { uploadCode: "UNSAFE_SVG", copyKey: "uploadErrType" } });
+    expect(r).toMatchObject({ ok: false, code: "UPLOAD_FAILED", errors: { uploadCode: "UNSAFE_SVG", copyKey: "unsafeSvg" } });
     expect(S.rpc.map((x) => x.fn)).toEqual(["reject_design_asset_upload"]);
     expect(S.rpc[0].args.p_signature).toBe(hmac("design_reject", `${U}|UNSAFE_SVG`, S.rpc[0].args.p_signed_at));
   });
