@@ -107,7 +107,7 @@ export interface AdminUsageRow {
 }
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** ② 이용 현황: 한국 날짜 [from, to](끝일 포함, 최대 366일). 합계는 화면이 rows 를 더한다 */
+/** ② 이용 현황: 한국 날짜 [from, to](끝일 포함 최대 367일, 두 날짜 차이 366일 이하). 합계는 화면이 rows 를 더한다 */
 export async function getAdminUsage(from: string, to: string): Promise<Result<AdminUsageRow[]>> {
   if (!DATE.test(from) || !DATE.test(to)) return fail("VALIDATION", "날짜는 YYYY-MM-DD 로 넣어 주세요.");
   const sb = await createSupabaseServerClient();
