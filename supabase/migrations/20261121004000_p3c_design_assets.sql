@@ -67,6 +67,8 @@ language sql immutable set search_path = '' as $$
        and p_name !~ '[[:cntrl:]]'
        and strpos(p_name, '..') = 0
        and p_name !~ '[\u200e\u200f\u202a-\u202e\u2066-\u2069]'
+       -- \ud655\uc7a5\uc790 \uc55e \uc774\ub984\uc774 0\uc790\uc778 \uc774\ub984(".png") \uac70\uc808(Tester QA-P3C-BACKEND-01 O1)
+       and p_name !~ '^\.[A-Za-z0-9]+$'
        and lower(substring(p_name from '\.([A-Za-z0-9]+)$')) = any (case p_mime
              when 'image/jpeg' then array['jpg', 'jpeg']
              else array[app.design_mime_ext(p_mime)] end), false)

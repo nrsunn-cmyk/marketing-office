@@ -41,7 +41,7 @@ describe("앞 바이트 형식 판정(Q3)", () => {
     expect(checkDesignDeclared("logo", "a.png", 10, "image/svg+xml")).toMatchObject({ ok: false, code: "TYPE_MISMATCH" });
     expect(checkDesignDeclared("color", "a.json", 1024 * 1024 + 1, "application/json")).toMatchObject({ ok: false, code: "TOO_LARGE" });
     expect(checkDesignDeclared("font", "a.woff2", 10 * 1024 * 1024 + 1, "font/woff2")).toMatchObject({ ok: false, code: "TOO_LARGE" });
-    for (const n of ["logo.svg.html", "a..svg", "a/b.svg", "a\\b.svg", "a\nb.svg", "x\u202egvs.svg", ` a.svg`, `${"가".repeat(197)}.svg`])
+    for (const n of [".svg", ".SVG", "logo.svg.html", "a..svg", "a/b.svg", "a\\b.svg", "a\nb.svg", "x\u202egvs.svg", ` a.svg`, `${"가".repeat(197)}.svg`])
       expect(checkDesignDeclared("logo", n, 10, "image/svg+xml"), n).toMatchObject({ ok: false, code: "TYPE_MISMATCH" });
     expect(checkDesignDeclared("logo", `${"가".repeat(196)}.svg`, 10, "image/svg+xml")).toMatchObject({ ok: true });
   });
