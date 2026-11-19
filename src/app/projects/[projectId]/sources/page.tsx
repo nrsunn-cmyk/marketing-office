@@ -243,9 +243,9 @@ function Header({ projectId, title }: { projectId: string; title: string }) {
 
 /** 같은 브리프의 주장끼리 묶는다(서버는 주장 1개 = 1줄, 브리프 제목 순) */
 function groupByBrief(rows: ResearchSourceCitation[]) {
-  const map = new Map<string, { briefId: string; briefTitle: string; channel: string; taskId: string; claims: string[] }>();
+  const map = new Map<string, { briefId: string; briefTitle: string; channel: string; taskId: string; archived: boolean; claims: string[] }>();
   for (const r of rows) {
-    const g = map.get(r.briefId) ?? { briefId: r.briefId, briefTitle: r.briefTitle, channel: r.channel, taskId: r.taskId, claims: [] };
+    const g = map.get(r.briefId) ?? { briefId: r.briefId, briefTitle: r.briefTitle, channel: r.channel, taskId: r.taskId, archived: r.briefArchived, claims: [] };
     g.claims.push(r.claimText);
     map.set(r.briefId, g);
   }
@@ -315,6 +315,8 @@ function Citations({ headingId, rows }: { headingId: string; rows: ResearchSourc
               <Link href={`/tasks/${b.taskId}?brief=${b.briefId}#brief`} className={s.citeLink}>
                 <span className={styles.badge}>{BRIEF_CHANNELS[b.channel as keyof typeof BRIEF_CHANNELS] ?? b.channel}</span>
                 <span>{b.briefTitle}</span>
+                {/* 보관한 브리프(또는 보관한 카드의 브리프)도 근거 추적을 위해 보인다. 열면 읽기 전용(QA-DEC09-01 O2) */}
+                {b.archived && <span className={s.archivedTag}>(보관)</span>}
               </Link>
               <ul className={s.citeClaims} aria-label={`${b.briefTitle}에서 이 출처를 근거로 단 주장`}>
                 {b.claims.map((c, i) => (

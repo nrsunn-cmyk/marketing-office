@@ -182,3 +182,8 @@
 .noCites {
   margin: 0;
 }
+
+/* 보관한 브리프 표시: 링크 안 글자라 링크 색을 따르되 굵기만 낮춘다 */
+.archivedTag {
+  font-weight: var(--font-weight-regular);
+}

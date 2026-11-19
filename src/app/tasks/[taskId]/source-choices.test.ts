@@ -39,4 +39,30 @@ describe("브리프 근거 선택 목록(sourceChoiceGroups)", () => {
     expect(groups[0]).toEqual({ label: "회사 프로필 3번 버전", choices: [{ value: "profile:pv:strengths", label: "강점: 빠른 납기" }] });
     expect(groups[1].choices).toEqual([{ value: "asset:a1", label: "회사 소개서.pdf" }]);
   });
+
+  it("같은 고객의 공통 자료는 '(고객 공통)'을 붙여 이 프로젝트 자료 뒤에 둔다(DEC-09 B, COPY-DEC09-01)", () => {
+    const groups = sourceChoiceGroups({
+      ...base,
+      assets: [
+        { id: "c1", label: "2026 회사 소개서", scope: "client" },
+        { id: "p1", label: "프로젝트 기획안", scope: "project" },
+        { id: "c2", label: "브랜드 가이드", scope: "client" },
+        { id: "p2", label: "인터뷰 메모", scope: "project" },
+      ],
+    });
+    expect(groups[1]).toEqual({
+      label: "프로젝트·고객 공통 자료",
+      choices: [
+        { value: "asset:p1", label: "프로젝트 기획안" },
+        { value: "asset:p2", label: "인터뷰 메모" },
+        { value: "asset:c1", label: "2026 회사 소개서 (고객 공통)" },
+        { value: "asset:c2", label: "브랜드 가이드 (고객 공통)" },
+      ],
+    });
+  });
+
+  it("긴 공통 자료 이름도 80자에서 줄인 뒤 '(고객 공통)'을 붙인다", () => {
+    const [c] = sourceChoiceGroups({ ...base, assets: [{ id: "c", label: "나".repeat(100), scope: "client" }] })[1].choices;
+    expect(c.label).toBe(`${"나".repeat(80)}… (고객 공통)`);
+  });
 });

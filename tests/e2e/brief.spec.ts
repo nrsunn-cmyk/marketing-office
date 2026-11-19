@@ -80,8 +80,8 @@ test("주장 추가 → [미확인 주장] → 근거 연결 → ✓ 근거 연�
   await expect(brief.getByRole("note").filter({ hasText: "미확인 주장 1개" })).toBeVisible();
 
   const link = await openDetails(claimItem(page), "근거 연결하기");
-  // 근거 범위 안내(QA-P2F-BACKEND-01 O1)
-  await expect(link.getByText(/고객 공통 자료와 다른 프로젝트의 자료는 고를 수 없습니다/)).toBeVisible();
+  // 근거 범위 안내(QA-P2F-BACKEND-01 O1, 문구는 DEC-09 B 확정본 COPY-DEC09-01)
+  await expect(link.getByText(/같은 고객의 공통 자료\. 다른 프로젝트의 자료는 고를 수 없습니다/)).toBeVisible();
   await link.getByLabel("근거", { exact: true }).selectOption(`profile:${s.profileVersionId}:products`);
   await link.getByLabel("근거 메모 (선택)").fill("상품 칸 첫 문장");
   await link.getByRole("button", { name: "근거 연결" }).click();
