@@ -1,83 +1,38 @@
 /**
- * P3A-UI-PREP-01 공통 제작 브리프 — 화면 쪽 모델(서버 없이 먼저 만든 자리).
- * 근거: AGY Design/p3-production/P3A-HANDOFF.md(필드 8종·글자 수·상태), production-brief.html.
- *
- * 서버(Backend P3A)가 오면:
- * - 아래 한도·허용값은 서버 도메인 상수(@/domain/... )로 바꿔 가져온다(같은 값이어야 한다).
- * - ProductionBriefView·ProductionBriefSectionData 는 서버 보기 타입으로 바꾼다.
- * - toProductionBriefPayload 의 칸 이름은 서버 입력 계약에 맞춘다.
- * zod·서버 모듈을 가져오지 않는다(브라우저 묶음에 서버 코드가 들어가지 않게).
+ * P3A 공통 제작 브리프 — 화면 쪽 모델(P3A-UI-PREP-01 → P3A-UI-CONNECT-01 서버 연결).
+ * 서버 계약: src/features/production-brief/server.ts(getProductionBriefsFor·create·update·rebase·archive),
+ * 상수·라벨: @/domain/production-brief/constants(브라우저에서 값으로 가져올 수 있는 상수 파일만. zod 는 서버 동작에서).
+ * AGY 인계표 C:/nadaum/Design/p3-production/P3A-HANDOFF.md(R1): 코드 4종·drafting/ready + 보관(archived_at)·프로젝트당 10개.
  */
+import {
+  DELIVERABLE_TYPES,
+  DELIVERABLE_TYPE_LABELS,
+  PRODUCTION_BRIEF_DISPLAY,
+  PRODUCTION_BRIEF_LIMITS,
+  PRODUCTION_BRIEF_STATUSES,
+  charLength,
+  type DeliverableType,
+  type ProductionBriefStatus,
+} from "@/domain/production-brief/constants";
+import type { ProductionBriefView } from "@/features/production-brief/server";
 
-/** 글자 수 한도(유니코드 코드 포인트 기준, 인계표 1절·3절 3) */
-export const PRODUCTION_BRIEF_LIMITS = {
-  title: 120,
-  targetAudience: 500,
-  coreMessage: 1000,
-  scopeSummary: 2000,
-  brandToneConstraints: 1000,
-  referenceNotes: 1000,
-  deliverableTypesMin: 1,
-  deliverableTypesMax: 4,
-} as const;
+export { DELIVERABLE_TYPES, DELIVERABLE_TYPE_LABELS, PRODUCTION_BRIEF_DISPLAY, PRODUCTION_BRIEF_LIMITS, PRODUCTION_BRIEF_STATUSES, charLength };
+export type { DeliverableType, ProductionBriefStatus };
 
-/** 포함 산출물 종류(허용값 4개, 순서 = 화면 순서) */
-export const DELIVERABLE_TYPES = {
-  web_copy: "홈페이지 구조·문구",
-  design_asset: "디자인 자산 (로고·배너)",
-  video_script: "영상 구성·파일",
-  ppt_template: "PPT 템플릿",
-} as const;
-export type DeliverableType = keyof typeof DELIVERABLE_TYPES;
-export const DELIVERABLE_TYPE_KEYS = Object.keys(DELIVERABLE_TYPES) as DeliverableType[];
-
-/** 저장 상태 3종(인계표 2절) */
-export const PRODUCTION_BRIEF_STATUSES = {
-  drafting: "작성 중",
-  confirmed: "확정",
-  archived: "보관",
-} as const;
-export type ProductionBriefStatus = keyof typeof PRODUCTION_BRIEF_STATUSES;
-/** 폼에서 고를 수 있는 상태(보관은 별도 단추로만) */
-export const EDITABLE_STATUSES = ["drafting", "confirmed"] as const satisfies readonly ProductionBriefStatus[];
-export type EditableStatus = (typeof EDITABLE_STATUSES)[number];
-
-/** 자리용 보기 타입 — 서버 보기 타입이 오면 바꾼다 */
-export interface ProductionBriefView {
-  id: string;
-  title: string;
-  targetAudience: string;
-  coreMessage: string;
-  deliverableTypes: DeliverableType[];
-  scopeSummary: string;
-  brandToneConstraints: string;
-  referenceNotes: string;
-  status: ProductionBriefStatus;
-  revision: number;
-  /** 기준 전략 버전(서버 관리) */
-  strategyVersion: { id: string; version: number | null };
-  /** 계산 표시: 기준 전략이 지금 승인본보다 앞섬 */
-  stale: boolean;
-}
-
-export interface ProductionBriefSectionData {
-  /** 활성(또는 보관한) 제작 브리프. 없으면 null(빈 상태) */
-  brief: ProductionBriefView | null;
-  canCreate: boolean;
-  createBlockedReason: string | null;
-  /** 지금 승인된 전략 버전 번호(없으면 null) */
-  approvedVersion: number | null;
-}
-
-/** 글자 수(코드 포인트). 서버 char_length 와 같은 기준 */
-export function charLength(s: string): number {
-  return Array.from(s).length;
-}
+/**
+ * 서버(briefTrim = DB app.funnel_trim)와 같은 앞뒤 정리. JS 의 \s 는 공백·탭·줄바꿈·NBSP·BOM·전각 공백을 모두 포함한다.
+ * 글자 수 표시·점검은 이 값으로 잰다(Tester QA-P3A-UI-01 U1: 끝 줄바꿈 하나로 '넘침'이 뜨던 문제).
+ */
+export const briefTrim = (s: string) => s.replace(/^[\s\u00a0\ufeff]+|[\s\u00a0\ufeff]+$/g, "");
+/** 서버가 받는 글자 수(정리한 뒤 코드 포인트) */
+export const countChars = (s: string) => charLength(briefTrim(s));
 
 /** "1,234 / 2,000자" */
 export function counterText(n: number, max: number): string {
   return `${n.toLocaleString("ko-KR")} / ${max.toLocaleString("ko-KR")}자`;
 }
+/** 화면 읽기 프로그램에 알릴 때: 한도의 90% 이상이거나 넘쳤을 때만(QA-P3A-UI-01 R2) */
+export const nearLimit = (n: number, max: number) => n >= Math.ceil(max * 0.9);
 
 export interface ProductionBriefFormValue {
   title: string;
@@ -87,7 +42,7 @@ export interface ProductionBriefFormValue {
   scopeSummary: string;
   brandToneConstraints: string;
   referenceNotes: string;
-  status: EditableStatus;
+  status: ProductionBriefStatus;
 }
 
 /** 글 칸 6개(화면 순서). 산출물 종류·상태는 따로 그린다 */
@@ -101,7 +56,6 @@ export const TEXT_FIELDS = [
 ] as const satisfies ReadonlyArray<{ key: keyof typeof PRODUCTION_BRIEF_LIMITS & keyof ProductionBriefFormValue; label: string; required: boolean; multiline: boolean; rows: number }>;
 export type TextFieldKey = (typeof TEXT_FIELDS)[number]["key"];
 
-/** 입력 예시(시안 문구) */
 export const FIELD_PLACEHOLDERS: Record<TextFieldKey, string> = {
   title: "예: 동네 카페 홈페이지·로고 제작 기준",
   targetAudience: "예: 외부 대행사 없이 직접 브랜드와 견적 기준을 정리하려는 1인·소규모 서비스 대표",
@@ -115,84 +69,96 @@ export function emptyProductionBrief(): ProductionBriefFormValue {
   return { title: "", targetAudience: "", coreMessage: "", deliverableTypes: [], scopeSummary: "", brandToneConstraints: "", referenceNotes: "", status: "drafting" };
 }
 
-/** 보기 → 폼 값(보관 상태는 폼으로 오지 않는다. 혹시 오면 작성 중으로 둔다) */
+/** 서버 보기 → 폼 값(선택 칸 null 은 빈 글) */
 export function productionBriefToForm(b: ProductionBriefView): ProductionBriefFormValue {
   return {
     title: b.title,
     targetAudience: b.targetAudience,
     coreMessage: b.coreMessage,
-    deliverableTypes: DELIVERABLE_TYPE_KEYS.filter((k) => b.deliverableTypes.includes(k)),
+    deliverableTypes: DELIVERABLE_TYPES.filter((k) => b.deliverableTypes.includes(k)),
     scopeSummary: b.scopeSummary,
-    brandToneConstraints: b.brandToneConstraints,
-    referenceNotes: b.referenceNotes,
-    status: b.status === "confirmed" ? "confirmed" : "drafting",
+    brandToneConstraints: b.brandToneConstraints ?? "",
+    referenceNotes: b.referenceNotes ?? "",
+    status: b.status,
   };
 }
 
 /** 산출물 종류 켜기·끄기(허용값만, 화면 순서 유지, 중복 없음) */
 export function toggleDeliverable(list: readonly DeliverableType[], key: DeliverableType, on: boolean): DeliverableType[] {
-  const set = new Set(list.filter((k) => k in DELIVERABLE_TYPES));
+  const set = new Set(list.filter((k) => (DELIVERABLE_TYPES as readonly string[]).includes(k)));
   if (on) set.add(key);
   else set.delete(key);
-  return DELIVERABLE_TYPE_KEYS.filter((k) => set.has(k));
+  return DELIVERABLE_TYPES.filter((k) => set.has(k));
 }
 
 export type ProductionBriefIssues = Partial<Record<TextFieldKey | "deliverableTypes", string>>;
 
-/**
- * 화면에서 미리 알려 줄 문제(저장은 서버가 최종 판단, 값을 자르지 않는다).
- * 필수 칸은 앞뒤 공백을 뺀 뒤 1자 이상, 모든 칸은 한도 이하, 산출물 종류는 1~4개.
- */
+/** 화면에서 미리 알려 줄 문제(저장은 서버가 최종 판단, 값을 자르지 않는다). 서버처럼 정리한 뒤 잰다 */
 export function checkProductionBrief(v: ProductionBriefFormValue): ProductionBriefIssues {
   const issues: ProductionBriefIssues = {};
   for (const f of TEXT_FIELDS) {
-    const value = v[f.key];
+    const n = countChars(v[f.key]);
     const max = PRODUCTION_BRIEF_LIMITS[f.key];
-    if (f.required && value.trim() === "") issues[f.key] = `${f.label}을(를) 입력해 주세요.`;
-    else if (charLength(value) > max) issues[f.key] = `${f.label}은(는) ${max.toLocaleString("ko-KR")}자까지 쓸 수 있습니다.`;
+    if (f.required && n === 0) issues[f.key] = `${f.label}을(를) 입력해 주세요.`;
+    else if (n > max) issues[f.key] = `${f.label}은(는) ${max.toLocaleString("ko-KR")}자까지 쓸 수 있습니다.`;
   }
   const n = new Set(v.deliverableTypes).size;
-  if (n < PRODUCTION_BRIEF_LIMITS.deliverableTypesMin) issues.deliverableTypes = "포함 산출물 종류를 1개 이상 선택해 주세요.";
-  else if (n > PRODUCTION_BRIEF_LIMITS.deliverableTypesMax) issues.deliverableTypes = `포함 산출물 종류는 ${PRODUCTION_BRIEF_LIMITS.deliverableTypesMax}개까지 고를 수 있습니다.`;
+  if (n < PRODUCTION_BRIEF_LIMITS.deliverableMin) issues.deliverableTypes = "포함 산출물 종류를 1개 이상 선택해 주세요.";
+  else if (n > PRODUCTION_BRIEF_LIMITS.deliverableMax) issues.deliverableTypes = `포함 산출물 종류는 ${PRODUCTION_BRIEF_LIMITS.deliverableMax}개까지 고를 수 있습니다.`;
   return issues;
 }
 
-/** 서버로 보낼 값(자리용 이름 — 서버 계약이 오면 맞춘다). 값은 자르지 않는다 */
-export function toProductionBriefPayload(v: ProductionBriefFormValue) {
+/** 만들기 payload — 서버 productionBriefCreateSchema(strictObject, status 없음). 값은 자르지 않는다(정리는 서버) */
+export function toCreatePayload(v: ProductionBriefFormValue) {
   return {
     title: v.title,
     targetAudience: v.targetAudience,
     coreMessage: v.coreMessage,
-    deliverableTypes: DELIVERABLE_TYPE_KEYS.filter((k) => v.deliverableTypes.includes(k)),
+    deliverableTypes: DELIVERABLE_TYPES.filter((k) => v.deliverableTypes.includes(k)),
     scopeSummary: v.scopeSummary,
     brandToneConstraints: v.brandToneConstraints,
     referenceNotes: v.referenceNotes,
-    status: v.status,
   };
 }
+/** 고치기 payload — productionBriefUpdateSchema(만들기 칸 + status) */
+export function toUpdatePayload(v: ProductionBriefFormValue) {
+  return { ...toCreatePayload(v), status: v.status };
+}
 
-/** 확정 문구(AGY 시안 production-brief.html) */
+/** 산출물 목록 글("홈페이지 구조·문구, 디자인 자산") */
+export const deliverableText = (list: readonly DeliverableType[]) => list.map((k) => DELIVERABLE_TYPE_LABELS[k] ?? k).join(", ");
+
+/** 확정 문구(AGY 시안 production-brief.html·task-detail-entry.html, DESIGN-REVIEW-P3A-UI-01 3절 확정 2건) */
 export const PB_COPY = {
   heading: "공통 제작 브리프",
-  intro: "승인된 전략을 바탕으로 홈페이지·디자인·영상·PPT 제작에 공통으로 쓸 기준을 정리합니다.",
+  intro: "승인된 전략을 바탕으로 홈페이지·디자인 자산·영상·PPT 제작 기준을 관리합니다. 보관하지 않은 브리프는 프로젝트당 10개까지 만들 수 있습니다.",
   emptyTitle: "아직 공통 제작 브리프가 없습니다.",
-  emptyDesc: "승인된 전략이 있으면 바로 제작 브리프를 만들 수 있습니다. 전략 내용을 바탕으로 처음 입력값을 채워 둡니다.",
-  create: "+ 공통 제작 브리프 만들기",
-  archivedNote: "보관한 제작 브리프입니다. 내용만 볼 수 있고, 고치기·상태 변경은 할 수 없습니다. 보관을 되돌릴 수는 없습니다.",
-  projectReadOnly: "보관한 프로젝트이거나 취소한 작업이라 제작 브리프를 고칠 수 없습니다.",
+  // 시안의 "전략 내용을 바탕으로 처음 입력값을 채워 둡니다"는 서버가 채우지 않아 뺐다(사실과 다른 안내 방지)
+  emptyDesc: "승인된 전략이 있으면 바로 제작 브리프를 만들 수 있습니다.",
+  createFirst: "+ 공통 제작 브리프 만들기",
+  createMore: "+ 새 제작 브리프 만들기",
+  createSubmit: "제작 브리프 만들기",
+  createBlockedLead: "새 제작 브리프를 만들 수 없습니다:",
+  noApprovedStrategy: "P2에서 승인된 전략이 아직 없습니다. 먼저 위 전략 구역에서 승인본을 확정해 주세요.",
+  projectReadOnly: "보관한 프로젝트이거나 취소한 작업이라 제작 브리프를 만들거나 고칠 수 없습니다.",
+  open: "열기 · 고치기",
+  view: "열어 보기",
   rebase: "지금 승인본 기준으로 맞추기",
   deliverableHint: "선택한 종류에 따라 이후 P3 제작·검수 단계가 열립니다.",
   statusHint: "보관은 아래 ‘이 제작 브리프 보관’ 단추로만 전환할 수 있습니다.",
-  confirmedOption: "확정 (후속 제작 단계에서 기준본으로 사용)",
+  readyOption: "확정 (후속 제작 단계에서 기준본으로 사용)",
+  readyNote: "확정한 제작 브리프는 이후 홈페이지·디자인 자산 단계의 기준본으로 씁니다. 고치면 그 단계에서도 바뀐 내용을 다시 확인해 주세요.",
   save: "제작 브리프 저장",
   archive: "이 제작 브리프 보관",
-  notConnected: "아직 서버와 연결되지 않아 저장할 수 없습니다. (P3-a 서버 작업 뒤 연결)",
+  archiveNote: "보관하면 내용만 볼 수 있고 고칠 수 없습니다. 보관은 되돌릴 수 없습니다.",
+  archiveConfirm: "보관 확인",
   loadError: "공통 제작 브리프를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
 } as const;
 
-/** 이전 전략 기준 안내(시안 문구, 버전 번호만 끼움) */
-export function staleText(briefVersion: number | null, approvedVersion: number | null): string {
+/** 이전 전략 기준 안내. 고칠 수 없을 때는 "맞추지 않아도 고칠 수 있습니다"를 뺀다(QA-P3A-UI-01 U2) */
+export function staleText(briefVersion: number | null, approvedVersion: number | null, editable = true): string {
   const now = approvedVersion ? `지금 승인본(${approvedVersion}번 버전)` : "지금 승인본";
   const old = briefVersion ? `앞선 전략(${briefVersion}번 버전)` : "앞선 전략";
-  return `${now}보다 ${old}으로 만든 제작 브리프입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요. 맞추지 않아도 고칠 수 있습니다.`;
+  const base = approvedVersion === null ? "바탕 전략의 승인본이 지금 없습니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요." : `${now}보다 ${old}으로 만든 제작 브리프입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요.`;
+  return editable ? `${base} 맞추지 않아도 고칠 수 있습니다.` : base;
 }

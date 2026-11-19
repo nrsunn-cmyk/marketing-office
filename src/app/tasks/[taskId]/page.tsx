@@ -15,6 +15,7 @@ import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveryPanel } from "./delivery-panel";
 import { FunnelSection } from "./funnel-section";
+import { ProductionBriefArea } from "./production-brief-section";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
 
@@ -125,6 +126,16 @@ async function TaskView({
             }
           >
             <FunnelSection detail={detail} briefId={briefId} />
+          </Suspense>
+          {/* P3A-UI-CONNECT-01: P3 공통 제작 브리프(FunnelSection 아래·DeliveryPanel 위, AGY P3I-HANDOFF.md 1절) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                공통 제작 브리프를 불러오는 중…
+              </p>
+            }
+          >
+            <ProductionBriefArea detail={detail} />
           </Suspense>
         </>
       ) : (
