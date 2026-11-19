@@ -65,7 +65,11 @@ test("카드에서 채널 브리프 만들기 → 상세 열기, 빈 브리프 �
   const brief = briefRegion(page);
   await expect(brief.getByRole("heading", { level: 2 })).toHaveText(`콘텐츠 브리프: ${CARD}`); // 템플릿 제목 = 카드 제목
   await expect(brief.getByText("아직 비어 있는 브리프입니다.")).toBeVisible();
-  await expect(brief.getByRole("button", { name: /AI/ })).toHaveCount(0); // 자동 문구 생성 버튼 없음(미결정)
+  // A1(DEC08-UI-01): 시험 스택에는 AI 키(ANTHROPIC/OPENAI/GEMINI_API_KEY)가 없으므로 선택지 0개 → AI 영역 자체가 없다.
+  // 실제 생성 흐름은 외부 호출이라 E2E 에서 하지 않는다(서버 단위 시험이 가짜 fetch 로 맡음)
+  await expect(brief.getByRole("heading", { name: "AI 문구 초안 만들기" })).toHaveCount(0);
+  await expect(brief.getByRole("button", { name: /AI/ })).toHaveCount(0);
+  await expect(brief.getByText(/외부 AI\(/)).toHaveCount(0);
 });
 
 test("주장 추가 → [미확인 주장] → 근거 연결 → ✓ 근거 연결됨", async ({ page }) => {
