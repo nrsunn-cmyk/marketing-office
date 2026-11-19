@@ -567,6 +567,58 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"execution_jobs": {
+                  Row: {
+                    "approved_at": string | null,"approved_by": string | null,"archived_at": string | null,"attempt_count": number,"block_reason": string | null,"channel": string,"created_at": string,"created_by": string,"executed_at": string | null,"external_url": string | null,"held_from": string | null,"id": string,"idempotency_key": string,"last_error_code": string | null,"payload": NonNullable<Json>,"project_id": string,"publication_id": string | null,"revision": number,"source_hash": string,"source_id": string,"source_kind": string,"source_revision": number,"status": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"attempt_count"?: number,"block_reason"?: string | null,"channel": string,"created_at"?: string,"created_by": string,"executed_at"?: string | null,"external_url"?: string | null,"held_from"?: string | null,"id"?: string,"idempotency_key": string,"last_error_code"?: string | null,"payload": NonNullable<Json>,"project_id": string,"publication_id"?: string | null,"revision"?: number,"source_hash": string,"source_id": string,"source_kind": string,"source_revision": number,"status"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"attempt_count"?: number,"block_reason"?: string | null,"channel"?: string,"created_at"?: string,"created_by"?: string,"executed_at"?: string | null,"external_url"?: string | null,"held_from"?: string | null,"id"?: string,"idempotency_key"?: string,"last_error_code"?: string | null,"payload"?: NonNullable<Json>,"project_id"?: string,"publication_id"?: string | null,"revision"?: number,"source_hash"?: string,"source_id"?: string,"source_kind"?: string,"source_revision"?: number,"status"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "execution_jobs_source_id_publication_id_fkey"
+      columns: ["source_id","publication_id"]
+isOneToOne: false
+      referencedRelation: "channel_publications"
+      referencedColumns: ["draft_id","id"]
+    },{
+      foreignKeyName: "execution_jobs_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"execution_results": {
+                  Row: {
+                    "archived_at": string | null,"collection_mode": string,"created_at": string,"created_by": string,"denominator": number | null,"execution_job_id": string | null,"id": string,"metric_name": string,"numerator": number | null,"period_end": string,"period_start": string,"project_id": string,"revision": number,"source_note": string,"status": string,"unit": string,"updated_at": string,"value": number,"void_reason": string | null,"voided_at": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"collection_mode": string,"created_at"?: string,"created_by": string,"denominator"?: number | null,"execution_job_id"?: string | null,"id"?: string,"metric_name": string,"numerator"?: number | null,"period_end": string,"period_start": string,"project_id": string,"revision"?: number,"source_note": string,"status"?: string,"unit": string,"updated_at"?: string,"value": number,"void_reason"?: string | null,"voided_at"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"collection_mode"?: string,"created_at"?: string,"created_by"?: string,"denominator"?: number | null,"execution_job_id"?: string | null,"id"?: string,"metric_name"?: string,"numerator"?: number | null,"period_end"?: string,"period_start"?: string,"project_id"?: string,"revision"?: number,"source_note"?: string,"status"?: string,"unit"?: string,"updated_at"?: string,"value"?: number,"void_reason"?: string | null,"voided_at"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "execution_results_project_id_execution_job_id_fkey"
+      columns: ["project_id","execution_job_id"]
+isOneToOne: false
+      referencedRelation: "execution_jobs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "execution_results_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"exports": {
                   Row: {
                     "artifact_version_id": string,"checksum_sha256": string | null,"created_at": string,"error_code": string | null,"format": string,"id": string,"idempotency_key": string,"mime": string | null,"object_key": string | null,"revision": number,"status": string,"updated_at": string,"workspace_id": string
@@ -1153,6 +1205,9 @@ isOneToOne: false
 "add_brief_claim":
 { Args: { "p_brief_id": string,"p_claim_kind"?: string,"p_text": string }; Returns: string
                            },
+"add_execution_result":
+{ Args: { "p_collection_mode"?: string,"p_denominator": number,"p_execution_job_id": string,"p_metric_name": string,"p_numerator": number,"p_period_end": string,"p_period_start": string,"p_project_id": string,"p_source_note": string,"p_unit": string,"p_value": number }; Returns: string
+                           },
 "add_funnel_item":
 { Args: { "p_channel"?: string,"p_description"?: string,"p_details"?: Json,"p_kind": string,"p_stage_id": string,"p_status"?: string,"p_target_note"?: string,"p_title": string }; Returns: string
                            },
@@ -1185,6 +1240,9 @@ isOneToOne: false
 "approve_company_profile_version":
 { Args: { "p_comment"?: string,"p_decision": string,"p_expected_last_seq": number,"p_profile_version_id": string }; Returns: number
                            },
+"approve_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string }; Returns: Json
+                           },
 "archive_brief_claim":
 { Args: { "p_claim_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -1196,6 +1254,12 @@ isOneToOne: false
                            },
 "archive_design_asset":
 { Args: { "p_asset_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"archive_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string }; Returns: number
+                           },
+"archive_execution_result":
+{ Args: { "p_result_id": string }; Returns: number
                            },
 "archive_funnel_item":
 { Args: { "p_expected_revision": number,"p_item_id": string }; Returns: number
@@ -1240,6 +1304,9 @@ isOneToOne: false
 "decide_version":
 { Args: { "p_artifact_id": string,"p_comment"?: string,"p_decision": string,"p_version_id": string }; Returns: undefined
                            },
+"enqueue_execution":
+{ Args: { "p_channel": string,"p_project_id": string,"p_source_id": string,"p_source_kind": string }; Returns: string
+                           },
 "finalize_quote":
 { Args: { "p_artifact_id": string,"p_customer_snapshot": Json,"p_issue_date": string,"p_items": Json,"p_notes": string,"p_payment_terms": string,"p_subtotal_won": number,"p_supplier_profile_id": string,"p_supplier_snapshot": Json,"p_tax_mode": string,"p_tax_rate_bp": number,"p_tax_won": number,"p_total_won": number,"p_valid_until": string,"p_version_id": string }; Returns: {
               "quote_id": string,"quote_number": string,"quote_version_id": string,"reused": boolean
@@ -1253,6 +1320,9 @@ isOneToOne: false
               "artifact_id": string,"reused": boolean,"version": number,"version_id": string
             }[]
                            },
+"hold_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string }; Returns: Json
+                           },
 "link_claim_source":
 { Args: { "p_claim_id": string,"p_kind": string,"p_note"?: string,"p_profile_field"?: string,"p_target_id": string }; Returns: string
                            },
@@ -1264,6 +1334,9 @@ isOneToOne: false
                            },
 "rebase_design_asset":
 { Args: { "p_asset_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"rebase_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string }; Returns: Json
                            },
 "rebase_funnel":
 { Args: { "p_expected_revision": number,"p_funnel_id": string }; Returns: number
@@ -1288,6 +1361,9 @@ isOneToOne: false
               "artifact_id": string,"reused": boolean,"version": number,"version_id": string
             }[]
                            },
+"record_tistory_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string,"p_note"?: string,"p_published_at": string,"p_url": string }; Returns: Json
+                           },
 "reject_design_asset_upload":
 { Args: { "p_reason": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: undefined
                            },
@@ -1309,6 +1385,12 @@ isOneToOne: false
                            },
 "restore_web_copy_version":
 { Args: { "p_doc_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
+                           },
+"resume_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string }; Returns: Json
+                           },
+"retry_execution":
+{ Args: { "p_expected_revision": number,"p_job_id": string }; Returns: Json
                            },
 "save_draft_version":
 { Args: { "p_content": Json,"p_expected_revision": number,"p_input_hash": string,"p_snapshot": Json,"p_task_id": string }; Returns: {
@@ -1369,6 +1451,9 @@ isOneToOne: false
                            },
 "void_channel_publication":
 { Args: { "p_publication_id": string,"p_reason": string }; Returns: string
+                           },
+"void_execution_result":
+{ Args: { "p_reason": string,"p_result_id": string }; Returns: number
                            }
           }
           Enums: {
