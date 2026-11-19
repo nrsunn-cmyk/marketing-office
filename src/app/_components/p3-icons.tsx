@@ -52,6 +52,16 @@ export function P3PptIcon({ width = 24, height = 24, ...p }: P) {
   );
 }
 
+/** icons/p3-qa.svg — 결과물 검수 체크리스트 아이콘 */
+export function P3QaIcon({ width = 24, height = 24, ...p }: P) {
+  return (
+    <svg {...base24} width={width} height={height} {...p}>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 10l2 2 5-5M8 16h8" />
+    </svg>
+  );
+}
+
 /** empty/empty-brief.svg — 아직 작성된 문서가 없음을 나타내는 문서 그림(P3-a·b·d·e·f 빈 상태, ASSETS-HANDOFF 4절) */
 export function EmptyBriefArt({ width = 96, height = 72, ...p }: P) {
   return (
