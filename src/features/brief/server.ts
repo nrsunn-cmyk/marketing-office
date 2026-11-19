@@ -19,6 +19,7 @@ import {
   type ClaimWithSources,
   type ProfileField,
 } from "@/domain/brief";
+import { assetSendLabel } from "@/domain/brief/ai-copy";
 import { funnelStageLabel } from "@/domain/funnel";
 import { getFunnelBoard, type FunnelBoard } from "@/features/funnel/server";
 import { requireWorkspace } from "@/server/auth/session";
@@ -44,6 +45,12 @@ export interface BriefSourceView {
   id: string;
   kind: "profile" | "asset" | "research";
   label: string;
+  /**
+   * DEC-08-R2(QA-FINAL-E-01 D3·O5): AI 문구 요청에 보내는 근거 이름. 자료 원문·전체 주소를 넣지 않는다.
+   * 파일 → "파일 · 파일 이름", 링크 → "링크 · 제목"(제목 없으면 도메인만), 메모 → "메모 · 제목"(제목 없으면 "메모 자료 n"),
+   * 프로필 → "회사 프로필 · 항목 이름", 외부 출처 → "외부 출처 · 제목". 화면용 이름(label)은 그대로다.
+   */
+  aiLabel: string;
   note: string | null;
 }
 export interface BriefClaimView extends ClaimWithSources {
@@ -159,7 +166,7 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
   const clientId = projectId
     ? (await sb.from("projects").select("client_id").eq("workspace_id", workspace.id).eq("id", projectId).maybeSingle()).data?.client_id ?? null
     : null;
-  const assetQuery = sb.from("source_assets").select("id, display_name, url, file_name, project_id").eq("workspace_id", workspace.id);
+  const assetQuery = sb.from("source_assets").select("id, display_name, url, file_name, project_id, kind").eq("workspace_id", workspace.id);
   const [srcRes, profRes, assetRes, researchRes] = await Promise.all([
     claimRows.length
       ? sb.from("content_claim_sources")
@@ -194,6 +201,16 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
   }));
   const research = (researchRes.data ?? []).map((r) => ({ id: r.id, label: r.title, reviewStatus: r.review_status }));
   const assetLabel = new Map(assets.map((a) => [a.id, a.scope === "client" ? `고객 공통 · ${a.label}` : a.label]));
+  const assetRow = new Map((assetRes.data ?? []).map((a) => [a.id, a]));
+  const untitledMemo = new Map<string, number>();
+  const aiAssetLabel = (id: string | null): string => {
+    const a = id ? assetRow.get(id) : undefined;
+    if (!a) return "자료";
+    return assetSendLabel(a, () => {
+      if (!untitledMemo.has(a.id)) untitledMemo.set(a.id, untitledMemo.size + 1);
+      return untitledMemo.get(a.id)!;
+    });
+  };
   const researchLabel = new Map(research.map((r) => [r.id, r.label]));
 
   const byClaim = new Map<string, BriefSourceView[]>();
@@ -205,7 +222,13 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
           ? `자료 · ${assetLabel.get(s.source_asset_id ?? "") ?? "목록 밖 자료"}`
           : `외부 출처 · ${researchLabel.get(s.research_source_id ?? "") ?? "목록 밖 출처"}`;
     const list = byClaim.get(s.claim_id) ?? [];
-    list.push({ id: s.id, kind: s.kind as BriefSourceView["kind"], label, note: s.note });
+    const aiLabel =
+      s.kind === "profile"
+        ? `회사 프로필 · ${PROFILE_FIELDS[s.profile_field as ProfileField] ?? "항목"}`
+        : s.kind === "asset"
+          ? aiAssetLabel(s.source_asset_id)
+          : `외부 출처 · ${researchLabel.get(s.research_source_id ?? "") ?? "출처"}`;
+    list.push({ id: s.id, kind: s.kind as BriefSourceView["kind"], label, aiLabel, note: s.note });
     byClaim.set(s.claim_id, list);
   }
   const claims: BriefClaimView[] = claimRows.map((c) => {

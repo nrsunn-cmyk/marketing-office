@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { briefCopyRequestSchema, briefErrorFromDb, checkBriefCopy, type BriefCopyRequest } from "@/domain/brief";
 import { BRIEF_COPY_OUTPUT_SCHEMA, BRIEF_COPY_SYSTEM, buildBriefCopyRequest, canonicalJson, estimateCostUsdMicro } from "@/domain/brief/ai-copy";
@@ -12,7 +12,6 @@ import {
   type BriefCopyProvider,
 } from "@/domain/brief/ai-models";
 import { fail, ok, type ErrorCode, type Result } from "@/server/result";
-import type { Json } from "@/server/supabase/database.types";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { getContentBrief } from "./server";
 
@@ -23,15 +22,24 @@ import { getContentBrief } from "./server";
  * - 외부로 보내는 것(공급자 무관): 브리프 제목·대상·훅·핵심 메시지·CTA·채널 항목, 근거가 연결된 주장 문장, 근거 이름.
  * - 순서(공급자 무관): 브리프 읽기(RLS) → 요청·계약 검사 → 예약 RPC(한도·모델 허용·재사용) → 호출(60초) → 계약 검사 → 마감 RPC.
  * - 호출: Anthropic 은 공식 SDK, OpenAI·Gemini 는 공급망을 줄이려고 fetch 로 직접 부른다(429·5xx·연결 오류 1번 재시도, 시간 초과는 재시도 없음).
+ * - R2(QA-FINAL-E-01 D1): 예약·마감 RPC 는 서버만 아는 비밀값(BRIEF_COPY_SIGNING_KEY = DB app.server_secrets 의 값)으로 HMAC 서명해 부른다.
+ *   사용자가 같은 로그인으로 RPC 를 직접 불러도 서명이 없어 거절된다. 서명 키가 없으면 기능이 꺼진다.
  */
 
 export const BRIEF_COPY_DISABLED_MESSAGE = "AI 문구 만들기가 아직 켜져 있지 않습니다. 관리자가 API 키를 설정하면 쓸 수 있습니다.";
 const TIMEOUT_MS = 60_000;
 
 const keyOf = (p: BriefCopyProvider) => process.env[BRIEF_COPY_PROVIDERS[p].envKey]?.trim() || "";
+const signingKey = () => process.env.BRIEF_COPY_SIGNING_KEY?.trim() || "";
 
-/** 키가 있는 공급자 */
+/** 서버 서명(R2): HMAC-SHA256(키, "용도|메시지") — DB app.hmac_sha256 과 같은 값 */
+export function signForDb(purpose: "reserve" | "finish", message: string, key = signingKey()): string {
+  return createHmac("sha256", key).update(`${purpose}|${message}`, "utf8").digest("hex");
+}
+
+/** 키가 있는 공급자(서명 키가 없으면 하나도 없음 — 기능 꺼짐) */
 export function enabledBriefCopyProviders(): BriefCopyProvider[] {
+  if (!signingKey()) return [];
   return (Object.keys(BRIEF_COPY_PROVIDERS) as BriefCopyProvider[]).filter((p) => keyOf(p) !== "");
 }
 
@@ -79,7 +87,9 @@ const anthropicErrorCode = (e: unknown): string => {
   return "UNKNOWN";
 };
 
-/** 60초 제한, 429·5xx·연결 오류는 SDK 가 1번만 다시 시도한다. 거절(refusal)이면 서버 쪽 대체 모델("default")로 넘긴다 */
+const ANTHROPIC_FALLBACK = new Set(["claude-sonnet-5-5", "claude-opus-5-5"]);
+
+/** 60초 제한, 429·5xx·연결 오류는 SDK 가 1번만 다시 시도한다. 거절(refusal)이면 서버 쪽 대체 모델("default")로 넘긴다(Sonnet·Opus) */
 export function anthropicCaller(apiKey: string, model: string, fetchImpl?: typeof fetch): BriefCopyCaller {
   // fetchImpl: 시험에서 네트워크 없이 요청 모양을 확인할 때만 쓴다
   const client = new Anthropic({ apiKey, timeout: TIMEOUT_MS, maxRetries: 1, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
@@ -88,8 +98,8 @@ export function anthropicCaller(apiKey: string, model: string, fetchImpl?: typeo
       const res = await client.beta.messages.create({
         model,
         max_tokens: 16000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        // 서버 쪽 대체 모델은 Sonnet·Opus 만 있다(Haiku 5.5 는 없음, QA-FINAL-E-01 O2)
+        ...(ANTHROPIC_FALLBACK.has(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
         output_config: { effort: "low", format: { type: "json_schema", schema: BRIEF_COPY_OUTPUT_SCHEMA as unknown as Record<string, unknown> } },
         system: BRIEF_COPY_SYSTEM,
         messages: [{ role: "user", content: JSON.stringify(req) }],
@@ -251,7 +261,13 @@ function callerFor(provider: BriefCopyProvider, model: string, apiKey: string): 
   return anthropicCaller(apiKey, model);
 }
 
+export const BRIEF_COPY_MISCONFIGURED_MESSAGE = "AI 문구 만들기 설정이 맞지 않습니다. 관리자에게 알려 주세요.";
+
 function rpcFail<T>(where: string, error: { code?: string; message: string }): Result<T> {
+  if (/NOT_CONFIGURED|BAD_SIGNATURE/.test(error.message)) {
+    console.error(`[${where}]`, error.code, error.message.slice(0, 120));
+    return fail("ERROR", BRIEF_COPY_MISCONFIGURED_MESSAGE);
+  }
   const e = briefErrorFromDb(error.message);
   if (e.code === "ERROR") console.error(`[${where}]`, error.code, error.message);
   const map: Record<string, ErrorCode> = { CONFLICT: "CONFLICT", NOT_FOUND: "NOT_FOUND", INVALID_TRANSITION: "INVALID_TRANSITION", ERROR: "ERROR" };
@@ -323,7 +339,8 @@ export async function generateBriefCopy(
       coreMessage: detail.brief.coreMessage,
       cta: detail.brief.cta,
       channelSpec: detail.brief.channelSpec as Record<string, unknown>,
-      claims: detail.claims.map((c) => ({ id: c.id, text: c.text, sourceLabels: c.sourceRows.map((s) => s.label) })),
+      // R2 D3: 외부로는 전송용 이름(aiLabel)만. 메모 원문·전체 주소는 보내지 않는다
+      claims: detail.claims.map((c) => ({ id: c.id, text: c.text, sourceLabels: c.sourceRows.map((s) => s.aiLabel) })),
     },
     opts,
   );
@@ -332,13 +349,17 @@ export async function generateBriefCopy(
   const inputHash = createHash("sha256").update(canonicalJson({ provider, model: model.id, req: parsedReq.data })).digest("hex");
 
   const sb = await createSupabaseServerClient();
+  const claimIds = parsedReq.data.claims.map((c) => c.id);
+  const signedAt = Date.now();
   const rsv = await sb.rpc("reserve_brief_copy_run", {
     p_brief_id: briefId,
     p_expected_revision: expectedRevision,
     p_input_hash: inputHash,
     p_provider: provider,
     p_model: model.id,
-    p_claim_ids: parsedReq.data.claims.map((c) => c.id),
+    p_claim_ids: claimIds,
+    p_signed_at: signedAt,
+    p_signature: signForDb("reserve", [briefId, expectedRevision, inputHash, provider, model.id, claimIds.join(","), signedAt].join("|")),
   });
   if (rsv.error) return rpcFail("generateBriefCopy.reserve", rsv.error);
   const row = rsv.data?.[0];
@@ -351,19 +372,28 @@ export async function generateBriefCopy(
 
   const res = await call(parsedReq.data);
   const usage = { model: res.model ?? model.id, inputTokens: res.inputTokens ?? 0, outputTokens: res.outputTokens ?? 0 };
-  const cost = res.kind === "error" && res.inputTokens === undefined ? 0 : estimateCostUsdMicro(usage.model, usage);
-  const finish = (status: "succeeded" | "rejected" | "refused" | "failed", extra: { variants?: BriefCopyVariant[]; problems?: string[]; error?: string }) =>
-    sb.rpc("finish_brief_copy_run", {
+  // 사용량을 모르는 실패(시간 초과·연결 끊김 등)는 업체가 처리분을 청구할 수 있어 예약 추정치(최대치)로 기록한다(QA-FINAL-E-01 O1)
+  const unknownUsage = res.kind === "error" && res.inputTokens === undefined;
+  const httpRejected = res.kind === "error" && /^(AUTH|PERMISSION|BAD_REQUEST|RATE_LIMIT)$/.test(res.code);
+  const cost = unknownUsage ? (httpRejected ? 0 : estimateCostUsdMicro(model.id, { inputTokens: 12_000, outputTokens: 20_000 })) : estimateCostUsdMicro(usage.model, usage);
+  const finish = (status: "succeeded" | "rejected" | "refused" | "failed", extra: { variants?: BriefCopyVariant[]; problems?: string[]; error?: string }) => {
+    const variantsText = extra.variants ? JSON.stringify(extra.variants) : null;
+    const problemsText = extra.problems ? JSON.stringify(extra.problems) : null;
+    const costMicro = Math.min(cost, 5_000_000);
+    const message = [row.run_id, status, variantsText ?? "", problemsText ?? "", extra.error ?? "", usage.inputTokens, usage.outputTokens, costMicro].join("|");
+    return sb.rpc("finish_brief_copy_run", {
       p_run_id: row.run_id,
       p_status: status,
       // RPC 인자는 null 을 받는다(생성 타입은 null 을 표시하지 않음)
-      p_variants: (extra.variants ?? null) as unknown as Json,
-      p_problems: (extra.problems ?? null) as unknown as Json,
+      p_variants: variantsText as unknown as string,
+      p_problems: problemsText as unknown as string,
       p_error_code: (extra.error ?? null) as unknown as string,
       p_input_tokens: usage.inputTokens,
       p_output_tokens: usage.outputTokens,
-      p_cost_usd_micro: Math.min(cost, 5_000_000),
+      p_cost_usd_micro: costMicro,
+      p_signature: signForDb("finish", message),
     });
+  };
 
   if (res.kind === "refused") {
     await finish("refused", {});

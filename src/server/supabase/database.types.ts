@@ -877,7 +877,7 @@ isOneToOne: false
             }[]
                            },
 "finish_brief_copy_run":
-{ Args: { "p_cost_usd_micro": number,"p_error_code": string,"p_input_tokens": number,"p_output_tokens": number,"p_problems": Json,"p_run_id": string,"p_status": string,"p_variants": Json }; Returns: undefined
+{ Args: { "p_cost_usd_micro": number,"p_error_code": string,"p_input_tokens": number,"p_output_tokens": number,"p_problems": string,"p_run_id": string,"p_signature": string,"p_status": string,"p_variants": string }; Returns: undefined
                            },
 "generate_strategy":
 { Args: { "p_content": Json,"p_extra_inputs": Json,"p_idempotency_key": string,"p_profile_version_id": string,"p_task_id": string }; Returns: {
@@ -902,7 +902,7 @@ isOneToOne: false
             }[]
                            },
 "reserve_brief_copy_run":
-{ Args: { "p_brief_id": string,"p_claim_ids": (string)[],"p_expected_revision": number,"p_input_hash": string,"p_model": string,"p_provider": string }; Returns: {
+{ Args: { "p_brief_id": string,"p_claim_ids": (string)[],"p_expected_revision": number,"p_input_hash": string,"p_model": string,"p_provider": string,"p_signature": string,"p_signed_at": number }; Returns: {
               "reused": boolean,"run_id": string
             }[]
                            },

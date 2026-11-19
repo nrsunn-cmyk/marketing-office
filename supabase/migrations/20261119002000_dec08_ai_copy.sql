@@ -5,13 +5,16 @@
 --   2) brief_copy_runs: 생성 1번 = 1행. 예약 → 마감(성공·검사 탈락·거절·실패) → (선택) 채택.
 --      외부로 보낸 프롬프트 원문은 저장하지 않는다. 결과 변형(variants)만 저장해 채택·재사용에 쓴다.
 --      select 만 본인 업무실, 쓰기는 정의자 RPC 3개만(INSERT·UPDATE·DELETE·TRUNCATE 회수).
---   3) 한도(app.brief_copy_limits): 업무실당 하루(업무실 시간대) 30번, 같은 브리프 60초에 1번,
+--   3) 한도(app.brief_copy_limits): 업무실당 하루(Asia/Seoul 고정, R2 W1) 30번, 같은 브리프 60초에 1번,
 --      월 추정 비용 상한 20,000,000 마이크로달러(20달러, 약 2.9만 원, 공급자 합계).
 --      마감 전 예약은 그 모델 요금으로 최대치(입력 12,000 + 출력 20,000 토큰)를 잡아 계산한다(DEC-08-R1).
 --   3-1) 허용 공급자·모델(app.brief_copy_models, DEC-08-R1 주인님 지시 "OpenAI / Claude / Gemini 중 선택, 모델도 선택"):
 --      서버 목록(src/domain/brief/ai-models.ts)과 같아야 한다(시험으로 대조). 목록 밖 공급자·모델은 예약에서 거절.
 --      같은 브리프·같은 입력이 10분 안에 성공했으면 새로 부르지 않고 그 결과를 다시 쓴다(중복 과금 방지).
+--   3-2) 서버 서명(R2 D1): 예약·마감은 서버만 아는 비밀값(app.server_secrets, 이 migration 이 무작위 생성)으로 HMAC 서명해야 받는다.
+--      서버 환경 변수 BRIEF_COPY_SIGNING_KEY 에 같은 값을 넣는다. 사용자가 직접 부르면 서명이 없어 거절된다.
 --   4) RPC: reserve_brief_copy_run · finish_brief_copy_run · accept_brief_copy. 감사: copy_generate(마감), copy_accept(채택).
+--      R2 D2: 예약은 업무실 행을 잠가 한도 검사·예약을 업무실마다 한 번에 하나씩 처리한다.
 --   5) update_content_brief: 'ai' 를 직접 보낼 수 없다. 지금 AI 초안이고 카피 글을 바꾸지 않으면 'ai' 유지, 바꾸면 보낸 값.
 --
 -- 바뀌지 않는 것: 다른 표·RLS·RPC, 근거 연결 규칙(23번), 결과물 경로.
@@ -93,24 +96,82 @@ $$;
 revoke execute on function app.brief_copy_models() from public, anon, authenticated;
 
 -- ─────────────────────────────────────────────
+-- 3-2) 서버 서명(DEC-08-R2, Tester QA-FINAL-E-01 D1): 예약·마감은 서버만 아는 비밀값으로 서명해야 받는다.
+--      앱에는 service_role 이 없어 서버와 사용자가 같은 로그인 토큰으로 RPC 를 부른다. 그래서 "서버만 아는 값"으로 가른다.
+--      비밀값은 이 migration 이 DB 안에서 무작위로 만들어 app.server_secrets 에 둔다(app 스키마, 로그인·익명 권한 없음).
+--      서버는 같은 값을 환경 변수 BRIEF_COPY_SIGNING_KEY 로 받는다(주인님이 SQL Editor 에서 읽어 Vercel 에 넣는다).
+--      서명 = HMAC-SHA256(키 = 비밀값 글자, 메시지 = 용도|값들). 내장 sha256() 만 써서 PG 17·PGlite 모두 같다(pgcrypto 불필요).
+-- ─────────────────────────────────────────────
+create table app.server_secrets (
+  name       text primary key check (length(name) between 1 and 100),
+  value      text not null check (length(value) >= 32),
+  created_at timestamptz not null default now()
+);
+revoke all on app.server_secrets from public, anon, authenticated;
+insert into app.server_secrets (name, value)
+values ('brief_copy_signing', encode(sha256(convert_to(gen_random_uuid()::text || gen_random_uuid()::text || clock_timestamp()::text, 'UTF8')), 'hex'));
+
+create or replace function app.hmac_sha256(p_key bytea, p_msg bytea) returns text
+language plpgsql immutable strict set search_path = '' as $$
+declare
+  k    bytea := p_key;
+  ipad bytea;
+  opad bytea;
+begin
+  if length(k) > 64 then
+    k := sha256(k);
+  end if;
+  k := k || decode(repeat('00', 64 - length(k)), 'hex');
+  ipad := k;
+  opad := k;
+  for i in 0..63 loop
+    ipad := set_byte(ipad, i, get_byte(k, i) # 54);
+    opad := set_byte(opad, i, get_byte(k, i) # 92);
+  end loop;
+  return encode(sha256(opad || sha256(ipad || p_msg)), 'hex');
+end $$;
+revoke execute on function app.hmac_sha256(bytea, bytea) from public, anon, authenticated;
+
+-- 서명 확인. 비밀값이 없으면 NOT_CONFIGURED, 다르면 BAD_SIGNATURE(어느 쪽이든 외부 호출 전 예약에서 멈춘다)
+create or replace function app.assert_server_signature(p_purpose text, p_message text, p_signature text) returns void
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  secret text;
+begin
+  select s.value into secret from app.server_secrets s where s.name = 'brief_copy_signing';
+  if secret is null then
+    raise exception 'NOT_CONFIGURED: AI 문구 만들기 서명 키가 DB 에 없습니다' using errcode = 'P0001';
+  end if;
+  if p_signature is null or lower(p_signature) <> app.hmac_sha256(convert_to(secret, 'UTF8'), convert_to(p_purpose || '|' || p_message, 'UTF8')) then
+    raise exception 'BAD_SIGNATURE: 서버 서명이 맞지 않습니다' using errcode = '42501';
+  end if;
+end $$;
+revoke execute on function app.assert_server_signature(text, text, text) from public, anon, authenticated;
+
+-- ─────────────────────────────────────────────
 -- 4) RPC
 -- ─────────────────────────────────────────────
--- 4-1) 예약: 한도 확인 뒤 'reserved' 행을 만든다. 같은 입력의 최근 성공이 있으면 그것을 돌려준다(reused = true).
---      브리프 행을 잠가 같은 브리프의 동시 예약이 겹치지 않게 한다.
+-- 4-1) 예약: 서버 서명 확인 → 한도 확인 → 'reserved' 행. 같은 입력의 최근 성공이 있으면 그것을 돌려준다(reused = true).
+--      R2(D2): 업무실 행을 먼저 잠가 같은 업무실의 예약을 한 번에 하나씩 처리한다(동시 요청으로 하루·월 한도를 넘지 못한다).
+--      그다음 브리프 행을 잠근다(같은 순서로만 잠가 교착이 없다).
+--      R2(W1): 하루·월 기준은 Asia/Seoul 고정(업무실 시간대를 바꿔도 한도가 다시 시작되지 않는다).
+--      서명 메시지: reserve|브리프id|revision|확인값|공급자|모델|주장id(쉼표)|서명시각(ms). 서명 시각은 ±5분 안이어야 한다.
 create or replace function public.reserve_brief_copy_run(
   p_brief_id          uuid,
   p_expected_revision integer,
   p_input_hash        text,
   p_provider          text,
   p_model             text,
-  p_claim_ids         uuid[]
+  p_claim_ids         uuid[],
+  p_signed_at         bigint,
+  p_signature         text
 ) returns table (run_id uuid, reused boolean)
 language plpgsql security definer set search_path = '' as $$
 declare
   uid  uuid := auth.uid();
+  ws   uuid;
   b    public.content_briefs%rowtype;
   lim  record;
-  tz   text;
   prev uuid;
   n    integer;
   cost bigint;
@@ -120,11 +181,22 @@ begin
   if uid is null then
     raise exception 'NOT_AUTHENTICATED: 로그인 정보가 없습니다' using errcode = '42501';
   end if;
-  select x.* into b
-    from public.content_briefs x
-   where x.id = p_brief_id
-     and exists (select 1 from public.workspaces w where w.id = x.workspace_id and w.owner_user_id = uid)
-     for update of x;
+  perform app.assert_server_signature('reserve',
+    concat_ws('|', p_brief_id::text, p_expected_revision::text, p_input_hash, p_provider, p_model, array_to_string(ids, ','), p_signed_at::text),
+    p_signature);
+  if p_signed_at is null or abs(extract(epoch from clock_timestamp()) * 1000 - p_signed_at) > 300000 then
+    raise exception 'BAD_SIGNATURE: 서명 시각이 너무 오래됐습니다' using errcode = '42501';
+  end if;
+  -- 업무실 행 잠금(본인 것만). 같은 업무실의 예약은 여기서 줄을 선다
+  select w.id into ws
+    from public.workspaces w
+   where w.owner_user_id = uid
+     and w.id = (select x.workspace_id from public.content_briefs x where x.id = p_brief_id)
+     for update of w;
+  if ws is null then
+    raise exception 'NOT_FOUND: 브리프를 찾을 수 없습니다' using errcode = 'P0002';
+  end if;
+  select x.* into b from public.content_briefs x where x.id = p_brief_id and x.workspace_id = ws for update of x;
   if not found then
     raise exception 'NOT_FOUND: 브리프를 찾을 수 없습니다' using errcode = 'P0002';
   end if;
@@ -162,50 +234,58 @@ begin
   if exists (select 1 from public.brief_copy_runs r where r.brief_id = b.id and r.created_at > now() - lim.brief_interval) then
     raise exception 'RATE_LIMITED: 같은 브리프는 1분에 한 번만 만들 수 있습니다. 잠시 뒤 다시 시도해 주세요' using errcode = 'P0001';
   end if;
-  select w.timezone into tz from public.workspaces w where w.id = b.workspace_id;
   select count(*) into n
     from public.brief_copy_runs r
-   where r.workspace_id = b.workspace_id
-     and r.created_at >= (date_trunc('day', now() at time zone tz) at time zone tz);
+   where r.workspace_id = ws
+     and r.created_at >= (date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul');
   if n >= lim.daily_runs then
     raise exception 'RATE_LIMITED: 오늘 AI 문구 생성 횟수(%번)를 다 썼습니다. 내일 다시 쓸 수 있습니다', lim.daily_runs using errcode = 'P0001';
   end if;
   select coalesce(sum(case when r.status = 'reserved' then r.cost_estimate_usd_micro else coalesce(r.cost_usd_micro, 0) end), 0) into cost
     from public.brief_copy_runs r
-   where r.workspace_id = b.workspace_id
-     and r.created_at >= (date_trunc('month', now() at time zone tz) at time zone tz);
+   where r.workspace_id = ws
+     and r.created_at >= (date_trunc('month', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul');
   if cost + est > lim.monthly_cap_usd_micro then
     raise exception 'BUDGET_EXCEEDED: 이번 달 AI 문구 생성 비용 상한에 닿았습니다. 다음 달에 다시 쓸 수 있습니다' using errcode = 'P0001';
   end if;
 
   insert into public.brief_copy_runs (workspace_id, brief_id, brief_revision, provider, model, cost_estimate_usd_micro, input_hash, claim_ids, created_by)
-  values (b.workspace_id, b.id, b.revision, p_provider, p_model, est, p_input_hash, ids, uid)
+  values (ws, b.id, b.revision, p_provider, p_model, est, p_input_hash, ids, uid)
   returning id into prev;
   return query select prev, false;
 end $$;
-revoke execute on function public.reserve_brief_copy_run(uuid, integer, text, text, text, uuid[]) from public, anon;
-grant execute on function public.reserve_brief_copy_run(uuid, integer, text, text, text, uuid[]) to authenticated;
+revoke execute on function public.reserve_brief_copy_run(uuid, integer, text, text, text, uuid[], bigint, text) from public, anon;
+grant execute on function public.reserve_brief_copy_run(uuid, integer, text, text, text, uuid[], bigint, text) to authenticated;
 
--- 4-2) 마감: 예약 행에 결과를 한 번만 적는다. 성공이면 변형 1~3개(글 1~5000자, 쓴 주장 id 는 예약 때 보낸 것 안에서).
+-- 4-2) 마감: 서버 서명 확인 → 예약 행에 결과를 한 번만 적는다. 성공이면 변형 1~3개(글 1~5000자, 쓴 주장 id 는 예약 때 보낸 것 안에서).
+--      R2(D1): 사용자가 직접 마감(위장 성공·비용 0 가로채기)할 수 없다. 변형·문제 목록은 서명한 JSON 글자 그대로 받는다.
+--      서명 메시지: finish|기록id|결과|변형JSON|문제JSON|오류코드|입력토큰|출력토큰|비용(없는 값은 빈 글자).
 create or replace function public.finish_brief_copy_run(
   p_run_id         uuid,
   p_status         text,
-  p_variants       jsonb,
-  p_problems       jsonb,
+  p_variants       text,
+  p_problems       text,
   p_error_code     text,
   p_input_tokens   integer,
   p_output_tokens  integer,
-  p_cost_usd_micro bigint
+  p_cost_usd_micro bigint,
+  p_signature      text
 ) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
-  uid uuid := auth.uid();
-  r   public.brief_copy_runs%rowtype;
-  v   jsonb;
+  uid  uuid := auth.uid();
+  r    public.brief_copy_runs%rowtype;
+  vars jsonb;
+  prob jsonb;
+  v    jsonb;
 begin
   if uid is null then
     raise exception 'NOT_AUTHENTICATED: 로그인 정보가 없습니다' using errcode = '42501';
   end if;
+  perform app.assert_server_signature('finish',
+    concat_ws('|', p_run_id::text, coalesce(p_status, ''), coalesce(p_variants, ''), coalesce(p_problems, ''), coalesce(p_error_code, ''),
+              coalesce(p_input_tokens::text, ''), coalesce(p_output_tokens::text, ''), coalesce(p_cost_usd_micro::text, '')),
+    p_signature);
   select x.* into r
     from public.brief_copy_runs x
    where x.id = p_run_id
@@ -220,14 +300,20 @@ begin
   if p_status is null or p_status not in ('succeeded', 'rejected', 'refused', 'failed') then
     raise exception 'VALIDATION: 알 수 없는 생성 결과입니다' using errcode = '22023';
   end if;
-  if (p_status = 'succeeded') <> (p_variants is not null) then
+  begin
+    vars := p_variants::jsonb;
+    prob := p_problems::jsonb;
+  exception when others then
+    raise exception 'VALIDATION: 변형 형식이 올바르지 않습니다' using errcode = '22023';
+  end;
+  if (p_status = 'succeeded') <> (vars is not null) then
     raise exception 'VALIDATION: 성공일 때만 변형을 저장합니다' using errcode = '22023';
   end if;
-  if p_variants is not null then
-    if jsonb_typeof(p_variants) <> 'array' or jsonb_array_length(p_variants) not between 1 and 3 then
+  if vars is not null then
+    if jsonb_typeof(vars) <> 'array' or jsonb_array_length(vars) not between 1 and 3 then
       raise exception 'VALIDATION: 변형은 1~3개여야 합니다' using errcode = '22023';
     end if;
-    for v in select * from jsonb_array_elements(p_variants) loop
+    for v in select * from jsonb_array_elements(vars) loop
       if jsonb_typeof(v) <> 'object' or (select count(*) from jsonb_object_keys(v)) <> 2
          or jsonb_typeof(v -> 'text') <> 'string' or length(v ->> 'text') not between 1 and 5000
          or jsonb_typeof(v -> 'usedClaimIds') <> 'array'
@@ -238,22 +324,22 @@ begin
       end if;
     end loop;
   end if;
-  if p_problems is not null and (jsonb_typeof(p_problems) <> 'array' or jsonb_array_length(p_problems) > 20) then
+  if prob is not null and (jsonb_typeof(prob) <> 'array' or jsonb_array_length(prob) > 20) then
     raise exception 'VALIDATION: 문제 목록 형식이 올바르지 않습니다' using errcode = '22023';
   end if;
   if coalesce(p_input_tokens, 0) < 0 or coalesce(p_output_tokens, 0) < 0 or coalesce(p_cost_usd_micro, 0) not between 0 and 5000000 then
     raise exception 'VALIDATION: 사용량 값이 올바르지 않습니다' using errcode = '22023';
   end if;
   update public.brief_copy_runs
-     set status = p_status, variants = p_variants, problems = p_problems, error_code = left(p_error_code, 100),
+     set status = p_status, variants = vars, problems = prob, error_code = left(p_error_code, 100),
          input_tokens = p_input_tokens, output_tokens = p_output_tokens, cost_usd_micro = p_cost_usd_micro, finished_at = now()
    where id = r.id;
   perform app.brief_audit(r.workspace_id, r.brief_id, 'copy_generate', null,
     jsonb_build_object('run_id', r.id, 'status', p_status, 'provider', r.provider, 'model', r.model, 'input_tokens', p_input_tokens,
                        'output_tokens', p_output_tokens, 'cost_usd_micro', p_cost_usd_micro));
 end $$;
-revoke execute on function public.finish_brief_copy_run(uuid, text, jsonb, jsonb, text, integer, integer, bigint) from public, anon;
-grant execute on function public.finish_brief_copy_run(uuid, text, jsonb, jsonb, text, integer, integer, bigint) to authenticated;
+revoke execute on function public.finish_brief_copy_run(uuid, text, text, text, text, integer, integer, bigint, text) from public, anon;
+grant execute on function public.finish_brief_copy_run(uuid, text, text, text, text, integer, integer, bigint, text) to authenticated;
 
 -- 4-3) 채택: 성공한 생성의 n번째 변형을 브리프 카피 초안으로 저장(copy_origin = 'ai'). 한 생성에서 한 번만.
 create or replace function public.accept_brief_copy(p_run_id uuid, p_variant integer, p_expected_revision integer)

@@ -55,6 +55,25 @@ export function buildBriefCopyRequest(src: BriefCopySource, opts: { variants?: n
   };
 }
 
+/**
+ * DEC-08-R2(QA-FINAL-E-01 D3·O5): 자료 근거를 AI 요청에 보낼 때의 이름. 자료 원문·전체 주소를 넣지 않는다.
+ * 파일 → "파일 · 파일 이름", 링크 → "링크 · 제목"(제목 없으면 "링크 · 도메인"), 메모 → "메모 · 제목"(제목 없으면 "메모 자료 n").
+ * 제목은 사용자가 붙인 이름(source_assets.file_name)이다. memoNo 는 제목 없는 메모의 번호(같은 브리프 안에서 1부터).
+ */
+export function assetSendLabel(a: { kind: string; file_name: string | null; url: string | null }, memoNo: () => number): string {
+  const title = a.file_name?.trim() || "";
+  if (a.kind === "file") return `파일 · ${title || "이름 없는 파일"}`;
+  if (a.kind === "url") {
+    if (title) return `링크 · ${title}`;
+    try {
+      return `링크 · ${new URL(a.url ?? "").hostname}`;
+    } catch {
+      return "링크";
+    }
+  }
+  return title ? `메모 · ${title}` : `메모 자료 ${memoNo()}`;
+}
+
 /** 같은 입력인지 비교하려고 키 순서를 고정한 JSON(해시 입력) */
 export function canonicalJson(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonicalJson).join(",")}]`;

@@ -2,6 +2,7 @@
  * DEC08-AI-COPY-01: 브리프 AI 문구 생성 기록·한도·채택(20261119002000_dec08_ai_copy) 시험. 모든 값은 합성이다.
  * 외부 호출은 없다(DB 는 예약·마감·채택·한도만 맡는다).
  */
+import { createHmac } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
 import { BRIEF_COPY_MODELS } from "@/domain/brief/ai-models";
@@ -12,12 +13,15 @@ let db: Db;
 let a: Fixture;
 let b: Fixture;
 let strategyTpl: string;
+let secret: string; // R2: 서버 서명 비밀값(migration 이 만든 값을 관리자 연결로 읽는다 — 서버의 BRIEF_COPY_SIGNING_KEY 역할)
+const sign = (purpose: string, message: string, key = secret) => createHmac("sha256", key).update(`${purpose}|${message}`, "utf8").digest("hex");
 
 beforeAll(async () => {
   db = await createDb();
   a = await seedOwner(db, "ai-owner-a@example.test");
   b = await seedOwner(db, "ai-owner-b@example.test");
   strategyTpl = (await one<{ id: string }>(db, "select id from templates where key = $1", [STRATEGY_TEMPLATE_VERSION])).id;
+  secret = (await one<{ value: string }>(db, "select value from app.server_secrets where name = 'brief_copy_signing'")).value;
   for (const f of [a, b])
     await asUser(db, f.userId, (tx) =>
       tx.query("select approve_company_profile_version($1, 'approved', coalesce((select max(seq) from company_profile_approvals where company_profile_version_id = $1), 0))", [f.profileA1]),
@@ -57,12 +61,20 @@ async function setup(f: Fixture = a) {
 /** 트랜잭션 안에서는 같은 tx 로 읽는다(관리자 연결을 쓰면 PGlite 단일 연결이 서로 기다린다) */
 const revIn = async (tx: Tx, briefId: string) => (await one<{ revision: number }>(tx, "select revision from content_briefs where id = $1", [briefId])).revision;
 const rev = async (briefId: string) => (await one<{ revision: number }>(db, "select revision from content_briefs where id = $1", [briefId])).revision;
-const reserve = (tx: Tx, briefId: string, revision: number, h: string, claims: string[], provider = "anthropic", model = "claude-sonnet-5-5") =>
-  one<{ run_id: string; reused: boolean }>(tx, "select * from reserve_brief_copy_run($1, $2, $3, $4, $5, $6::uuid[])", [briefId, revision, h, provider, model, claims]);
-const finish = (tx: Tx, runId: string, status: string, variants: unknown, o: { problems?: unknown; err?: string | null; inT?: number; outT?: number; cost?: number } = {}) =>
-  tx.query("select finish_brief_copy_run($1, $2, $3, $4, $5, $6, $7, $8)", [
-    runId, status, variants === null ? null : JSON.stringify(variants), o.problems === undefined ? null : JSON.stringify(o.problems), o.err ?? null, o.inT ?? 3000, o.outT ?? 5000, o.cost ?? 56000,
-  ]);
+/** 서버처럼 서명해서 예약한다(o.sig 로 서명을 바꿔 위조를 시험) */
+const reserve = (tx: Tx, briefId: string, revision: number, h: string, claims: string[], provider = "anthropic", model = "claude-sonnet-5-5", o: { sig?: string | null; at?: number } = {}) => {
+  const at = o.at ?? Date.now();
+  const sig = o.sig === undefined ? sign("reserve", [briefId, revision, h, provider, model, claims.join(","), at].join("|")) : o.sig;
+  return one<{ run_id: string; reused: boolean }>(tx, "select * from reserve_brief_copy_run($1, $2, $3, $4, $5, $6::uuid[], $7, $8)", [briefId, revision, h, provider, model, claims, at, sig]);
+};
+/** 서버처럼 서명해서 마감한다(o.sig 로 서명을 바꿔 위조를 시험) */
+const finish = (tx: Tx, runId: string, status: string, variants: unknown, o: { problems?: unknown; err?: string | null; inT?: number; outT?: number; cost?: number; sig?: string | null } = {}) => {
+  const vt = variants === null ? null : JSON.stringify(variants);
+  const pt = o.problems === undefined ? null : JSON.stringify(o.problems);
+  const [inT, outT, cost] = [o.inT ?? 3000, o.outT ?? 5000, o.cost ?? 56000];
+  const sig = o.sig === undefined ? sign("finish", [runId, status, vt ?? "", pt ?? "", o.err ?? "", inT, outT, cost].join("|")) : o.sig;
+  return tx.query("select finish_brief_copy_run($1, $2, $3, $4, $5, $6, $7, $8, $9)", [runId, status, vt, pt, o.err ?? null, inT, outT, cost, sig]);
+};
 const accept = (tx: Tx, runId: string, variant: number, revision: number) => one<{ r: number }>(tx, "select accept_brief_copy($1, $2, $3) as r", [runId, variant, revision]).then((x) => x.r);
 const updateBrief = (tx: Tx, id: string, r: number, copy: string | null, origin: string) =>
   one<{ r: number }>(tx, "select update_content_brief($1, $2, '합성 브리프', null, null, null, null, '{}', $3, $4, null, 'drafting') as r", [id, r, copy, origin]).then((x) => x.r);
@@ -151,6 +163,54 @@ describe("입력 검사", () => {
   });
 });
 
+describe("서버 서명(DEC-08-R2, QA-FINAL-E-01 D1)", () => {
+  it("HMAC 이 표준 시험 값(RFC 4231 2번)과 Node 계산이 같다(긴 키 포함)", async () => {
+    const h = async (k: string, m: string) => (await one<{ h: string }>(db, "select app.hmac_sha256(convert_to($1, 'UTF8'), convert_to($2, 'UTF8')) as h", [k, m])).h;
+    expect(await h("Jefe", "what do ya want for nothing?")).toBe("5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843");
+    const long = "가".repeat(50); // 150바이트 키(64바이트 넘음 → 먼저 sha256)
+    expect(await h(long, "메시지|1")).toBe(createHmac("sha256", long).update("메시지|1", "utf8").digest("hex"));
+    expect(await h(secret, "reserve|x")).toBe(sign("reserve", "x"));
+  });
+
+  it("사용자가 직접 부르면 거절: 서명 없음·다른 키·바꾼 값·오래된 서명 예약, 위장 성공·비용 0 가로채기 마감(A1·A2)", async () => {
+    const s = await setup();
+    const r0 = await rev(s.briefId);
+    await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(60), [], undefined, undefined, { sig: null })), /BAD_SIGNATURE/);
+    await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(60), [], undefined, undefined, { sig: sign("reserve", "다른 값") })), /BAD_SIGNATURE/);
+    const forged = sign("reserve", [s.briefId, r0, hash(60), "anthropic", "claude-sonnet-5-5", "", 1].join("|"), "사용자가-추측한-키".repeat(3));
+    await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(60), [], undefined, undefined, { sig: forged, at: 1 })), /BAD_SIGNATURE/);
+    // 서명은 맞지만 10분 전 시각 → 오래됨
+    await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(60), [], undefined, undefined, { at: Date.now() - 600_000 })), /서명 시각이 너무 오래/);
+    expect(await one<{ n: number }>(db, "select count(*)::int as n from brief_copy_runs where brief_id = $1", [s.briefId])).toEqual({ n: 0 });
+
+    // 서버가 정상 예약 → 사용자가 먼저 '실패·비용 0'(A2) 또는 '내 글로 성공'(A1)으로 마감하려 하면 거절
+    const res = await asA((tx) => reserve(tx, s.briefId, r0, hash(61), [s.c1]));
+    await expectDbError(asA((tx) => finish(tx, res.run_id, "failed", null, { cost: 0, sig: null })), /BAD_SIGNATURE/);
+    await expectDbError(asA((tx) => finish(tx, res.run_id, "succeeded", [{ text: "내가 쓴 글", usedClaimIds: [] }], { cost: 0, sig: sign("finish", "x") })), /BAD_SIGNATURE/);
+    // 서명한 값과 다른 비용을 보내면 거절(서명은 값 전체에 걸린다)
+    const goodSig = sign("finish", [res.run_id, "succeeded", JSON.stringify([{ text: "AI 문구", usedClaimIds: [] }]), "", "", 3000, 5000, 896000].join("|"));
+    await expectDbError(asA((tx) => finish(tx, res.run_id, "succeeded", [{ text: "AI 문구", usedClaimIds: [] }], { cost: 0, sig: goodSig })), /BAD_SIGNATURE/);
+    expect((await one<{ status: string }>(db, "select status from brief_copy_runs where id = $1", [res.run_id])).status).toBe("reserved");
+    // 서버의 진짜 마감은 그대로 된다(실제 비용 기록)
+    await asA((tx) => finish(tx, res.run_id, "succeeded", [{ text: "AI 문구", usedClaimIds: [] }], { cost: 896000 }));
+    expect(await one(db, "select status, cost_usd_micro::int as c from brief_copy_runs where id = $1", [res.run_id])).toEqual({ status: "succeeded", c: 896000 });
+  });
+
+  it("비밀값이 DB 에 없으면 NOT_CONFIGURED(외부 호출 전 예약에서 멈춤), 로그인은 비밀값·서명 함수에 접근 불가", async () => {
+    const s = await setup();
+    const r0 = await rev(s.briefId);
+    await db.query("delete from app.server_secrets where name = 'brief_copy_signing'");
+    try {
+      await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(62), [])), /NOT_CONFIGURED/);
+    } finally {
+      await db.query("insert into app.server_secrets (name, value) values ('brief_copy_signing', $1)", [secret]);
+    }
+    await expectDbError(asA((tx) => tx.query("select * from app.server_secrets")), /permission denied/);
+    await expectDbError(asA((tx) => tx.query("select app.hmac_sha256(convert_to('a', 'UTF8'), convert_to('b', 'UTF8'))")), /permission denied/);
+    await expectDbError(asA((tx) => tx.query("select app.assert_server_signature('reserve', 'x', 'y')")), /permission denied/);
+  });
+});
+
 describe("공급자·모델 허용 목록(DEC-08-R1)", () => {
   it("DB 목록(app.brief_copy_models)과 서버 목록(ai-models.ts)이 같다(공급자·모델·요금)", async () => {
     const rows = (await db.query<{ provider: string; model: string; input_usd: string; output_usd: string }>("select * from app.brief_copy_models()")).rows;
@@ -199,6 +259,10 @@ describe("한도", () => {
     );
     await age(s.briefId);
     await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(13), [])), /오늘 AI 문구 생성 횟수\(30번\)/);
+    // R2 W1: 업무실 시간대를 자정이 막 지난 곳으로 바꿔도 하루 한도는 다시 시작되지 않는다(Asia/Seoul 고정)
+    await db.query("update workspaces set timezone = 'America/Anguilla' where id = $1", [a.workspaceId]);
+    await expectDbError(asA((tx) => reserve(tx, s.briefId, r0, hash(17), [])), /오늘 AI 문구 생성 횟수\(30번\)/);
+    await db.query("update workspaces set timezone = 'Asia/Seoul' where id = $1", [a.workspaceId]);
     // 하루 기록 28개를 지우면 다시 예약할 수 있는 상태(이 시험이 넣은 것만)
     await db.query("delete from brief_copy_runs where brief_id = $1 and status = 'failed' and error_code = 'TIMEOUT' and cost_usd_micro = 0", [t.briefId]);
 
@@ -236,7 +300,7 @@ describe("업무실 경계 (P0)", () => {
     await expectDbError(asA((tx) => tx.query("update brief_copy_runs set status = 'reserved' where id = $1", [res.run_id])), /permission denied/);
     await expectDbError(asA((tx) => tx.query("insert into brief_copy_runs (workspace_id, brief_id, brief_revision, provider, model, cost_estimate_usd_micro, input_hash, created_by) values ($1, $2, 1, 'openai', 'gpt-6.2-sol', 0, $3, $4)", [a.workspaceId, s.briefId, hash(22), a.userId])), /permission denied/);
     await expectDbError(asA((tx) => tx.query("delete from brief_copy_runs where id = $1", [res.run_id])), /permission denied/);
-    await expectDbError(asAnon((tx) => tx.query("select * from reserve_brief_copy_run($1, 1, $2, 'anthropic', 'claude-sonnet-5-5', '{}')", [s.briefId, hash(23)])), /permission denied/);
+    await expectDbError(asAnon((tx) => tx.query("select * from reserve_brief_copy_run($1, 1, $2, 'anthropic', 'claude-sonnet-5-5', '{}', 0, 'x')", [s.briefId, hash(23)])), /permission denied/);
     await expectDbError(asA((tx) => tx.query("select * from app.brief_copy_limits()")), /permission denied/);
     await expectDbError(asA((tx) => tx.query("select * from app.brief_copy_models()")), /permission denied/);
 

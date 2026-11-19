@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BriefCopyRequest } from "@/domain/brief";
 
@@ -31,8 +32,10 @@ vi.mock("@/server/supabase/server", () => ({
   }),
 }));
 
-const { generateBriefCopy, acceptBriefCopy, isBriefCopyAiEnabled, listBriefCopyChoices, anthropicCaller, openaiCaller, geminiCaller, BRIEF_COPY_DISABLED_MESSAGE } =
+const { generateBriefCopy, acceptBriefCopy, isBriefCopyAiEnabled, listBriefCopyChoices, anthropicCaller, openaiCaller, geminiCaller, BRIEF_COPY_DISABLED_MESSAGE, BRIEF_COPY_MISCONFIGURED_MESSAGE } =
   await import("./ai-copy");
+const SIGN_KEY = "synthetic-signing-key-0123456789abcdef";
+const hmac = (purpose: string, message: string) => createHmac("sha256", SIGN_KEY).update(`${purpose}|${message}`, "utf8").digest("hex");
 
 const DETAIL = {
   brief: {
@@ -41,7 +44,14 @@ const DETAIL = {
     imageGuide: null, status: "drafting", revision: 3, archived: false, stale: false,
   },
   claims: [
-    { id: C1, text: "고객 만족도 92% 조사", kind: "statistic", revision: 1, sources: [], sourceRows: [{ id: "s1", kind: "asset", label: "자료 · 2026 고객 조사.pdf", note: "비공개 메모" }] },
+    {
+      id: C1, text: "고객 만족도 92% 조사", kind: "statistic", revision: 1, sources: [],
+      sourceRows: [
+        { id: "s1", kind: "asset", label: "자료 · 2026 고객 조사.pdf", aiLabel: "파일 · 2026 고객 조사.pdf", note: "비공개 메모" },
+        { id: "s2", kind: "asset", label: "자료 · 김철수 010-1234-5678 견적 300만원", aiLabel: "메모 자료 1", note: null },
+        { id: "s3", kind: "asset", label: "자료 · https://example.com/p?utm_source=x&email=a@b.c", aiLabel: "링크 · example.com", note: null },
+      ],
+    },
     { id: C2, text: "근거 없는 주장", kind: "other", revision: 1, sources: [], sourceRows: [] },
   ],
   warnings: [],
@@ -56,7 +66,8 @@ const OUT = { variants: [{ text: "문구", usedClaimIds: [C1] }] };
 const finishOf = () => st.rpc.find((r) => r.fn === "finish_brief_copy_run")?.args;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- mock.calls 의 형을 정하려고 인자를 둔다
 const okCaller = (output: unknown) => vi.fn(async (_req: BriefCopyRequest) => ({ kind: "ok" as const, output, model: "claude-sonnet-5-5", inputTokens: 3000, outputTokens: 5000 }));
-const keys = (o: { anthropic?: string; openai?: string; google?: string }) => {
+const keys = (o: { anthropic?: string; openai?: string; google?: string; signing?: string }) => {
+  vi.stubEnv("BRIEF_COPY_SIGNING_KEY", o.signing ?? SIGN_KEY);
   vi.stubEnv("ANTHROPIC_API_KEY", o.anthropic ?? "");
   vi.stubEnv("OPENAI_API_KEY", o.openai ?? "");
   vi.stubEnv("GEMINI_API_KEY", o.google ?? "");
@@ -75,6 +86,7 @@ const recorder = (responses: Array<() => Response | Promise<Response>>) => {
 };
 
 beforeEach(() => {
+  vi.stubEnv("BRIEF_COPY_SIGNING_KEY", SIGN_KEY);
   st.rpc.length = 0;
   st.reserve = { data: [{ run_id: "run-1", reused: false }], error: null };
   st.detail = structuredClone(DETAIL);
@@ -90,6 +102,14 @@ describe("켜짐·꺼짐·선택지", () => {
     expect(isBriefCopyAiEnabled()).toBe(false);
     expect(listBriefCopyChoices()).toEqual([]);
     expect(await generateBriefCopy("t1", "b1", 3)).toEqual({ ok: false, code: "VALIDATION", message: BRIEF_COPY_DISABLED_MESSAGE });
+    expect(st.rpc).toEqual([]);
+  });
+
+  it("서명 키(BRIEF_COPY_SIGNING_KEY)가 없으면 공급자 키가 있어도 꺼짐", async () => {
+    keys({ anthropic: "sk-synthetic", signing: "" });
+    expect(isBriefCopyAiEnabled()).toBe(false);
+    expect(listBriefCopyChoices()).toEqual([]);
+    expect(await generateBriefCopy("t1", "b1", 3)).toMatchObject({ ok: false, message: BRIEF_COPY_DISABLED_MESSAGE });
     expect(st.rpc).toEqual([]);
   });
 
@@ -129,12 +149,17 @@ describe("생성 흐름(공급자 공통)", () => {
       data: { runId: "run-1", provider: "anthropic", model: "claude-sonnet-5-5", reused: false, variants: [{ text: "만족도 92%의 이유", usedClaimIds: [C1] }, { text: "지금 무료 진단", usedClaimIds: [] }] },
     });
     const req = caller.mock.calls[0][0];
-    expect(req.claims).toEqual([{ id: C1, text: "고객 만족도 92% 조사", sourceLabels: ["자료 · 2026 고객 조사.pdf"] }]);
-    expect(JSON.stringify(req)).not.toContain("비공개 메모");
+    // R2 D3·O5: 근거 이름은 전송용 이름만(메모 원문·전체 주소·근거 메모 없음)
+    expect(req.claims).toEqual([{ id: C1, text: "고객 만족도 92% 조사", sourceLabels: ["파일 · 2026 고객 조사.pdf", "메모 자료 1", "링크 · example.com"] }]);
+    for (const leak of ["비공개 메모", "김철수", "010-1234", "300만원", "utm_source", "a@b.c"]) expect(JSON.stringify(req)).not.toContain(leak);
     expect(req.constraints).toEqual({ language: "ko", maxChars: 600, variants: 2 });
     expect(st.rpc[0]).toMatchObject({ fn: "reserve_brief_copy_run", args: { p_brief_id: "b1", p_expected_revision: 3, p_provider: "anthropic", p_model: "claude-sonnet-5-5", p_claim_ids: [C1] } });
     const h1 = st.rpc[0].args.p_input_hash;
     expect(h1).toMatch(/^[0-9a-f]{64}$/);
+    // R2 D1: 예약 서명 = HMAC(서명 키, reserve|브리프|revision|확인값|공급자|모델|주장id|서명시각)
+    const a = st.rpc[0].args;
+    expect(a.p_signature).toBe(hmac("reserve", ["b1", 3, h1, "anthropic", "claude-sonnet-5-5", C1, a.p_signed_at].join("|")));
+    expect(Math.abs(Date.now() - (a.p_signed_at as number))).toBeLessThan(10_000);
     // 같은 입력·다른 모델이면 확인값이 다르다(재사용은 같은 모델만)
     st.rpc.length = 0;
     await generateBriefCopy("t1", "b1", 3, { provider: "openai", model: "gpt-6-luna" }, okCaller(OUT));
@@ -144,9 +169,11 @@ describe("생성 흐름(공급자 공통)", () => {
 
   it("마감 인자: 변형·토큰·비용은 고른 모델 요금(Sonnet 3000×2 + 5000×10 = 56,000)", async () => {
     await generateBriefCopy("t1", "b1", 3, { variants: 1 }, okCaller({ variants: [{ text: "문구", usedClaimIds: [C1] }] }));
+    const vt = JSON.stringify([{ text: "문구", usedClaimIds: [C1] }]);
     expect(finishOf()).toEqual({
-      p_run_id: "run-1", p_status: "succeeded", p_variants: [{ text: "문구", usedClaimIds: [C1] }], p_problems: null, p_error_code: null,
+      p_run_id: "run-1", p_status: "succeeded", p_variants: vt, p_problems: null, p_error_code: null,
       p_input_tokens: 3000, p_output_tokens: 5000, p_cost_usd_micro: 56000,
+      p_signature: hmac("finish", ["run-1", "succeeded", vt, "", "", 3000, 5000, 56000].join("|")),
     });
   });
 
@@ -161,7 +188,7 @@ describe("생성 흐름(공급자 공통)", () => {
     const r = await generateBriefCopy("t1", "b1", 3, {}, okCaller({ variants: [{ text: "할인율 50%", usedClaimIds: [C2] }] }));
     expect(r.ok).toBe(false);
     expect(finishOf()).toMatchObject({ p_status: "rejected", p_variants: null });
-    expect(finishOf()!.p_problems).toEqual(expect.arrayContaining(["1번 변형이 근거 없는 주장을 썼습니다.", "1번 변형에 근거 없는 수치가 있습니다: 50%"]));
+    expect(JSON.parse(finishOf()!.p_problems as string)).toEqual(expect.arrayContaining(["1번 변형이 근거 없는 주장을 썼습니다.", "1번 변형에 근거 없는 수치가 있습니다: 50%"]));
   });
 
   it("거절·시간 초과·키 오류 문구, revision·보관·한도", async () => {
@@ -169,7 +196,11 @@ describe("생성 흐름(공급자 공통)", () => {
     expect(finishOf()).toMatchObject({ p_status: "refused", p_cost_usd_micro: 200 });
     st.rpc.length = 0;
     expect(await generateBriefCopy("t1", "b1", 3, {}, vi.fn(async () => ({ kind: "error" as const, code: "TIMEOUT" })))).toEqual({ ok: false, code: "ERROR", message: "AI 응답이 늦어 멈췄습니다. 잠시 후 다시 시도해 주세요." });
-    expect(finishOf()).toMatchObject({ p_status: "failed", p_error_code: "TIMEOUT", p_cost_usd_micro: 0 });
+    // R2 O1: 사용량을 모르는 시간 초과는 예약 추정치(Sonnet 12,000×2 + 20,000×10)로 기록한다
+    expect(finishOf()).toMatchObject({ p_status: "failed", p_error_code: "TIMEOUT", p_cost_usd_micro: 224000 });
+    st.rpc.length = 0;
+    await generateBriefCopy("t1", "b1", 3, { provider: "openai", model: "gpt-6-luna" }, vi.fn(async () => ({ kind: "error" as const, code: "AUTH" })));
+    expect(finishOf()).toMatchObject({ p_status: "failed", p_error_code: "AUTH", p_cost_usd_micro: 0 });
     expect(await generateBriefCopy("t1", "b1", 3, { provider: "google" }, vi.fn(async () => ({ kind: "error" as const, code: "AUTH" })))).toMatchObject({ message: expect.stringMatching(/Gemini \(Google\) 키가 올바르지 않거나/) });
     st.rpc.length = 0;
     expect((await generateBriefCopy("t1", "b1", 2, {}, okCaller({}))).ok).toBe(false);
@@ -179,6 +210,13 @@ describe("생성 흐름(공급자 공통)", () => {
     st.detail = structuredClone(DETAIL);
     st.reserve = { data: null, error: { code: "P0001", message: "BUDGET_EXCEEDED: 이번 달 AI 문구 생성 비용 상한에 닿았습니다. 다음 달에 다시 쓸 수 있습니다" } };
     expect(await generateBriefCopy("t1", "b1", 3, {}, okCaller({}))).toEqual({ ok: false, code: "VALIDATION", message: "이번 달 AI 문구 생성 비용 상한에 닿았습니다. 다음 달에 다시 쓸 수 있습니다." });
+    // 서명 키가 DB 와 다르거나 DB 에 없으면 외부 호출 전에 설정 오류 문구
+    for (const message of ["BAD_SIGNATURE: 서버 서명이 맞지 않습니다", "NOT_CONFIGURED: AI 문구 만들기 서명 키가 DB 에 없습니다"]) {
+      st.reserve = { data: null, error: { code: "42501", message } };
+      const caller = okCaller({});
+      expect(await generateBriefCopy("t1", "b1", 3, {}, caller)).toEqual({ ok: false, code: "ERROR", message: BRIEF_COPY_MISCONFIGURED_MESSAGE });
+      expect(caller).not.toHaveBeenCalled();
+    }
   });
 
   it("키만 있고 호출기를 안 주면 그 공급자의 실제 호출기(fetch)를 쓴다 — OpenAI 기본 모델로 끝까지", async () => {
@@ -210,8 +248,14 @@ describe("Anthropic 호출기(공식 SDK) — 가짜 fetch", () => {
     expect(seen[0].url).toMatch(/\/v1\/messages(\?|$)/);
     // SDK 판에 따라 x-api-key 또는 authorization 으로 보낸다
     expect(seen[0].headers.get("x-api-key") ?? seen[0].headers.get("authorization") ?? "").toContain("sk-synthetic");
-    expect(seen[0].headers.get("anthropic-beta")).toContain("server-side-fallback-2026-07-01");
-    expect(seen[0].body).toMatchObject({ model: "claude-haiku-5-5", max_tokens: 16000, fallbacks: "default", output_config: { effort: "low", format: { type: "json_schema" } } });
+    // R2 O2: Haiku 5.5 에는 서버 쪽 대체 모델이 없어 보내지 않는다
+    expect(seen[0].headers.get("anthropic-beta") ?? "").not.toContain("server-side-fallback");
+    expect(seen[0].body).not.toHaveProperty("fallbacks");
+    expect(seen[0].body).toMatchObject({ model: "claude-haiku-5-5", max_tokens: 16000, output_config: { effort: "low", format: { type: "json_schema" } } });
+    const s2 = recorder([() => reply(message({ text: JSON.stringify(OUT) }))]);
+    await anthropicCaller("sk-synthetic", "claude-sonnet-5-5", s2.f)(REQ);
+    expect(s2.seen[0].headers.get("anthropic-beta")).toContain("server-side-fallback-2026-07-01");
+    expect(s2.seen[0].body).toMatchObject({ model: "claude-sonnet-5-5", fallbacks: "default" });
     expect(seen[0].body).not.toHaveProperty("thinking");
     expect(seen[0].body.messages).toEqual([{ role: "user", content: JSON.stringify(REQ) }]);
   });
