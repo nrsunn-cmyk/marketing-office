@@ -14,6 +14,7 @@ import { WebCopyEditor } from "./web-copy-editor";
 import {
   SECTION_FIELDS,
   WC_COPY,
+  archivedDocOption,
   docToEditor,
   formatKstMinute,
   restoreHint,
@@ -135,6 +136,7 @@ function BriefBlock({ board, readOnly, actions }: { board: WebCopyBoard; readOnl
             <>
               <p className={`${styles.muted} ${f.keep}`}>{WC_COPY.emptyDesc}</p>
               <BriefActionButton action={actions.create} hidden={{ briefId: board.brief.id }} submitLabel={WC_COPY.create} pendingLabel="만드는 중…" variant="primary" />
+              {board.archivedDocs.length > 0 && <CopyFromArchived board={board} action={actions.create} />}
             </>
           ) : (
             <p className={`${styles.muted} ${f.keep}`} role="note">
@@ -149,8 +151,32 @@ function BriefBlock({ board, readOnly, actions }: { board: WebCopyBoard; readOnl
   );
 }
 
+/** 보관한 문서(판 100개가 찬 문서 포함)의 지금 판을 복사해 새 문서로(서버 createWebCopyDoc copyFromDocId) */
+function CopyFromArchived({ board, action }: { board: WebCopyBoard; action?: BriefAction }) {
+  const sumId = `web-copy-copy-${board.brief.id}`;
+  return (
+    <details className={`${f.inlineDetails} ${wc.wcCopy}`}>
+      <summary id={sumId}>{WC_COPY.copyFromArchived}</summary>
+      <BriefActionButton action={action} hidden={{ briefId: board.brief.id }} submitLabel={WC_COPY.copyFromArchived} pendingLabel="만드는 중…">
+        <p className={`${styles.muted} ${f.keep}`}>{WC_COPY.copyFromArchivedHint}</p>
+        <div className={styles.field}>
+          <select name="copyFromDocId" aria-labelledby={sumId} defaultValue={board.archivedDocs[0]?.id}>
+            {board.archivedDocs.map((d) => (
+              <option key={d.id} value={d.id}>
+                {archivedDocOption(d)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </BriefActionButton>
+    </details>
+  );
+}
+
 function DocBody({ doc, board, readOnly, actions }: { doc: WebCopyDocView; board: WebCopyBoard; readOnly: boolean; actions: WebCopyActions }) {
   const locked = readOnly || doc.readOnlyReason !== null;
+  // 판 100개: 저장·되돌리기·맞추기 없이 내용만 보이고, 보관한 뒤 복사해 새 문서로(AGY versionLimitReached)
+  const full = !locked && doc.versionsFull;
   const ids = { docId: doc.id, revision: doc.revision };
   const editor = docToEditor(doc);
   const sources = sourceOptions(board);
@@ -171,12 +197,19 @@ function DocBody({ doc, board, readOnly, actions }: { doc: WebCopyDocView; board
         </div>
       )}
 
-      {locked ? (
+      {full && (
+        <div className={`${styles.notice} ${f.warnBox}`} role="note">
+          <p className={f.keep}>{WC_COPY.versionLimitReached}</p>
+        </div>
+      )}
+
+      {locked || full ? (
         <ReadOnlyDoc doc={doc} sources={sources} />
-      ) : (
+      ) : null}
+      {!locked && (
         <>
           {/* 저장에 성공하면 revision 이 바뀌어 편집기가 서버 값으로 새로 그려진다 */}
-          <WebCopyEditor key={doc.revision} action={actions.save} hidden={ids} initialStatus={editor.status} initialPages={editor.pages} sources={sources} />
+          {!full && <WebCopyEditor key={doc.revision} action={actions.save} hidden={ids} initialStatus={editor.status} initialPages={editor.pages} sources={sources} />}
           {/* 되돌릴 수 없는 보관은 한 번 더 확인한다(P3-a 와 같은 접은 안, AGY P3I-HANDOFF.md 3절) */}
           <details className={`${f.inlineDetails} ${wc.wcDanger}`}>
             <summary>{WC_COPY.archive}</summary>
@@ -187,7 +220,7 @@ function DocBody({ doc, board, readOnly, actions }: { doc: WebCopyDocView; board
         </>
       )}
 
-      <Versions doc={doc} board={board} locked={locked} restore={actions.restore} />
+      <Versions doc={doc} board={board} locked={locked || full} restore={actions.restore} />
     </>
   );
 }

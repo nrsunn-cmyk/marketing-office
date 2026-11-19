@@ -20,6 +20,7 @@ import {
   webCopyBriefNotice,
   WC_COPY,
   restoreMissingCitationsText,
+  archivedDocOption,
   type WebCopyPageView,
   type WebCopySectionView,
 } from "./web-copy-model";
@@ -195,6 +196,8 @@ describe("P3-b 홈페이지 구조·문구 화면 모델(인계표 P3B-HANDOFF.m
     expect(webCopyBriefNotice(d({ rebaseBlockedReason: "제작 브리프가 작성 중이라 맞출 수 없습니다." }), { archived: false, status: "drafting" })).toEqual({ kind: "notConfirmed", text: WC_COPY.briefNotConfirmedNotice, canRebase: false });
     const full = "판이 100개라 맞출 수 없습니다. 문서를 보관하고 마지막 판을 복사해 새 문서를 만들어 주세요.";
     expect(webCopyBriefNotice(d({ rebaseBlockedReason: full }), ready)).toEqual({ kind: "other", text: full, canRebase: false });
+    // 판 100개가 찼으면 화면이 versionLimitReached 를 따로 보이므로 맞추기 안내는 없음
+    expect(webCopyBriefNotice({ ...d({ rebaseBlockedReason: full }), versionsFull: true }, ready)).toBeNull();
     // 고칠 수 없는 문서(프로젝트 보관·작업 취소)는 맞추기 안내 없음
     expect(webCopyBriefNotice(d({ readOnlyReason: "보관한 프로젝트입니다." }), { archived: true, status: "ready" })).toBeNull();
   });
@@ -208,6 +211,10 @@ describe("P3-b 홈페이지 구조·문구 화면 모델(인계표 P3B-HANDOFF.m
     expect(WC_COPY.briefNotConfirmedNotice).toBe("바탕이 된 공통 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다. 브리프 확정 후 다시 시도해 주세요.");
     expect(restoreMissingCitationsText(2)).toBe("되돌리려는 판에 지금은 없는 근거 출처가 2개 있어 되돌릴 수 없습니다. 출처를 먼저 확인해 주세요.");
     expect(WC_COPY.rebase).toBe("최신 제작 브리프 기준으로 맞추기");
+    expect(WC_COPY.copyFromArchived).toBe("보관한 문서 내용을 복사해 새로 만들기");
+    expect(WC_COPY.copyFromArchivedHint).toBe("보관한 문서나 판이 가득 찬 문서의 내용을 복사해 새 홈페이지 문서로 이어서 작업할 수 있습니다.");
+    expect(WC_COPY.versionLimitReached).toBe("판 이력이 100개에 도달해 더 저장하거나 되돌릴 수 없습니다. 보관한 뒤 내용을 복사해 새 문서로 만들어 주세요.");
+    expect(archivedDocOption({ currentVersionNo: 100, archivedAt: "2026-11-19T18:20:00Z" })).toBe("v100 · 2026-11-20 03:20 KST 보관");
     expect(restoreHint(4)).toBe("되돌리기를 누르면 과거 기록을 지우지 않고, 선택한 판의 내용을 새 편집본(v4)으로 복원합니다.");
   });
 });

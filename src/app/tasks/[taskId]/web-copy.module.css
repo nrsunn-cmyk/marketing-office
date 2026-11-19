@@ -408,3 +408,8 @@
 :global([data-theme="dark"]) .wcJump a:focus-visible {
   color: var(--header-nav-text, #f8fafc);
 }
+
+/* 보관 문서 복사해 새로 만들기(접은 안) */
+.wcCopy {
+  margin-top: var(--space-2);
+}

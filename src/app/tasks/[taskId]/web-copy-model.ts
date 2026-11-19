@@ -250,6 +250,10 @@ export const WC_COPY = {
   staleBanner: "바탕이 된 공통 제작 브리프가 새 버전으로 바뀌었습니다. 페이지 문구와 연결된 근거가 최신 기준과 맞는지 확인해 주세요.",
   briefNotConfirmedNotice: "바탕이 된 공통 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다. 브리프 확정 후 다시 시도해 주세요.",
   rebase: "최신 제작 브리프 기준으로 맞추기",
+  // 보관 문서 복사·판 100개(AGY P3-COPY-FINAL.md 6절 추가 3키)
+  copyFromArchived: "보관한 문서 내용을 복사해 새로 만들기",
+  copyFromArchivedHint: "보관한 문서나 판이 가득 찬 문서의 내용을 복사해 새 홈페이지 문서로 이어서 작업할 수 있습니다.",
+  versionLimitReached: "판 이력이 100개에 도달해 더 저장하거나 되돌릴 수 없습니다. 보관한 뒤 내용을 복사해 새 문서로 만들어 주세요.",
 } as const;
 
 /** 되돌리려는 판에 지금 없는 출처가 n개(AGY 6절). 서버가 출처 재검사를 하게 되면 쓴다(Master: 출처 삭제 경로가 없어 지금은 검사 안 함) */
@@ -258,12 +262,13 @@ export const restoreMissingCitationsText = (n: number) => `되돌리려는 판�
 /**
  * 바탕 브리프 안내(Master 최종 결정, Tester QA-P3B-BACKEND-01 O1): 서버 doc.stale·canRebase·rebaseBlockedReason 기준.
  * - 맞출 수 있음 → staleBanner + 맞추기 단추
- * - 막힘: 바탕 브리프 보관 → briefArchivedNotice 만(staleBanner 없음), 브리프 작성 중 → briefNotConfirmedNotice, 그 밖(판 100개) → 서버 문구
+ * - 막힘: 바탕 브리프 보관 → briefArchivedNotice 만(staleBanner 없음), 브리프 작성 중 → briefNotConfirmedNotice,
+ *   판 100개 → 없음(화면이 versionLimitReached 를 따로 한 번 보인다), 그 밖 → 서버 문구
  * - 고칠 수 없는 문서(readOnlyReason)나 이전 기준이 아니면 없음
  */
 export type WebCopyBriefNotice = { kind: "stale"; text: string; canRebase: true } | { kind: "archived" | "notConfirmed" | "other"; text: string; canRebase: false } | null;
 export function webCopyBriefNotice(
-  doc: Pick<WebCopyDocView, "stale" | "canRebase" | "rebaseBlockedReason" | "readOnlyReason">,
+  doc: Pick<WebCopyDocView, "stale" | "canRebase" | "rebaseBlockedReason" | "readOnlyReason"> & { versionsFull?: boolean },
   brief: { archived: boolean; status: string },
 ): WebCopyBriefNotice {
   if (!doc.stale || doc.readOnlyReason !== null) return null;
@@ -271,7 +276,11 @@ export function webCopyBriefNotice(
   if (!doc.rebaseBlockedReason) return null;
   if (brief.archived) return { kind: "archived", text: WC_COPY.briefArchivedNotice, canRebase: false };
   if (brief.status !== "ready") return { kind: "notConfirmed", text: WC_COPY.briefNotConfirmedNotice, canRebase: false };
+  if (doc.versionsFull) return null;
   return { kind: "other", text: doc.rebaseBlockedReason, canRebase: false };
 }
+
+/** 복사해 새로 만들 때 고르는 보관 문서 이름("v12 · 2026-11-20 03:20 KST 보관") */
+export const archivedDocOption = (d: { currentVersionNo: number; archivedAt: string }) => `v${d.currentVersionNo} · ${formatKstMinute(d.archivedAt)} 보관`;
 
 export const restoreHint = (nextVersion: number) => `되돌리기를 누르면 과거 기록을 지우지 않고, 선택한 판의 내용을 새 편집본(v${nextVersion})으로 복원합니다.`;

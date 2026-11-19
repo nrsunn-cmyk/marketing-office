@@ -124,6 +124,7 @@ const STATES: Record<string, { boards: WebCopyBoard[] | null; readOnly?: boolean
   문서읽기전용: { boards: [board(stale({ readOnlyReason: "보관한 프로젝트입니다. 프로젝트를 다시 열어야 홈페이지 문서를 만들거나 고칠 수 있습니다." }))] },
   프로젝트읽기전용: { boards: [board(stale({ canRebase: true }))], readOnly: true },
   프로젝트읽기전용빈: { boards: [board(null)], readOnly: true },
+  보관문서복사: { boards: [board(null, { archivedDocs: [{ id: "aaaaaaaa-aaaa-4aaa-8aaa-000000000009", currentVersionNo: 100, archivedAt: "2026-11-19T18:20:00Z" }, { id: "aaaaaaaa-aaaa-4aaa-8aaa-000000000008", currentVersionNo: 12, archivedAt: "2026-11-18T08:00:00Z" }], docCount: 2 })] },
   브리프둘: { boards: [board(DOC), board(null, { brief: { ...BRIEF, id: "bbbbbbbb-bbbb-4bbb-8bbb-000000000002", title: "두 번째 브리프" } })] },
   불러오기실패: { boards: null },
   글자넘침출처없음: { boards: [board({ ...DOC, pages: [longHome, ...DOC.pages.slice(1)] }, { sources: [] })] },
@@ -254,11 +255,32 @@ describe("홈페이지 구조·문구 상태별 화면", () => {
     expect(text(h)).not.toContain(REBASE);
   });
 
-  it("판 100개: 서버 문구 그대로, 맞추기 없음", () => {
+  it("판 100개(AGY versionLimitReached): 안내 하나, 편집기·되돌리기·맞추기 없음, 내용 조회와 보관은 남김", () => {
     const h = render("판100");
-    expect(text(h)).toContain("판이 100개라 맞출 수 없습니다.");
-    expect(text(h)).not.toContain(REBASE);
-    expect(text(h)).toContain("편집 v100");
+    const t = text(h);
+    expect(t).toContain("판 이력이 100개에 도달해 더 저장하거나 되돌릴 수 없습니다. 보관한 뒤 내용을 복사해 새 문서로 만들어 주세요.");
+    expect(t).not.toContain("판이 100개라 맞출 수 없습니다."); // 서버 맞추기 문구와 겹쳐 보이지 않음
+    expect(t).not.toContain(REBASE);
+    expect(t).toContain("편집 v100");
+    expect(count(h, /<textarea/g)).toBe(0);
+    expect(t).not.toContain("문구·구조 저장");
+    expect(t).not.toContain("이 판으로 되돌리기");
+    expect(t).toContain("1. 홈 (/) · 섹션 2개");
+    expect(t).toContain("보관 확인");
+  });
+
+  it("보관 문서 복사(AGY copyFromArchived): 기본 시작과 별도로, 접은 안에 안내·보관 문서 고르기", () => {
+    const h = render("보관문서복사");
+    const t = text(h);
+    expect(t).toContain("+ 홈페이지 구조·문구 시작하기");
+    expect(h).toMatch(/<details[^>]*><summary id="web-copy-copy-[^"]+">보관한 문서 내용을 복사해 새로 만들기<\/summary>/);
+    expect(t).toContain("보관한 문서나 판이 가득 찬 문서의 내용을 복사해 새 홈페이지 문서로 이어서 작업할 수 있습니다.");
+    expect(h).toMatch(/<select name="copyFromDocId" aria-labelledby="web-copy-copy-[^"]+">/);
+    expect(t).toContain("v100 · 2026-11-20 03:20 KST 보관");
+    expect(t).toContain("v12 · 2026-11-18 17:00 KST 보관");
+    expect(count(h, /name="briefId"/g)).toBe(2);
+    // 보관 문서가 없으면 복사 선택 없음
+    expect(text(render("빈상태"))).not.toContain("보관한 문서 내용을 복사해 새로 만들기");
   });
 
   it("고칠 수 없는 문서(서버 readOnlyReason): 안내, 폼·맞추기·되돌리기 0개, 모든 페이지 내용·제외 표시·출처 이름", () => {
