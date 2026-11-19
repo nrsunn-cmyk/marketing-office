@@ -31,7 +31,7 @@ revoke execute on function app.web_copy_cta_ok(text) from public, anon;
 
 -- 글 정리: 문자열이면 앞뒤 공백류를 지운다(본문은 줄바꿈도 \n 으로). 선택 칸은 빈 글이면 null. 문자열이 아니면 그대로(검사가 거절)
 create or replace function app.wc_text(v jsonb, p_optional boolean, p_body boolean) returns jsonb
-language sql immutable set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select case
     when v is null or jsonb_typeof(v) <> 'string' then v
     else (select case when p_optional and t = '' then 'null'::jsonb else to_jsonb(t) end
@@ -42,7 +42,7 @@ revoke execute on function app.wc_text(jsonb, boolean, boolean) from public, ano
 
 -- 판 내용 정리: 알려진 글 칸만 정리하고, 모양은 바꾸지 않는다(모르는 키·잘못된 형은 검사가 거절)
 create or replace function app.web_copy_normalize(p jsonb) returns jsonb
-language plpgsql immutable set search_path = '' as $$
+language plpgsql stable set search_path = '' as $$
 declare
   pages jsonb := '[]'::jsonb;
   secs  jsonb;
@@ -85,19 +85,19 @@ language sql immutable set search_path = '' as $$
 $$;
 revoke execute on function app.jt(jsonb) from public, anon;
 
--- 판 내용 검사: 문제가 없으면 null, 있으면 첫 문제의 한글 문구. 정리된 값과 채워진 id 를 기준으로 본다.
+-- 판 내용 검사(STABLE: format·jsonb 함수가 STABLE 이라 정직하게 표시, CHECK 에 쓸 수 있다): 문제가 없으면 null, 있으면 첫 문제의 한글 문구. 정리된 값과 채워진 id 를 기준으로 본다.
 --   모양(정해진 키만), 페이지 1~10, 섹션 페이지당 1~12·전체 60(제외 포함), 칸별 글자 수(코드 포인트), 경로·CTA 형식,
 --   정렬 번호 = 배열 순서, 출처 0~10·중복 없음(존재는 RPC 가 본다), id 는 uuid·문서 안에서 중복 없음, 경로 중복 없음
 create or replace function app.web_copy_content_problem(p jsonb) returns text
-language plpgsql immutable set search_path = '' as $$
+language plpgsql stable set search_path = '' as $$
 declare
   pg     jsonb;
   sc     jsonb;
   pi     integer := 0;
   si     integer;
   total  integer := 0;
-  ids    text[] := '{}';
-  slugs  text[] := '{}';
+  ids    text[] := '{}'::text[];
+  slugs  text[] := '{}'::text[];
   k      text;
   c      jsonb;
   t      text;
@@ -176,7 +176,7 @@ revoke execute on function app.web_copy_content_problem(jsonb) from public, anon
 
 -- CHECK 용: NULL 로 빠지지 않게 coalesce(Tester P3A D1 교훈)
 create or replace function app.web_copy_content_ok(p jsonb) returns boolean
-language sql immutable set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select coalesce(app.web_copy_content_problem(p) is null, false)
 $$;
 revoke execute on function app.web_copy_content_ok(jsonb) from public, anon;
@@ -184,7 +184,7 @@ revoke execute on function app.web_copy_content_ok(jsonb) from public, anon;
 -- 기본 4페이지(AGY 확정 C:/nadaum/Design/p3-production/P3B-DEFAULT-TEMPLATE.md). 홈 첫 섹션 헤드라인은 브리프 제목(있으면).
 --   id 는 넣는 쪽(RPC)이 채운다. 이 함수 결과를 src/domain/web-copy/template.ts 와 시험이 맞대어 본다
 create or replace function app.web_copy_default_content(p_brief_title text) returns jsonb
-language sql immutable set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select jsonb_build_object('pages', jsonb_build_array(
     jsonb_build_object('id', null, 'title', '홈', 'slug', '/', 'sort_order', 1, 'sections', jsonb_build_array(
       jsonb_build_object('id', null, 'section_name', '첫 화면', 'purpose', '방문자에게 핵심 가치와 다음 행동을 안내하는 자리입니다.',
