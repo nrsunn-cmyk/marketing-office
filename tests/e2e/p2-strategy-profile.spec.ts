@@ -216,7 +216,10 @@ test("N2 관찰(기대값 고정 안 함): 기준 프로필 철회 뒤 전략 �
   await expect(review(page).getByText("이 버전의 승인을 철회했습니다.")).toBeVisible();
   await page.goto(taskUrl);
   await expect(page.getByRole("heading", { name: /^전략 \d+번 버전$/ })).toBeVisible(); // 결과가 흘러 들어온 뒤 관찰
-  await expect(page.getByRole("button", { name: "이 버전 승인" }).or(page.getByText("승인본"))).toBeVisible();
+  // 전략 결과 영역의 '승인본' 배지만 찾는다(P3 제작 브리프의 "…승인본을 확정해 주세요" 안내와 겹치지 않게, Tester QA-P3A-E2E-01 R1)
+  await expect(
+    page.getByRole("button", { name: "이 버전 승인" }).or(page.locator('section[aria-labelledby="strategy-result"]').getByText("승인본", { exact: true })),
+  ).toBeVisible();
   const note = await page.getByRole("note").filter({ hasText: "회사 프로필 1번 버전" }).allTextContents();
   const approveVisible = await page.getByRole("button", { name: "이 버전 승인" }).isVisible();
   test.info().annotations.push(
