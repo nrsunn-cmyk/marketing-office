@@ -38,6 +38,8 @@ export const SOURCE_UPLOAD_ERROR_MESSAGES = {
   TYPE_MISMATCH: "파일 이름과 내용의 형식이 다릅니다. 확장자를 확인해 주세요.",
   UPLOAD_MISSING: "파일 올리기를 마치지 못했습니다. 연결을 확인한 뒤 다시 올려 주세요.",
   UPLOAD_EXPIRED: "올리기 유효 시간이 지났습니다. 파일을 다시 올려 주세요.",
+  // 업무실당 진행 중 예약 20(DB LIMIT_REACHED). 화면이 글자 대신 코드로 알아보도록(Front SOURCE-UPLOAD-UI-01 제안)
+  CONCURRENT_LIMIT: "진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
 } as const;
 export type SourceUploadErrorCode = keyof typeof SOURCE_UPLOAD_ERROR_MESSAGES;
 
@@ -60,7 +62,7 @@ export function sourceUploadErrorFromDb(message: string | null | undefined): Sou
   }
   switch (head) {
     case "LIMIT_REACHED":
-      return { code: "UPLOAD_FAILED", message: hangul(detail) ?? "잠시 후 다시 시도해 주세요." };
+      return { code: "UPLOAD_FAILED", message: SOURCE_UPLOAD_ERROR_MESSAGES.CONCURRENT_LIMIT, uploadCode: "CONCURRENT_LIMIT" };
     case "NOT_FOUND":
       return { code: "NOT_FOUND", message: hangul(detail) ?? "찾을 수 없습니다." };
     case "VALIDATION":
