@@ -1,9 +1,10 @@
-import { addTextAssetAction, addUrlAssetAction, confirmUploadAction, uploadAssetAction } from "@/features/assets/actions";
+import { addTextAssetAction, addUrlAssetAction, confirmSourceUploadAction, confirmUploadAction, prepareSourceUploadAction } from "@/features/assets/actions";
 import { listAssets, type AssetOwner } from "@/features/assets/server";
 import { ASSET_KIND_LABELS, EXTRACTION_STATUS_LABELS, UPLOAD_STATUS_LABELS } from "@/domain/state/labels";
 import styles from "../ui.module.css";
 import { ActionForm } from "./action-form";
 import { MobileActionSheet } from "./mobile-action-sheet";
+import { SourceUploadForm } from "./source-upload-form";
 
 function OwnerFields({ owner }: { owner: AssetOwner }) {
   return (
@@ -79,14 +80,11 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
       <MobileActionSheet title="자료 추가">
       <details>
         <summary>파일 올리기 (PDF·PNG·JPEG·TXT, 10MB까지)</summary>
-        <ActionForm action={uploadAssetAction} submitLabel="파일 올리기" pendingLabel="올리는 중…">
-          <OwnerFields owner={owner} />
-          <div className={styles.field}>
-            <label htmlFor="asset-file">파일</label>
-            <input id="asset-file" name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" aria-describedby="asset-file-help" />
-            <span id="asset-file-help" className={styles.muted}>휴대폰에서는 파일 고르기 창에서 사진 찍기도 고를 수 있습니다.</span>
-          </div>
-        </ActionForm>
+        {/* SOURCE-UPLOAD-UI-01: 파일은 브라우저가 저장소에 직접 올린다(운영 함수 본문 4.5MB 한도). 예약 → 올리기 → 확정 */}
+        <SourceUploadForm
+          owner={{ clientId: owner.clientId ?? null, projectId: owner.projectId ?? null }}
+          actions={{ prepare: prepareSourceUploadAction, confirm: confirmSourceUploadAction }}
+        />
       </details>
 
       <details>
