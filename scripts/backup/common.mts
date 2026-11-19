@@ -109,6 +109,8 @@ export const LATER_TABLES = [
   "admin_access_log",
   // 20261119004000_p2e_lead_magnets
   "lead_magnets",
+  // 20261121005000_source_upload_direct(자료 파일 직접 업로드 예약. 파일 자체는 확정된 source_assets 로 백업한다)
+  "source_asset_uploads",
 ] as const;
 
 export const TABLES = [
