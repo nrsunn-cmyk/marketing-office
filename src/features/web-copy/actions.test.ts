@@ -65,7 +65,7 @@ describe("홈페이지 구조·문구 폼 동작", () => {
     expect((await saveWebCopyAction({}, fd({ docId: D, revision: "4", payload: "" }))).message).toBe("입력이 비었거나 너무 깁니다.");
     expect((await saveWebCopyAction({}, fd({ docId: D, revision: "4", payload: "x".repeat(700_001) }))).message).toBe("입력이 비었거나 너무 깁니다.");
     expect((await saveWebCopyAction({}, fd({ docId: D, revision: "4", payload: "{" }))).message).toBe("입력을 읽을 수 없습니다. 화면을 새로 고쳐 주세요.");
-    for (const revision of ["0", "-1", "1.5", "x", ""]) expect(await saveWebCopyAction({}, fd({ docId: D, revision, payload }))).toEqual({ message: "잘못된 요청입니다." });
+    for (const revision of ["0", "-1", "1.5", "x", "", "2147483648", "1e12"]) expect(await saveWebCopyAction({}, fd({ docId: D, revision, payload }))).toEqual({ message: "잘못된 요청입니다." });
     expect(await saveWebCopyAction({}, fd({ docId: "x", revision: "4", payload }))).toEqual({ message: "잘못된 요청입니다." });
     expect(m.save).not.toHaveBeenCalled();
   });
@@ -84,7 +84,7 @@ describe("홈페이지 구조·문구 폼 동작", () => {
     m.restore.mockResolvedValue(OK);
     expect(await restoreWebCopyVersionAction({}, fd({ docId: D, revision: "5", versionNo: "2" }))).toEqual({ ok: true, message: "2번 판의 내용으로 새 판을 만들었습니다." });
     expect(m.restore).toHaveBeenCalledWith(D, 5, 2);
-    for (const versionNo of ["0", "x", ""]) expect(await restoreWebCopyVersionAction({}, fd({ docId: D, revision: "5", versionNo }))).toEqual({ message: "잘못된 요청입니다." });
+    for (const versionNo of ["0", "x", "", "2147483648"]) expect(await restoreWebCopyVersionAction({}, fd({ docId: D, revision: "5", versionNo }))).toEqual({ message: "잘못된 요청입니다." });
     expect(m.restore).toHaveBeenCalledTimes(1);
   });
 

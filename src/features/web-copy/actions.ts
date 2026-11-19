@@ -14,8 +14,10 @@ import { archiveWebCopy, createWebCopyDoc, rebaseWebCopy, restoreWebCopyVersion,
  * 값 검사는 서버 함수의 zod 계약(webCopySaveSchema)과 DB 가 한다.
  */
 const uuid = z.uuid();
-const revision = z.coerce.number().int().positive();
-const versionNo = z.coerce.number().int().positive();
+// DB integer 범위를 넘는 큰 수는 DB 오류 대신 '잘못된 요청'으로(Backend 검토 낮음 의견)
+const INT_MAX = 2_147_483_647;
+const revision = z.coerce.number().int().positive().max(INT_MAX);
+const versionNo = z.coerce.number().int().positive().max(INT_MAX);
 // 한도 끝까지 채운 문서(섹션 60개 × 칸 상한 합 2,700자 = 162,000자)가 이모지·이스케이프로 늘어나도 들어가는 여유.
 // 칸별·개수 상한은 서버 zod·DB 가 막는다
 const MAX_PAYLOAD = 700_000;
