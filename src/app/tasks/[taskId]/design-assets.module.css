@@ -1,0 +1,236 @@
+/* P3C-UI-PREP-01 디자인 자산 관리. 시안 Design/p3-production/assets.html.
+ * 색·간격은 기존 토큰만(src/styles/tokens.css). 44px 규칙은 funnel.module.css 의 .funnel 범위를 같이 쓰고,
+ * 분류 필터 단추도 44px. 아이콘·그림·배지는 AGY SVG(Design/assets/p3-p4)를 인라인으로(currentColor). */
+
+.daSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(제작 브리프·리드마그넷과 같은 방식) */
+}
+:global([data-theme="dark"]) .daSection {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .daSection {
+    --text-muted: inherit;
+  }
+}
+
+.daHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.daTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.daIcon {
+  flex: none;
+  color: var(--info-text);
+}
+.daTagIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.daBanner p,
+.daEmpty p {
+  margin: 0;
+}
+.daEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.daEmptyArt {
+  color: var(--text-muted);
+}
+.daCreate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.daFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.daFilter {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+}
+.daFilter[aria-pressed="true"] {
+  border: 2px solid var(--info-border);
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-weight: var(--font-weight-semibold);
+}
+.daFilter:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.daList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.daCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.daCard > p {
+  margin: 0;
+}
+.daCardArchived {
+  border-style: dashed;
+  background: var(--bg-subtle);
+}
+.daCardTitle {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+.daBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.daBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.daBadge_drafting {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.daBadge_reviewed {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.daBadge_archived {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-style: dashed;
+}
+.daOrigin_external_upload {
+  color: var(--text-main);
+}
+.daOrigin_app_generated {
+  color: var(--text-main);
+  border-style: dashed;
+}
+
+.daUsages p {
+  margin: 0;
+}
+.daUsagesHead {
+  font-weight: var(--font-weight-semibold);
+}
+.daUsageList {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+
+.daCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+.daCardBody p {
+  margin: 0;
+}
+.daVersions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.daVersion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.daVersionCurrent {
+  border: 2px solid var(--info-border);
+}
+.daForm {
+  max-width: 640px;
+}
+.daFieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.daReq {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.daCount {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.daCountOver {
+  color: var(--danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+.daDanger {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.daSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
