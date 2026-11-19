@@ -2,12 +2,13 @@
 
 import { useId, useState } from "react";
 import { ActionForm } from "../../_components/action-form";
-import { BadgeArchived, BadgeDrafting, BadgeReady } from "../../_components/p3-icons";
+import { BadgeArchived, BadgeDrafting, BadgeReady, BadgeStale } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
 import f from "./funnel.module.css";
 import da from "./design-assets.module.css";
 import { notConnectedAction, type BriefAction } from "./production-brief-edit-form";
 import { BriefActionButton } from "./production-brief-buttons";
+import { DesignUploadPanel, type UploadActions } from "./design-assets-upload";
 import {
   DA_COPY,
   DA_LABELS,
@@ -31,25 +32,41 @@ import {
   type DesignAssetKind,
   type DesignAssetStatus,
   type DesignAssetView,
+  type DesignAssetsData,
 } from "./design-assets-model";
 
-/** 서버 동작 자리(P3-c 서버가 오면 actions.ts 의 동작을 넘긴다. 없으면 단추마다 '아직 서버와 연결되지 않아…' 안내) */
+/** 서버 동작(actions.ts). 시험에서 넘기지 않으면 단추마다 '아직 서버와 연결되지 않아…' 안내 */
 export interface DesignAssetActions {
   save?: BriefAction;
-  replace?: BriefAction;
   archive?: BriefAction;
   restore?: BriefAction;
+  rebase?: BriefAction;
+  usages?: BriefAction;
+  download?: (assetId: string, version: number) => Promise<{ ok: true; data: { url: string } } | { ok: false; message: string }>;
+  upload?: UploadActions;
 }
+/** 자산별 미리 보기(서버가 그릴 때 만든 300초 서명 주소, 색상은 글자) */
+export type DesignPreviews = Record<string, { url?: string; text?: string }>;
 
 /**
- * 디자인 자산 목록(P3C-UI-PREP-01, 시안 Design/p3-production/assets.html).
+ * 디자인 자산 목록(시안 Design/p3-production/assets.html).
  * 분류 필터(전체·로고·이미지·색상·글꼴, 고른 단추 aria-pressed) → 자산 카드.
- * 고칠 수 없으면(읽기 전용·권한 없음·보관 자산) 폼·단추를 그리지 않고 내용과 이력만 보인다.
+ * 고칠 수 없으면(읽기 전용·권한 없음·보관 자산) 폼·단추를 그리지 않고 내용·이력·내려받기만 보인다.
  */
-export function DesignAssetList({ assets, locked, actions = {} }: { assets: DesignAssetView[]; locked: boolean; actions?: DesignAssetActions }) {
+export function DesignAssetList({
+  data,
+  locked,
+  previews = {},
+  actions = {},
+}: {
+  data: Pick<DesignAssetsData, "assets" | "usageOptions" | "brief">;
+  locked: boolean;
+  previews?: DesignPreviews;
+  actions?: DesignAssetActions;
+}) {
   const [kind, setKind] = useState<DesignAssetKind | "all">("all");
-  const counts = kindCounts(assets);
-  const shown = filterAssets(assets, kind);
+  const counts = kindCounts(data.assets);
+  const shown = filterAssets(data.assets, kind);
   const filters: Array<DesignAssetKind | "all"> = ["all", ...DESIGN_ASSET_KIND_KEYS];
   return (
     <>
@@ -62,7 +79,7 @@ export function DesignAssetList({ assets, locked, actions = {} }: { assets: Desi
       </div>
       <ul className={da.daList} aria-label={`${DA_COPY.heading} 목록`}>
         {shown.map((a) => (
-          <AssetCard key={a.id} a={a} locked={locked || a.archivedAt !== null} actions={actions} />
+          <AssetCard key={a.id} a={a} briefId={data.brief.id} usageOptions={data.usageOptions} preview={previews[a.id]} locked={locked || a.archivedAt !== null} actions={actions} />
         ))}
       </ul>
     </>
@@ -79,7 +96,74 @@ function StatusBadge({ status }: { status: DesignAssetStatus }) {
   );
 }
 
-function AssetCard({ a, locked, actions }: { a: DesignAssetView; locked: boolean; actions: DesignAssetActions }) {
+/** 미리 보기: 그림은 <img> 로만(SVG 인라인 금지, 실행 막음), 색상·토큰은 글자로만, 글꼴은 없음 */
+function Preview({ a, preview }: { a: DesignAssetView; preview?: { url?: string; text?: string } }) {
+  if (preview?.url && a.mimeType.startsWith("image/")) {
+    return (
+      <figure className={da.daPreview}>
+        {/* 서명 주소 그림(next/image 최적화를 거치지 않음 — 300초 서명 주소·SVG 를 그대로 보인다) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={preview.url} alt={`${a.title} 미리 보기`} className={da.daPreviewImg} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+        {a.mimeType === "image/svg+xml" && <figcaption className={`${styles.muted} ${f.keep}`}>{DA_COPY.svgPreviewNotice}</figcaption>}
+      </figure>
+    );
+  }
+  if (preview?.text !== undefined) {
+    return (
+      <pre className={da.daPreviewText} tabIndex={0} aria-label={`${a.title} 미리 보기`}>
+        {preview.text}
+      </pre>
+    );
+  }
+  return null;
+}
+
+function DownloadButton({ assetId, version, action }: { assetId: string; version: number; action?: DesignAssetActions["download"] }) {
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <span className={da.daDownload}>
+      <button
+        type="button"
+        className={`${styles.secondaryButton} ${f.touch}`}
+        disabled={busy}
+        onClick={async () => {
+          if (!action) return setErr(P3_COMMON_COPY.notConnected);
+          setBusy(true);
+          setErr("");
+          const r = await action(assetId, version);
+          setBusy(false);
+          if (r.ok) window.location.assign(r.data.url);
+          else setErr(r.message);
+        }}
+        aria-label={`v${version} 내려받기`}
+      >
+        내려받기
+      </button>
+      {err && (
+        <span className={styles.error} role="alert">
+          {err}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function AssetCard({
+  a,
+  briefId,
+  usageOptions,
+  preview,
+  locked,
+  actions,
+}: {
+  a: DesignAssetView;
+  briefId: string;
+  usageOptions: DesignAssetsData["usageOptions"];
+  preview?: { url?: string; text?: string };
+  locked: boolean;
+  actions: DesignAssetActions;
+}) {
   const titleId = `da-${a.id}`;
   const ids = { assetId: a.id, revision: a.revision };
   const versions = [...a.versions].sort((x, y) => y.version - x.version);
@@ -97,21 +181,37 @@ function AssetCard({ a, locked, actions }: { a: DesignAssetView; locked: boolean
             {DA_LABELS.archivedBadge}
           </span>
         )}
+        {a.stale && !a.archivedAt && (
+          <span className={`${f.tag} ${f.tag_warn} ${da.daTagIcon}`}>
+            <BadgeStale />
+            이전 기준
+          </span>
+        )}
         <span className={f.tag}>{`v${a.version}`}</span>
       </p>
       <p className={`${styles.muted} ${f.keep}`}>{assetMetaLine(a)}</p>
+      <Preview a={a} preview={preview} />
       <div className={da.daUsages}>
         <p className={da.daUsagesHead}>{a.usages.length ? `${DA_LABELS.usages} (${a.usages.length}):` : `${DA_LABELS.usages}:`}</p>
         {a.usages.length ? (
           <ul className={da.daUsageList}>
             {a.usages.map((u) => (
-              <li key={u.id}>{u.label}</li>
+              <li key={u.id}>
+                {u.label ?? (
+                  // 홈페이지 문서 지금 판에서 사라진 섹션(또는 보관한 문서): 서버가 label 을 비워 준다
+                  <span className={`${f.tag} ${f.tag_warn} ${da.daTagIcon}`}>
+                    <BadgeStale />
+                    이전 기준
+                  </span>
+                )}
+              </li>
             ))}
           </ul>
         ) : (
           <p className={styles.muted}>{DA_LABELS.noUsages}</p>
         )}
       </div>
+      {a.stale && !locked && <BriefActionButton action={actions.rebase} hidden={ids} submitLabel={DA_COPY.rebase} pendingLabel={P3_COMMON_COPY.rebasePending} />}
 
       <details className={f.inlineDetails}>
         <summary>{DA_LABELS.detailsSummary}</summary>
@@ -124,23 +224,27 @@ function AssetCard({ a, locked, actions }: { a: DesignAssetView; locked: boolean
           {!locked && <p className={`${styles.muted} ${f.keep}`}>{P3_COMMON_COPY.restoreHint}</p>}
           <ol className={da.daVersions}>
             {versions.map((v) => (
-              <li key={v.version} className={`${da.daVersion} ${v.current ? da.daVersionCurrent : ""}`}>
+              <li key={v.id} className={`${da.daVersion} ${v.current ? da.daVersionCurrent : ""}`}>
                 <p className={f.keep}>
                   <strong>{v.current ? `v${v.version} ${DA_LABELS.currentVersionMark}` : `v${v.version}`}</strong>
-                  {` · ${formatKstMinute(v.savedAt)}${v.note ? ` · ${v.note}` : ""}`}
+                  {` · ${formatKstMinute(v.savedAt)}${v.note ? ` · ${v.note}` : ""}${v.restoredFromVersion ? ` · v${v.restoredFromVersion}에서 되돌림` : ""}`}
                 </p>
-                {v.current ? (
-                  <span className={f.tag}>{DA_LABELS.inUse}</span>
-                ) : locked ? null : (
-                  <BriefActionButton action={actions.restore} hidden={{ ...ids, version: v.version }} submitLabel={DA_COPY.restore} pendingLabel={P3_COMMON_COPY.savePending} />
-                )}
+                <div className={da.daVersionTools}>
+                  <DownloadButton assetId={a.id} version={v.version} action={actions.download} />
+                  {v.current ? (
+                    <span className={f.tag}>{DA_LABELS.inUse}</span>
+                  ) : locked ? null : (
+                    <BriefActionButton action={actions.restore} hidden={{ ...ids, version: v.version }} submitLabel={DA_COPY.restore} pendingLabel={P3_COMMON_COPY.savePending} />
+                  )}
+                </div>
               </li>
             ))}
           </ol>
           {!locked && (
             <>
               <AssetEditForm a={a} action={actions.save} />
-              <ReplaceForm a={a} action={actions.replace} />
+              <UsagesForm a={a} options={usageOptions} action={actions.usages} />
+              <DesignUploadPanel mode="replace" briefId={briefId} asset={{ id: a.id, revision: a.revision, kind: a.kind }} actions={actions.upload} />
               <details className={`${f.inlineDetails} ${da.daDanger}`}>
                 <summary>{DA_COPY.archive}</summary>
                 <BriefActionButton action={actions.archive} hidden={ids} submitLabel={DA_COPY.archive} pendingLabel={P3_COMMON_COPY.archivePending}>
@@ -245,25 +349,43 @@ function AssetEditForm({ a, action }: { a: DesignAssetView; action?: BriefAction
   );
 }
 
-/** 새 버전으로 교체(실제 파일 올리기는 서버 연결 뒤 — 지금은 교체 사유만 받는 자리) */
-function ReplaceForm({ a, action }: { a: DesignAssetView; action?: BriefAction }) {
+/** 사용처(홈페이지 섹션) 고르기 — 전체 교체, 자산당 20곳. 지금 판에서 사라진 사용처는 목록에 없어 저장하면 빠진다 */
+function UsagesForm({ a, options, action }: { a: DesignAssetView; options: DesignAssetsData["usageOptions"]; action?: BriefAction }) {
   const id = useId();
-  const [note, setNote] = useState("");
-  const n = countChars(note);
-  const max = DESIGN_ASSET_LIMITS.changeNote;
+  const key = (o: { docId: string; sectionId: string }) => `${o.docId}:${o.sectionId}`;
+  const [sel, setSel] = useState<Set<string>>(() => new Set(a.usages.map(key)));
+  if (options.length === 0) return null;
+  const max = DESIGN_ASSET_LIMITS.usagesPerAsset;
+  const chosen = options.filter((o) => sel.has(key(o)));
+  const over = chosen.length > max;
   return (
-    <ActionForm action={action ?? notConnectedAction} submitLabel={DA_COPY.replaceFile} pendingLabel={P3_COMMON_COPY.savePending} variant="secondary" className={`${f.form} ${da.daForm}`}>
+    <ActionForm action={action ?? notConnectedAction} submitLabel={DA_COPY.save} pendingLabel={P3_COMMON_COPY.savePending} variant="secondary" className={`${f.form} ${da.daForm}`}>
       <input type="hidden" name="assetId" value={a.id} />
       <input type="hidden" name="revision" value={a.revision} />
-      <div className={styles.field}>
-        <div className={da.daFieldHead}>
-          <label htmlFor={`${id}-note`}>
-            {DA_LABELS.changeNote} <span className={da.daReq}>(선택)</span>
-          </label>
-          <Counter id={`${id}-note-count`} n={n} max={max} label={DA_LABELS.changeNote} />
+      <input type="hidden" name="payload" value={JSON.stringify(chosen.map((o) => ({ docId: o.docId, sectionId: o.sectionId })))} />
+      <fieldset className={da.daUsagePick} aria-describedby={`${id}-count`}>
+        <legend>{`${DA_LABELS.usages} (${chosen.length} / ${max})`}</legend>
+        <div className={da.daUsageGrid}>
+          {options.map((o) => (
+            <label key={key(o)} className={da.daCheck}>
+              <input
+                type="checkbox"
+                checked={sel.has(key(o))}
+                onChange={(e) => {
+                  const next = new Set(sel);
+                  if (e.target.checked) next.add(key(o));
+                  else next.delete(key(o));
+                  setSel(next);
+                }}
+              />
+              <span>{o.label}</span>
+            </label>
+          ))}
         </div>
-        <input id={`${id}-note`} type="text" name="changeNote" value={note} onChange={(e) => setNote(e.target.value)} aria-describedby={`${id}-note-count`} />
-      </div>
+        <span id={`${id}-count`} className={over ? `${da.daCount} ${da.daCountOver}` : da.daSrOnly}>
+          {over ? `사용처는 자산당 ${max}곳까지입니다.` : `${chosen.length} / ${max}`}
+        </span>
+      </fieldset>
     </ActionForm>
   );
 }

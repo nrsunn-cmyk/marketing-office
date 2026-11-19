@@ -234,3 +234,160 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ── P3C-UI-CONNECT-01 서버 연결 ── */
+.daBrief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.daBriefTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+
+/* 업로드·확정(시안 assets.html) */
+.daUpload {
+  min-width: 0;
+}
+.daDrop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 2px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.daDrop p {
+  margin: 0;
+}
+.daDropOver {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+}
+.daPick {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.daPick:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+.daFileName {
+  font-weight: var(--font-weight-semibold);
+}
+.daUploadState p {
+  margin: 0;
+}
+.daUploadOk {
+  color: var(--success-text);
+}
+.daUploadButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* 미리 보기: 그림은 <img> 로만, 색상·토큰은 글자로만 */
+.daPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+.daPreviewImg {
+  display: block;
+  max-width: min(100%, 320px);
+  max-height: 200px;
+  object-fit: contain;
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+.daPreviewText {
+  max-height: 200px;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.daPreviewText:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.daVersionTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.daDownload {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* 사용처 고르기(체크 상자 44px 라벨) */
+.daUsagePick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.daUsagePick legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+.daUsageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-2);
+}
+.daCheck {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.daCheck:has(input:checked) {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+}
+.daCheck input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 0;
+}
+.daCheck:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
