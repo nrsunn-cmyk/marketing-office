@@ -657,6 +657,27 @@ describe.skipIf(!present)(`P3-c 디자인 자산 공격 시험(${T.assets})`, ()
         ]),
       ).toBe(n0);
     });
+    it("형식 매개변수(bbd0116): 'image/png; charset=…'·앞뒤 공백은 통과, 'image/pngx'·'image/png2;x'·'text/png'·대문자는 TYPE_MISMATCH", async () => {
+      for (const mime of [
+        "image/png; charset=binary",
+        "image/png;charset=utf-8",
+        " image/png ",
+      ]) {
+        const up = await reserve(a, c.briefId);
+        await putObject(a, up.storage_key, PNG.size, mime);
+        await confirmCreate(a, up);
+      }
+      for (const mime of [
+        "image/pngx",
+        "image/png2;x=1",
+        "text/png",
+        "IMAGE/PNG",
+      ]) {
+        const up = await reserve(a, c.briefId);
+        await putObject(a, up.storage_key, PNG.size, mime);
+        await expectDbError(confirmCreate(a, up), P3C.err.mismatch);
+      }
+    });
     it("만료된 예약 → 거절, 같은 예약 두 번 확정 → 두 번째 거절, 남의 예약 → NOT_FOUND", async () => {
       const up = await reserve(a, c.briefId);
       await putObject(a, up.storage_key, PNG.size, PNG.mime);
