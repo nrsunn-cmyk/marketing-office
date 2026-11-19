@@ -199,6 +199,64 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"channel_drafts": {
+                  Row: {
+                    "archived_at": string | null,"body": string,"brief_id": string,"channel": string,"created_at": string,"created_by": string,"id": string,"image_note": string | null,"language": string,"meta_description": string | null,"revision": number,"source_brief_revision": number,"source_snapshot": NonNullable<Json>,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"tags": NonNullable<Json>,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"body"?: string,"brief_id": string,"channel"?: string,"created_at"?: string,"created_by": string,"id"?: string,"image_note"?: string | null,"language"?: string,"meta_description"?: string | null,"revision"?: number,"source_brief_revision": number,"source_snapshot": NonNullable<Json>,"status"?: string,"strategy_artifact_id": string,"strategy_version_id": string,"tags"?: NonNullable<Json>,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"body"?: string,"brief_id"?: string,"channel"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"image_note"?: string | null,"language"?: string,"meta_description"?: string | null,"revision"?: number,"source_brief_revision"?: number,"source_snapshot"?: NonNullable<Json>,"status"?: string,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"tags"?: NonNullable<Json>,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "channel_drafts_brief_id_strategy_artifact_id_fkey"
+      columns: ["brief_id","strategy_artifact_id"]
+isOneToOne: false
+      referencedRelation: "content_briefs"
+      referencedColumns: ["id","strategy_artifact_id"]
+    },{
+      foreignKeyName: "channel_drafts_strategy_artifact_id_strategy_version_id_fkey"
+      columns: ["strategy_artifact_id","strategy_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["artifact_id","id"]
+    },{
+      foreignKeyName: "channel_drafts_workspace_id_brief_id_fkey"
+      columns: ["workspace_id","brief_id"]
+isOneToOne: false
+      referencedRelation: "content_briefs"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"channel_publications": {
+                  Row: {
+                    "created_at": string,"created_by": string,"draft_id": string,"id": string,"kind": string,"note": string | null,"published_at": string | null,"url": string | null,"voids_id": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"draft_id": string,"id"?: string,"kind": string,"note"?: string | null,"published_at"?: string | null,"url"?: string | null,"voids_id"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"draft_id"?: string,"id"?: string,"kind"?: string,"note"?: string | null,"published_at"?: string | null,"url"?: string | null,"voids_id"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "channel_publications_draft_id_voids_id_fkey"
+      columns: ["draft_id","voids_id"]
+isOneToOne: false
+      referencedRelation: "channel_publications"
+      referencedColumns: ["draft_id","id"]
+    },{
+      foreignKeyName: "channel_publications_workspace_id_draft_id_fkey"
+      columns: ["workspace_id","draft_id"]
+isOneToOne: false
+      referencedRelation: "channel_drafts"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"clients": {
                   Row: {
                     "archived_at": string | null,"created_at": string,"description": string | null,"id": string,"industry": string | null,"name": string,"revision": number,"updated_at": string,"workspace_id": string
@@ -555,6 +613,38 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     },{
       foreignKeyName: "lead_magnets_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"production_briefs": {
+                  Row: {
+                    "archived_at": string | null,"brand_tone_constraints": string | null,"core_message": string,"created_at": string,"created_by": string,"deliverable_types": (string)[],"id": string,"project_id": string,"reference_notes": string | null,"revision": number,"scope_summary": string,"source_snapshot": NonNullable<Json>,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"target_audience": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"brand_tone_constraints"?: string | null,"core_message": string,"created_at"?: string,"created_by": string,"deliverable_types": (string)[],"id"?: string,"project_id": string,"reference_notes"?: string | null,"revision"?: number,"scope_summary": string,"source_snapshot": NonNullable<Json>,"status"?: string,"strategy_artifact_id": string,"strategy_version_id": string,"target_audience": string,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"brand_tone_constraints"?: string | null,"core_message"?: string,"created_at"?: string,"created_by"?: string,"deliverable_types"?: (string)[],"id"?: string,"project_id"?: string,"reference_notes"?: string | null,"revision"?: number,"scope_summary"?: string,"source_snapshot"?: NonNullable<Json>,"status"?: string,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"target_audience"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "production_briefs_project_id_strategy_artifact_id_fkey"
+      columns: ["project_id","strategy_artifact_id"]
+isOneToOne: false
+      referencedRelation: "artifacts"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "production_briefs_strategy_artifact_id_strategy_version_id_fkey"
+      columns: ["strategy_artifact_id","strategy_version_id"]
+isOneToOne: false
+      referencedRelation: "artifact_versions"
+      referencedColumns: ["artifact_id","id"]
+    },{
+      foreignKeyName: "production_briefs_workspace_id_project_id_fkey"
       columns: ["workspace_id","project_id"]
 isOneToOne: false
       referencedRelation: "projects"
@@ -962,6 +1052,9 @@ isOneToOne: false
 "archive_brief_claim":
 { Args: { "p_claim_id": string,"p_expected_revision": number }; Returns: number
                            },
+"archive_channel_draft":
+{ Args: { "p_draft_id": string,"p_expected_revision": number }; Returns: number
+                           },
 "archive_content_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -971,11 +1064,17 @@ isOneToOne: false
 "archive_lead_magnet":
 { Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
                            },
+"archive_production_brief":
+{ Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
 "assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
                            },
 "confirm_source_upload":
 { Args: { "p_sha256": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: string
+                           },
+"create_channel_draft":
+{ Args: { "p_brief_id": string }; Returns: string
                            },
 "create_content_brief":
 { Args: { "p_audience"?: string,"p_channel": string,"p_channel_spec"?: Json,"p_core_message"?: string,"p_cta"?: string,"p_funnel_item_id": string,"p_title": string }; Returns: {
@@ -989,6 +1088,9 @@ isOneToOne: false
                            },
 "create_lead_magnet":
 { Args: { "p_audience"?: string,"p_delivery"?: string,"p_format": string,"p_lead_fields"?: Json,"p_outline"?: Json,"p_promise"?: string,"p_stage_id": string,"p_status"?: string,"p_title": string }; Returns: string
+                           },
+"create_production_brief":
+{ Args: { "p_brand_tone_constraints"?: string,"p_core_message": string,"p_deliverable_types": (string)[],"p_project_id": string,"p_reference_notes"?: string,"p_scope_summary": string,"p_strategy_artifact_id": string,"p_target_audience": string,"p_title": string }; Returns: string
                            },
 "decide_version":
 { Args: { "p_artifact_id": string,"p_comment"?: string,"p_decision": string,"p_version_id": string }; Returns: undefined
@@ -1009,6 +1111,9 @@ isOneToOne: false
 "link_claim_source":
 { Args: { "p_claim_id": string,"p_kind": string,"p_note"?: string,"p_profile_field"?: string,"p_target_id": string }; Returns: string
                            },
+"rebase_channel_draft":
+{ Args: { "p_draft_id": string,"p_expected_revision": number }; Returns: number
+                           },
 "rebase_content_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -1017,6 +1122,12 @@ isOneToOne: false
                            },
 "rebase_lead_magnet":
 { Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
+                           },
+"rebase_production_brief":
+{ Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"record_channel_publication":
+{ Args: { "p_draft_id": string,"p_note"?: string,"p_published_at": string,"p_url": string }; Returns: string
                            },
 "record_delivery":
 { Args: { "p_artifact_id": string,"p_delivered_at": string,"p_method": string,"p_note"?: string }; Returns: string
@@ -1069,6 +1180,9 @@ isOneToOne: false
 "update_brief_claim":
 { Args: { "p_claim_id": string,"p_claim_kind": string,"p_expected_revision": number,"p_text": string }; Returns: number
                            },
+"update_channel_draft":
+{ Args: { "p_body": string,"p_draft_id": string,"p_expected_revision": number,"p_image_note": string,"p_meta_description": string,"p_status": string,"p_tags": Json,"p_title": string }; Returns: number
+                           },
 "update_content_brief":
 { Args: { "p_audience": string,"p_brief_id": string,"p_channel_spec": Json,"p_copy_draft": string,"p_copy_origin": string,"p_core_message": string,"p_cta": string,"p_expected_revision": number,"p_hook": string,"p_image_guide": string,"p_status": string,"p_title": string }; Returns: number
                            },
@@ -1080,6 +1194,12 @@ isOneToOne: false
                            },
 "update_lead_magnet":
 { Args: { "p_audience": string,"p_delivery": string,"p_expected_revision": number,"p_format": string,"p_lead_fields": Json,"p_lead_magnet_id": string,"p_outline": Json,"p_promise": string,"p_stage_id": string,"p_status": string,"p_title": string }; Returns: number
+                           },
+"update_production_brief":
+{ Args: { "p_brand_tone_constraints": string,"p_brief_id": string,"p_core_message": string,"p_deliverable_types": (string)[],"p_expected_revision": number,"p_reference_notes": string,"p_scope_summary": string,"p_status": string,"p_target_audience": string,"p_title": string }; Returns: number
+                           },
+"void_channel_publication":
+{ Args: { "p_publication_id": string,"p_reason": string }; Returns: string
                            }
           }
           Enums: {
