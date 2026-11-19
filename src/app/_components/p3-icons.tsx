@@ -42,6 +42,16 @@ export function P3VideoIcon({ width = 24, height = 24, ...p }: P) {
   );
 }
 
+/** icons/p3-ppt.svg — PPT 구성·템플릿 아이콘 */
+export function P3PptIcon({ width = 24, height = 24, ...p }: P) {
+  return (
+    <svg {...base24} width={width} height={height} {...p}>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M12 16v4M8 20h8M7 9h6M7 12h4" />
+    </svg>
+  );
+}
+
 /** empty/empty-brief.svg — 아직 작성된 문서가 없음을 나타내는 문서 그림(P3-a·b·d·e·f 빈 상태, ASSETS-HANDOFF 4절) */
 export function EmptyBriefArt({ width = 96, height = 72, ...p }: P) {
   return (
