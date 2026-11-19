@@ -190,7 +190,7 @@ describe("예약", () => {
     await expectDbError(asA((tx) => reserve(tx, br.id, { fileName: "lo\u0000go.svg" })), /TYPE_MISMATCH|invalid byte|null character/);
     await expectDbError(asA((tx) => reserve(tx, br.id, { fileName: ` ${"a".repeat(10)}.svg` })), /TYPE_MISMATCH/);
     // Tester CS2·CS9·C3: 다중 확장자, '..', 줄바꿈, 역슬래시, 글자 방향 바꾸기(RTL 덮어쓰기), 201자
-    for (const fileName of ["logo.svg.html", "..svg", "a..b.svg", "a\nb.svg", "a\\b.svg", "gpj\u202e.svg", "a\u2066b.svg", `${"가".repeat(197)}.svg`])
+    for (const fileName of [".svg", "logo.svg.html", "..svg", "a..b.svg", "a\nb.svg", "a\\b.svg", "gpj\u202e.svg", "a\u2066b.svg", `${"가".repeat(197)}.svg`])
       await expectDbError(asA((tx) => reserve(tx, br.id, { fileName })), /TYPE_MISMATCH|BAD_SIGNATURE/);
     await asA((tx) => reserve(tx, br.id, { fileName: `${"가".repeat(196)}.svg` })); // 정확히 200자는 된다
     await asA((tx) => reserve(tx, br.id, { fileName: "<img src=x onerror=alert(1)>.svg" })); // 꺾쇠는 글자로만 보인다(화면 이스케이프)

@@ -102,7 +102,9 @@ export function extensionOf(fileName: string): string {
 
 /** 파일 이름 글자 규칙(DB app.design_file_name_ok 와 같음): 경로 구분자·'..'·제어 문자·글자 방향 바꾸기 문자 거절 */
 const BAD_NAME = /[\\/\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]|\.\./;
-export const designFileNameOk = (name: string) => name.length >= 1 && Array.from(name).length <= 200 && name === name.trim() && !BAD_NAME.test(name);
+// 확장자 앞 이름이 0자인 이름(".png")도 거절한다(Tester QA-P3C-BACKEND-01 O1)
+export const designFileNameOk = (name: string) =>
+  name.length >= 1 && Array.from(name).length <= 200 && name === name.trim() && !BAD_NAME.test(name) && !/^\.[A-Za-z0-9]+$/.test(name);
 
 /** 예약 전(이름·크기·선언 형식만)과 확정 전(실제 바이트) 검사에 함께 쓴다 */
 export function checkDesignDeclared(kind: DesignAssetKind, fileName: string, size: number, mime: string): DesignFileCheck {
