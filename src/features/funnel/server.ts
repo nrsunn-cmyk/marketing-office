@@ -33,6 +33,8 @@ export interface FunnelItemView {
   status: FunnelItemInput["status"];
   targetNote: string | null;
   details: LeadMagnetDetails | null;
+  /** 이 카드가 가리키는 리드마그넷 기획(P2-e, cta·lead_magnet 카드만). 없으면 null */
+  leadMagnetId: string | null;
   position: number;
   revision: number;
   updatedAt: string;
@@ -113,7 +115,7 @@ export async function getFunnelBoardFor(detail: TaskDetail | null): Promise<Funn
     sb.from("funnel_stages").select("id, stage_key, position, focus, revision").eq("workspace_id", workspace.id).eq("funnel_id", f.id).order("position"),
     sb
       .from("funnel_items")
-      .select("id, stage_id, kind, title, description, channel, status, target_note, details, position, revision, updated_at")
+      .select("id, stage_id, kind, title, description, channel, status, target_note, details, lead_magnet_id, position, revision, updated_at")
       .eq("workspace_id", workspace.id)
       .eq("funnel_id", f.id)
       .is("archived_at", null)
@@ -134,6 +136,7 @@ export async function getFunnelBoardFor(detail: TaskDetail | null): Promise<Funn
       status: i.status as FunnelItemView["status"],
       targetNote: i.target_note,
       details: (i.details as LeadMagnetDetails | null) ?? null,
+      leadMagnetId: i.lead_magnet_id ?? null,
       position: i.position,
       revision: i.revision,
       updatedAt: i.updated_at,
