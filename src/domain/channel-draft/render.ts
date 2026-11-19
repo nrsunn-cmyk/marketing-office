@@ -83,12 +83,15 @@ type Block =
   | { kind: "quote"; lines: string[] }
   | { kind: "table"; head: string[]; rows: string[][] };
 
-const H3 = /^###[ \t]+(.+)$/;
-const H2 = /^##[ \t]+(.+)$/;
-const UL = /^[-*][ \t]+(.+)$/;
-const OL = /^\d{1,3}\.[ \t]+(.+)$/;
-const QUOTE = /^>[ \t]?(.*)$/;
-const TABLE_SEP = /^\|?[ \t]*:?-{3,}:?[ \t]*(\|[ \t]*:?-{3,}:?[ \t]*)*\|?[ \t]*$/;
+// R1(QA-P2G-BACKEND-01 O1): 내용 칸은 [\s\S] 로 둔다. 줄은 이미 \n 으로 나눴고, `.` 은 U+2028 을 받지 않아
+//   공백을 길게 늘인 줄 끝에 U+2028 이 오면 [ \t]+ 와 (.+) 사이 공백 나누기를 모두 되감아 시간이 제곱으로 늘었다
+const H3 = /^###[ \t]+([\s\S]+)$/;
+const H2 = /^##[ \t]+([\s\S]+)$/;
+const UL = /^[-*][ \t]+([\s\S]+)$/;
+const OL = /^\d{1,3}\.[ \t]+([\s\S]+)$/;
+const QUOTE = /^>[ \t]?([\s\S]*)$/;
+// 앞뒤를 지운 줄에 쓴다(끝의 [ \t]* 두 개가 겹쳐 되감던 것을 없앰, R1)
+const TABLE_SEP = /^\|?[ \t]*:?-{3,}:?[ \t]*(\|[ \t]*:?-{3,}:?[ \t]*)*\|?$/;
 const cells = (line: string) =>
   line
     .trim()
@@ -130,7 +133,7 @@ export function parseBody(body: string): Block[] {
         i++;
       }
       blocks.push({ kind: "quote", lines: ql });
-    } else if (line.trim().startsWith("|") && i + 1 < lines.length && TABLE_SEP.test(lines[i + 1]!)) {
+    } else if (line.trim().startsWith("|") && i + 1 < lines.length && TABLE_SEP.test(lines[i + 1]!.trim())) {
       const head = cells(line);
       i += 2;
       const rows: string[][] = [];

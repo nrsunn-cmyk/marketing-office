@@ -248,6 +248,24 @@ describe("X20 큰 입력: 빠르게 끝나고 예외 없음", () => {
   }
 });
 
+describe("X20b 되감기(QA-P2G-BACKEND-01 O1): 줄 끝 앞 U+2028·표 구분선 공백 19990개도 50ms 안", () => {
+  for (const [name, body] of [
+    ["목록", `-${" ".repeat(19990)} `],
+    ["번호 목록", `1.${" ".repeat(19990)} `],
+    ["소제목", `##${" ".repeat(19990)} `],
+    ["작은 소제목", `###${" ".repeat(19990)} `],
+    ["표 구분선", `| a |\n|---${" ".repeat(19980)}x`],
+  ] as const) {
+    it(name, () => {
+      expectSafe(body);
+      const t = performance.now();
+      renderTistoryHtml(body);
+      toPlainText(body);
+      expect(performance.now() - t).toBeLessThan(50);
+    });
+  }
+});
+
 describe("X21 다른 출력", () => {
   const evil = "<script>alert(1)</script>\u0000\r\n../..\\x:*?\"<>|";
   it("toPlainText 는 글자(태그를 만들지 않음 — 화면은 글자로만 보인다)", () => {
