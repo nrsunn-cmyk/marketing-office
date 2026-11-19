@@ -7,7 +7,11 @@ create role service_role nologin bypassrls;
 create schema auth;
 create table auth.users (
   id    uuid primary key default gen_random_uuid(),
-  email text unique
+  email text unique,
+  -- 실제 Supabase auth.users 에도 있는 열(관리자 목록 ADMIN-IMPL-01 이 읽는다)
+  created_at         timestamptz default now(),
+  last_sign_in_at    timestamptz,
+  email_confirmed_at timestamptz
 );
 
 -- Supabase의 auth.uid()와 같은 방식으로 JWT의 sub를 읽는다

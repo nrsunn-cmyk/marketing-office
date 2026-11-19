@@ -5,7 +5,21 @@ export type Database = {
   
   "public": {
           Tables: {
-            "approvals": {
+            "admin_access_log": {
+                  Row: {
+                    "admin_id": string,"id": string,"occurred_at": string,"params": NonNullable<Json>,"row_count": number,"rpc": string,"seq": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "admin_id": string,"id"?: string,"occurred_at"?: string,"params"?: NonNullable<Json>,"row_count": number,"rpc": string,"seq"?: never
+                  }
+                  Update: {
+                    "admin_id"?: string,"id"?: string,"occurred_at"?: string,"params"?: NonNullable<Json>,"row_count"?: number,"rpc"?: string,"seq"?: never
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"approvals": {
                   Row: {
                     "actor_id": string,"artifact_id": string,"artifact_version_id": string,"comment": string | null,"created_at": string,"decision": string,"id": string,"seq": number,"workspace_id": string
                   }
@@ -842,6 +856,29 @@ isOneToOne: false
                            },
 "add_research_source":
 { Args: { "p_project_id": string,"p_publisher"?: string,"p_quoted_excerpt"?: string,"p_retrieved_at": string,"p_title": string,"p_url": string }; Returns: string
+                           },
+"admin_list_accounts":
+{ Args: { "p_before_created"?: string,"p_before_id"?: string,"p_limit"?: number }; Returns: {
+              "allowlisted": boolean,"clients": number,"email": string,"email_confirmed": boolean,"last_sign_in_at": string,"projects": number,"signed_up_at": string,"tasks": number,"user_id": string,"workspace_created_at": string,"workspace_id": string,"workspace_name": string
+            }[]
+                           },
+"admin_list_audit":
+{ Args: { "p_action"?: string,"p_before_seq"?: number,"p_from"?: string,"p_limit"?: number,"p_to"?: string,"p_workspace_id"?: string }; Returns: {
+              "action": string,"actor_id": string,"details": Json,"entity_id": string,"entity_type": string,"occurred_at": string,"revision": number,"seq": number,"workspace_id": string
+            }[]
+                           },
+"admin_list_pending_allowlist":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "added_at": string,"email": string,"note": string
+            }[]
+                           },
+"admin_usage_summary":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "ai_cost_usd_micro": number,"ai_runs": number,"artifact_versions_created": number,"asset_bytes": number,"assets_added": number,"briefs_created": number,"last_activity_at": string,"owner_email": string,"tasks_created": number,"workspace_id": string,"workspace_name": string
+            }[]
+                           },
+"admin_whoami":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "approve_company_profile_version":
 { Args: { "p_comment"?: string,"p_decision": string,"p_expected_last_seq": number,"p_profile_version_id": string }; Returns: number
