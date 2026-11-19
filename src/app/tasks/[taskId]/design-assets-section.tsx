@@ -21,7 +21,7 @@ import f from "./funnel.module.css";
 import da from "./design-assets.module.css";
 import { DesignAssetList, type DesignAssetActions, type DesignPreviews } from "./design-assets-list";
 import { DesignUploadPanel } from "./design-assets-upload";
-import { DA_COPY, DA_LABELS, P3_COMMON_COPY, type DesignAssetsData } from "./design-assets-model";
+import { DA_COPY, DA_LABELS, P3_COMMON_COPY, storageLevel, storageLimitReachedText, storageNearLimitText, storageOf, storageUsedText, type DesignAssetsData } from "./design-assets-model";
 
 export type { DesignAssetActions };
 export interface DesignAssetBoard {
@@ -144,13 +144,17 @@ function BriefBlock({ board, readOnly, actions }: { board: DesignAssetBoard; rea
   const headId = `design-assets-${data.brief.id}`;
   // 고칠 수 없는 이유: 화면 읽기 전용은 위에 한 번, 그 밖(올리기 꺼짐 등)은 서버 이유 그대로, 없으면 권한 없음
   const lockNote = readOnly ? null : !data.canWrite ? (data.readOnlyReason ?? DA_COPY.noPermission) : null;
+  // 업무실 저장 용량(서버가 줄 때만, 막대 없이 실제 숫자 글 — Master O4 결정·AGY DESIGN-P3C-COPY-03)
+  const storage = storageOf(data);
+  const level = storageLevel(storage);
   const blocked = !locked && !data.canCreate && !full ? data.createBlockedReason : null;
-  const upload = !locked && data.canCreate && <DesignUploadPanel mode="create" briefId={data.brief.id} actions={actions.upload} />;
+  const canUpload = !locked && data.canCreate && level !== "full";
   return (
     <section className={da.daBrief} aria-labelledby={headId}>
       <h3 id={headId} className={da.daBriefTitle}>
         {`기준 제작 브리프: ${data.brief.title}`}
         <span className={styles.badge}>{`자산 ${data.count} / ${data.limit}개`}</span>
+        {storage && <span className={f.tag}>{storageUsedText(storage.usedBytes, storage.limitBytes)}</span>}
         {data.stale && (
           <span className={`${f.tag} ${f.tag_warn} ${da.daTagIcon}`}>
             <BadgeStale />
@@ -176,25 +180,27 @@ function BriefBlock({ board, readOnly, actions }: { board: DesignAssetBoard; rea
           <p className={f.keep}>{DA_COPY.limitReached}</p>
         </div>
       )}
+      {!locked && storage && level !== "ok" && (
+        <div className={`${styles.notice} ${f.warnBox}`} role="note">
+          <p className={f.keep}>{level === "full" ? storageLimitReachedText(storage.limitBytes) : storageNearLimitText(storage.limitBytes)}</p>
+        </div>
+      )}
       {blocked && (
         <p className={`${styles.muted} ${f.keep}`} role="note">
           {blocked}
         </p>
       )}
 
-      {data.assets.length === 0 ? (
+      {data.assets.length === 0 && (
         <div className={`${styles.emptyState} ${da.daEmpty}`}>
           <EmptyAssetsArt className={da.daEmptyArt} />
           <strong>{DA_COPY.emptyTitle}</strong>
-          {upload && <p className={`${styles.muted} ${f.keep}`}>{DA_COPY.emptyDesc}</p>}
-          {upload}
+          {canUpload && <p className={`${styles.muted} ${f.keep}`}>{DA_COPY.emptyDesc}</p>}
         </div>
-      ) : (
-        <>
-          {upload}
-          <DesignAssetList data={data} locked={locked} previews={previews} actions={actions} />
-        </>
       )}
+      {/* 업로드 패널은 자산 수와 상관없이 늘 같은 자리(첫 자산을 올린 뒤에도 다시 만들어지지 않아 성공 안내가 남는다, Tester QA-P3C-E2E-01 O1) */}
+      {canUpload && <DesignUploadPanel key={`upload-${data.brief.id}`} mode="create" briefId={data.brief.id} actions={actions.upload} />}
+      {data.assets.length > 0 && <DesignAssetList data={data} locked={locked} previews={previews} actions={actions} />}
     </section>
   );
 }

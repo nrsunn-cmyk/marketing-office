@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DA_COPY, guessMime, kindsForMime, precheckFile, titleFromFileName, uploadErrorText, uploadProgressText } from "./design-assets-model";
+import { DA_COPY, guessMime, kindsForMime, precheckFile, storageLevel, storageOf, storageUsedText, titleFromFileName, uploadErrorText, uploadProgressText } from "./design-assets-model";
 import { classifyPut, putToSignedUrl, runDesignUpload, type UploadActions, type UploadPhase, type XhrLike } from "./design-upload";
 
 /** P3C-UI-CONNECT-01 올리기: 미리 거르기 → 예약 → 서명 주소 PUT(실제 바이트 진행) → 확정, 실패 문구는 AGY DA_COPY 키 */
@@ -84,6 +84,23 @@ describe("업로드 문구·미리 거르기(AGY DA_COPY upload 12키·unsafeSvg
     expect(precheckFile("logo", file("a.zip", 10, "application/zip"))).toBe(DA_COPY.uploadErrType);
     expect(precheckFile("image", file("a.svg", 10, "image/svg+xml"))).toBe(DA_COPY.uploadErrType);
     expect(precheckFile("image", file("a.jpg", 10, "image/png"))).toBe(DA_COPY.uploadErrMismatch);
+  });
+
+  it("확장자만 있는 이름(.png)은 AGY 전용 문구, 서버 unsafeSvg 키는 그대로 확정 문구(R1)", () => {
+    for (const n of [".png", ".SVG", " .css "]) expect(precheckFile("logo", file(n, 10, "image/png")), n).toBe("확장자만 있는 파일 이름은 사용할 수 없습니다. 파일 이름을 붙인 뒤 다시 올려 주세요.");
+    expect(precheckFile("logo", file("a.png", 10, "image/png"))).toBeNull();
+    expect(uploadErrorText({ message: "x", uploadCode: "UNSAFE_SVG", copyKey: "unsafeSvg" })).toBe(DA_COPY.unsafeSvg);
+  });
+
+  it("저장 용량(R1, Master O4): 서버가 줄 때만, 실제 숫자 글(막대·% 없음), 90% 이상 near·한도 이상 full", () => {
+    expect(storageOf({})).toBeNull();
+    expect(storageOf({ storage: { usedBytes: 1, limitBytes: 0 } })).toBeNull();
+    const s = storageOf({ storage: { usedBytes: 120 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 } });
+    expect(s && storageUsedText(s.usedBytes, s.limitBytes)).toBe("사용 중 120.0 MB / 500.0 MB");
+    expect(storageLevel(s)).toBe("ok");
+    expect(storageLevel({ usedBytes: 450 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 })).toBe("near");
+    expect(storageLevel({ usedBytes: 500 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 })).toBe("full");
+    expect(storageLevel(null)).toBeNull();
   });
 });
 

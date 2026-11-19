@@ -110,6 +110,9 @@ const STATES: Record<string, { boards: DesignAssetBoard[] | null; readOnly?: boo
   올리기꺼짐: { boards: [board(data(FOUR, { canWrite: false, readOnlyReason: "디자인 자산 올리기가 아직 켜져 있지 않습니다. 관리자에게 문의해 주세요.", canCreate: false, createBlockedReason: "디자인 자산 올리기가 아직 켜져 있지 않습니다. 관리자에게 문의해 주세요." }))] },
   브리프작성중: { boards: [board(data([], { canCreate: false, createBlockedReason: "제작 브리프를 확정해야 디자인 자산을 올릴 수 있습니다." }))] },
   브리프없음: { boards: [] },
+  용량보통: { boards: [board({ ...data(FOUR), storage: { usedBytes: 120 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 } } as DesignAssetsData)] },
+  용량거의: { boards: [board({ ...data(FOUR), storage: { usedBytes: 460 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 } } as DesignAssetsData)] },
+  용량가득: { boards: [board({ ...data(FOUR), storage: { usedBytes: 500 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 } } as DesignAssetsData)] },
   브리프둘: { boards: [board(data([LOGO])), board(data([], { brief: { ...BRIEF, id: "bbbbbbbb-bbbb-4bbb-8bbb-000000000002", title: "두 번째 브리프" } }))] },
   불러오기실패: { boards: null },
 };
@@ -243,6 +246,29 @@ describe("디자인 자산 관리 상태별 화면(서버 연결)", () => {
     expect(text(h)).toContain("기준 제작 브리프: 두 번째 브리프");
     const ids = [...h.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("업로드 패널은 빈 상태 상자 밖, 자산이 있을 때와 같은 자리(첫 자산 뒤에도 다시 만들어지지 않음 — Tester O1)", () => {
+    const empty = render("빈상태");
+    const box = empty.indexOf('class="emptyState daEmpty"');
+    const boxEnd = empty.indexOf("</div>", empty.indexOf("</strong>", box));
+    expect(empty.indexOf('type="file"')).toBeGreaterThan(boxEnd);
+    const one = render("작성중");
+    // 패널 앞에 오는 형제는 같은 블록 제목·안내뿐, 목록은 패널 뒤
+    expect(one.indexOf('type="file"')).toBeLessThan(one.indexOf('class="daFilters"'));
+  });
+
+  it("저장 용량(서버가 줄 때만): 사용 중 글, 90% 이상 안내, 가득 차면 업로드 패널 없음 / 서버가 안 주면 표시 없음", () => {
+    expect(text(render("작성중"))).not.toMatch(/사용 중 [\d.]+ (B|KB|MB)/); // 판 목록의 '사용 중' 표시와 구분
+    const ok = render("용량보통");
+    expect(text(ok)).toContain("사용 중 120.0 MB / 500.0 MB");
+    expect(ok).not.toMatch(/progressbar|<progress|%/);
+    expect(text(ok)).not.toContain("거의 찼습니다");
+    expect(text(render("용량거의"))).toContain("업무실 디자인 자산 저장 용량(500.0 MB)이 거의 찼습니다. 쓰지 않는 자산을 정리해 주세요.");
+    const full = render("용량가득");
+    expect(text(full)).toContain("업무실 디자인 자산 저장 용량(500.0 MB)이 가득 차 더 올릴 수 없습니다. 쓰지 않는 자산을 정리한 뒤 다시 올려 주세요.");
+    expect(full).not.toContain("+ 외부 파일 올리기");
+    expect(full).toContain('aria-label="v1 내려받기"');
   });
 
   it("불러오기 실패: 알림과 다시 불러오기", () => {

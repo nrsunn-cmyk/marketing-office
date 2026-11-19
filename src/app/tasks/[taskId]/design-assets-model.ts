@@ -63,7 +63,29 @@ export const DA_COPY = {
   uploadErrExpired: "올리기 링크 유효 시간이 지났습니다. 다시 시도를 누르면 새 링크로 올립니다.",
   unsafeSvg: "보안상 위험한 요소(스크립트·외부 연결 등)가 들어 있는 SVG 파일은 올릴 수 없습니다. 위험 요소를 빼고 다시 저장하거나 PNG 파일로 올려 주세요.",
   svgPreviewNotice: "보안상 SVG 파일은 실행을 막기 위해 읽기 전용 이미지로만 미리 보며, 내려받을 때만 원본 파일로 받습니다.",
+  // DESIGN-P3C-COPY-03: 확장자만 있는 이름·저장 용량(막대 없이 실제 숫자 글)
+  uploadErrNameOnlyExt: "확장자만 있는 파일 이름은 사용할 수 없습니다. 파일 이름을 붙인 뒤 다시 올려 주세요.",
 } as const;
+/** storageUsed "사용 중 {used} / {limit}"(실측값, 막대 없음) */
+export const storageUsedText = (used: number, limit: number) => `사용 중 ${formatBytes(used)} / ${formatBytes(limit)}`;
+export const storageNearLimitText = (limit: number) => `업무실 디자인 자산 저장 용량(${formatBytes(limit)})이 거의 찼습니다. 쓰지 않는 자산을 정리해 주세요.`;
+export const storageLimitReachedText = (limit: number) => `업무실 디자인 자산 저장 용량(${formatBytes(limit)})이 가득 차 더 올릴 수 없습니다. 쓰지 않는 자산을 정리한 뒤 다시 올려 주세요.`;
+
+/**
+ * 업무실 저장 용량(서버가 줄 때만 보인다 — Backend 요청 중). usedBytes = 모든 판의 서로 다른 파일 + 진행 중 예약 합,
+ * limitBytes = app.design_asset_quota_bytes(). 서버가 아직 주지 않으면 null → 화면에 아무것도 안 보임.
+ */
+export type DesignStorage = { usedBytes: number; limitBytes: number };
+export function storageOf(d: object): DesignStorage | null {
+  const s = (d as { storage?: unknown }).storage as Partial<DesignStorage> | null | undefined;
+  return s && Number.isFinite(s.usedBytes) && Number.isFinite(s.limitBytes) && (s.limitBytes as number) > 0 ? { usedBytes: s.usedBytes as number, limitBytes: s.limitBytes as number } : null;
+}
+/** 90% 이상이면 near, 한도 이상이면 full */
+export function storageLevel(s: DesignStorage | null): "ok" | "near" | "full" | null {
+  if (!s) return null;
+  if (s.usedBytes >= s.limitBytes) return "full";
+  return s.usedBytes >= s.limitBytes * 0.9 ? "near" : "ok";
+}
 /** uploadProgressBytes "{loaded} / {total} 올리는 중…"(실측 바이트) */
 export const uploadProgressText = (loaded: number, total: number) => `${formatBytes(loaded)} / ${formatBytes(total)} 올리는 중…`;
 /** 시안 업로드 안내 줄 "로고(SVG·PNG), … · 최대 10MB" */
@@ -199,6 +221,8 @@ export const kindsForMime = (m: DesignMime | null): DesignAssetKind[] => (m ? DE
 
 /** 올리기 전 미리 거르기(크기·형식·이름). 통과면 null, 아니면 확정 문구 */
 export function precheckFile(kind: DesignAssetKind, file: { name: string; size: number; type: string }): string | null {
+  // 확장자만 있는 이름(".png")은 서버도 거절한다(Backend 1bafec5, 서버는 형식 불일치 코드) — 화면은 전용 확정 문구로 먼저 알린다
+  if (/^\.[A-Za-z0-9]+$/.test(file.name.trim())) return DA_COPY.uploadErrNameOnlyExt;
   const mime = guessMime(file.name, file.type);
   if (!mime) return DA_COPY.uploadErrType;
   const c = checkDesignDeclared(kind, file.name, file.size, mime);
