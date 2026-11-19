@@ -3,11 +3,18 @@
 # 이 워크플로는 주인님 토큰으로 Vercel CLI 배포를 한다(배포 주체 = 토큰 주인, 커밋 작성자와 무관).
 # - 실행: GitHub 저장소 Actions → vercel-deploy → Run workflow(main 브랜치, 대상 선택). 수동 실행만 받는다.
 # - 처음에는 preview(미리보기)로 한 번 시험한다. 작성자 확인에 걸리지 않는지 본 뒤 production(운영)을 쓴다.
-# - 비밀값: 저장소 Secrets 의 VERCEL_TOKEN·VERCEL_ORG_ID·VERCEL_PROJECT_ID(주인님이 직접 넣는다).
-#   토큰은 명령 인자(--token)로 넘기지 않는다. 명령 인자는 로그·프로세스 목록에 남을 수 있다(Vercel 외부 파이프라인 문서).
-# - main 이 아닌 브랜치를 골라 돌리면 배포 작업을 건너뛴다. pull_request 계열로는 돌지 않는다(비밀값 보호).
-# - Vercel CLI 버전 고정: vercel@65.11.0(2026-11-03 배포, npm 등록소 조회 2026-11-19).
-# - 자세한 절차·되돌리기: docs/deploy-actions.md
+# - 비밀값: GitHub Environment `production`(배포 브랜치 main만)의 Environment Secrets
+#   VERCEL_TOKEN·VERCEL_ORG_ID·VERCEL_PROJECT_ID(주인님이 직접 넣는다).
+#   job 에 environment: production 을 대상과 상관없이 늘 건다. preview 도 같은 토큰을 쓰므로,
+#   다른 브랜치에서 이 파일을 고쳐 돌려도 Secret 을 받지 못하게 하려면 두 대상 모두 이 Environment 를 거쳐야 한다
+#   (Tester QA-DEPLOY-ACTIONS-01 W2).
+# - 토큰은 Vercel 단계(pull·build·deploy)와 첫 확인 단계의 step env 에만 둔다. npm ci·verify 에서는 보이지 않는다(W1).
+#   명령 인자(--token, -t)로 넘기지 않는다. 명령 인자는 로그·프로세스 목록에 남을 수 있다(Vercel 외부 파이프라인 문서).
+# - main 이 아닌 브랜치를 골라 돌리면 배포 작업을 건너뛴다. pull_request 계열로는 돌지 않는다.
+# - 공급망: 액션은 커밋 SHA 로 고정(옆 주석이 태그, 2026-11-19 git ls-remote 확인).
+#   Vercel CLI 는 devDependencies 의 vercel 65.11.0(2026-11-03 배포)을 package-lock.json 무결성 안에서
+#   npx --no-install 로만 부른다. 실행 때 따로 내려받지 않는다.
+# - 자세한 절차·되돌리기: docs/deploy-actions.md. 안전 장치 시험: tests/unit/deploy-workflow.test.ts
 name: vercel-deploy
 
 on:
@@ -35,22 +42,23 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    environment: production
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_CLI: vercel@65.11.0
       # 입력값은 스크립트 안에 직접 끼워 넣지 않고 환경 변수로만 넘긴다.
       TARGET: ${{ inputs.target }}
     steps:
-      - name: 비밀값 3개가 있는지 확인
+      - name: 비밀값 3개와 배포 대상 확인
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           missing=""
           [ -n "$VERCEL_TOKEN" ] || missing="$missing VERCEL_TOKEN"
           [ -n "$VERCEL_ORG_ID" ] || missing="$missing VERCEL_ORG_ID"
           [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing VERCEL_PROJECT_ID"
           if [ -n "$missing" ]; then
-            echo "::error::저장소 Secrets 에 없는 값:$missing (docs/deploy-actions.md 1절)"
+            echo "::error::Environment production 의 Secrets 에 없는 값:$missing (docs/deploy-actions.md 1절)"
             exit 1
           fi
           case "$TARGET" in
@@ -58,36 +66,54 @@ jobs:
             *) echo "::error::배포 대상은 preview 또는 production 만 됩니다"; exit 1 ;;
           esac
 
-      - uses: actions/checkout@v7
+      - name: 저장소 받기
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - name: Node 준비
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
 
-      # 잠금 파일 그대로 설치하고, 배포 전에 형식검사·린트·단위/DB 시험을 한 번 더 돈다.
-      - run: npm ci
-      - run: npm run verify
+      # 잠금 파일 그대로 설치한다(vercel CLI 포함). 이 단계에는 토큰이 없다.
+      - name: 의존성 설치
+        run: npm ci
+
+      # 배포 전에 형식검사·린트·단위/DB 시험을 한 번 더 돈다. 실패하면 배포하지 않는다. 이 단계에도 토큰이 없다.
+      - name: 형식검사·린트·시험
+        run: npm run verify
 
       - name: Vercel 환경 설정 내려받기
-        run: npx --yes "$VERCEL_CLI" pull --yes --environment="$TARGET"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx --no-install vercel pull --yes --environment="$TARGET"
 
       - name: 빌드
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ "$TARGET" = production ]; then
-            npx --yes "$VERCEL_CLI" build --prod
+            npx --no-install vercel build --prod
           else
-            npx --yes "$VERCEL_CLI" build
+            npx --no-install vercel build
           fi
 
       - name: 배포
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ "$TARGET" = production ]; then
-            url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod)
+            url=$(npx --no-install vercel deploy --prebuilt --prod)
           else
-            url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt)
+            url=$(npx --no-install vercel deploy --prebuilt)
           fi
           echo "배포 주소: $url"
           {
