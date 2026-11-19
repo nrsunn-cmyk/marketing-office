@@ -16,7 +16,7 @@ vi.mock("@/server/supabase/server", () => ({
     },
   }),
 }));
-const { isAdmin, listAdminAccounts, getAdminUsage, listAdminAudit } = await import("./server");
+const { isAdmin, listAdminAccounts, getAdminUsage, listAdminAudit, getAdminP3Progress } = await import("./server");
 
 const account = (i: number) => ({
   user_id: `u${i}`, email: `u${i}@example.test`, signed_up_at: `2026-11-1${i}T00:00:00Z`, last_sign_in_at: null, email_confirmed: true,
@@ -80,5 +80,35 @@ describe("관리자 서버 함수", () => {
       nextBeforeSeq: 42,
     });
     expect(st.calls.at(-1)).toEqual({ fn: "admin_list_audit", args: { p_limit: 1, p_action: "copy_generate" } });
+  });
+
+  it("P3 진행 현황(ADMIN-P3-01): 열 이름 변환, 승인 대기 null 유지, limit 1~500, 비관리자는 NOT_FOUND", async () => {
+    st.result.admin_p3_progress = {
+      data: [
+        {
+          workspace_id: "w1", workspace_name: "업무실", owner_email: "a@example.test", project_id: "p1",
+          briefs_drafting: 1, briefs_ready: 2, briefs_archived: 0, web_docs_drafting: 1, web_docs_reviewed: 0, web_docs_archived: 1, web_versions: 3,
+          stale_briefs: 1, stale_web_docs: 0, brief_limit_reached: false, web_version_limit_reached: 0, pending_approvals: null, last_activity_at: "2026-11-19T19:30:00Z",
+        },
+      ],
+      error: null,
+    };
+    const r = await getAdminP3Progress(9999);
+    expect(st.calls.at(-1)).toEqual({ fn: "admin_p3_progress", args: { p_limit: 500 } });
+    expect(r).toEqual({
+      ok: true,
+      data: [
+        {
+          workspaceId: "w1", workspaceName: "업무실", ownerEmail: "a@example.test", projectId: "p1",
+          briefs: { drafting: 1, ready: 2, archived: 0 }, webDocs: { drafting: 1, reviewed: 0, archived: 1, versions: 3 },
+          blocked: { staleBriefs: 1, staleWebDocs: 0, briefLimitReached: false, webVersionLimitReached: 0, pendingApprovals: null },
+          lastActivityAt: "2026-11-19T19:30:00Z",
+        },
+      ],
+    });
+    await getAdminP3Progress(0);
+    expect(st.calls.at(-1)?.args).toEqual({ p_limit: 1 });
+    st.result.admin_p3_progress = { data: null, error: { code: "42501", message: "FORBIDDEN: 관리자만 볼 수 있습니다" } };
+    expect(await getAdminP3Progress()).toEqual({ ok: false, code: "NOT_FOUND", message: "페이지를 찾을 수 없습니다." });
   });
 });

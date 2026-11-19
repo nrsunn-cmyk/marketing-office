@@ -1058,6 +1058,11 @@ isOneToOne: false
               "added_at": string,"email": string,"note": string
             }[]
                            },
+"admin_p3_progress":
+{ Args: { "p_limit"?: number }; Returns: {
+              "brief_limit_reached": boolean,"briefs_archived": number,"briefs_drafting": number,"briefs_ready": number,"last_activity_at": string,"owner_email": string,"pending_approvals": number,"project_id": string,"stale_briefs": number,"stale_web_docs": number,"web_docs_archived": number,"web_docs_drafting": number,"web_docs_reviewed": number,"web_version_limit_reached": number,"web_versions": number,"workspace_id": string,"workspace_name": string
+            }[]
+                           },
 "admin_usage_summary":
 { Args: { "p_from": string,"p_to": string }; Returns: {
               "ai_cost_usd_micro": number,"ai_runs": number,"artifact_versions_created": number,"asset_bytes": number,"assets_added": number,"briefs_created": number,"last_activity_at": string,"owner_email": string,"tasks_created": number,"workspace_id": string,"workspace_name": string

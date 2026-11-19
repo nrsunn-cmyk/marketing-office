@@ -181,3 +181,45 @@ export async function listAdminAudit(f: AdminAuditFilter = {}): Promise<Result<{
   }));
   return ok({ rows, nextBeforeSeq: rows.length === limit ? (rows.at(-1)?.seq ?? null) : null });
 }
+
+export interface AdminP3ProgressRow {
+  workspaceId: string;
+  workspaceName: string;
+  ownerEmail: string | null;
+  projectId: string;
+  /** P3-a 제작 브리프(보관 안 됨: 작성 중·확정, 보관) */
+  briefs: { drafting: number; ready: number; archived: number };
+  /** P3-b 홈페이지 문서(보관 안 됨: 작성 중·검토 완료, 보관)와 판 수 합 */
+  webDocs: { drafting: number; reviewed: number; archived: number; versions: number };
+  /** 막힌 곳: 이전 기준(브리프는 전략, 문서는 브리프), 한도(브리프 10개 찼는지, 판 100개 찬 문서 수), 승인 대기(P3-f 전이라 null = 준비 중) */
+  blocked: { staleBriefs: number; staleWebDocs: number; briefLimitReached: boolean; webVersionLimitReached: number; pendingApprovals: number | null };
+  lastActivityAt: string | null;
+}
+
+/**
+ * ④ P3 제작 진행 현황(ADMIN-P3-01): 제작 브리프가 있는 업무실·프로젝트별 개수·상태·시각. 사용자 글(제목·문구·프로젝트 이름)은 오지 않는다.
+ * 구현된 단계(P3-a·P3-b)만 실제 개수다. 화면은 나머지 단계를 '준비 중'으로 둔다(근거 없는 진행률 금지).
+ */
+export async function getAdminP3Progress(limit = 200): Promise<Result<AdminP3ProgressRow[]>> {
+  const sb = await createSupabaseServerClient();
+  const { data, error } = await sb.rpc("admin_p3_progress", { p_limit: Math.min(500, Math.max(1, Math.trunc(limit))) });
+  if (error) return rpcFail("getAdminP3Progress", error);
+  return ok(
+    (data ?? []).map((r) => ({
+      workspaceId: r.workspace_id,
+      workspaceName: r.workspace_name,
+      ownerEmail: r.owner_email,
+      projectId: r.project_id,
+      briefs: { drafting: r.briefs_drafting, ready: r.briefs_ready, archived: r.briefs_archived },
+      webDocs: { drafting: r.web_docs_drafting, reviewed: r.web_docs_reviewed, archived: r.web_docs_archived, versions: r.web_versions },
+      blocked: {
+        staleBriefs: r.stale_briefs,
+        staleWebDocs: r.stale_web_docs,
+        briefLimitReached: r.brief_limit_reached,
+        webVersionLimitReached: r.web_version_limit_reached,
+        pendingApprovals: r.pending_approvals ?? null,
+      },
+      lastActivityAt: r.last_activity_at,
+    })),
+  );
+}
