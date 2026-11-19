@@ -4,15 +4,13 @@
  */
 import { z } from "zod";
 import { funnelErrorFromDb, funnelIssueMessage } from "@/domain/funnel";
-import { DELIVERABLE_TYPES, PRODUCTION_BRIEF_LIMITS, PRODUCTION_BRIEF_STATUSES, charLength } from "./constants";
+import { DELIVERABLE_TYPES, PRODUCTION_BRIEF_LIMITS, PRODUCTION_BRIEF_STATUSES, briefTrim, charLength } from "./constants";
 
 // 상수는 constants.ts 에 둔다(화면 import 경계는 client-imports.test.ts 가 검사)
 export * from "./constants";
 
 const L = PRODUCTION_BRIEF_LIMITS;
 
-/** DB app.funnel_trim 과 같은 정리(공백류 + NBSP·BOM) */
-export const briefTrim = (s: string) => s.replace(/^[\s ﻿]+|[\s ﻿]+$/g, "");
 
 const requiredText = (max: number, label: string) =>
   z

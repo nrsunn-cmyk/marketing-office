@@ -53,3 +53,6 @@ export function isStaleStrategy(briefVersionId: string, approvedVersionId: strin
 
 /** 코드 포인트 글자 수(DB length() 와 같다) */
 export const charLength = (s: string) => Array.from(s).length;
+
+/** DB app.funnel_trim 과 같은 정리(공백류 + NBSP·BOM). 화면에서도 같은 기준으로 글자 수를 세도록 여기에 둔다(Tester QA-P3A-BACKEND-01 I6) */
+export const briefTrim = (s: string) => s.replace(/^[\s\u00a0\ufeff]+|[\s\u00a0\ufeff]+$/g, "");
