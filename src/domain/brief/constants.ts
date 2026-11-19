@@ -7,7 +7,7 @@ export const CLAIM_KINDS = { statistic: "수치·통계", capability: "제품 �
 export type ClaimKind = keyof typeof CLAIM_KINDS;
 export const PROFILE_FIELDS = { products: "제품·서비스", audience: "고객층", strengths: "강점", brand_rules: "브랜드 규칙", channel_urls: "채널 주소" } as const;
 export type ProfileField = keyof typeof PROFILE_FIELDS;
-/** DB copy_origin. 'ai' 는 자동 문구 생성이 결정되기 전까지 없다(ai-contract.ts) */
+/** 화면 폼이 보낼 수 있는 copy_origin. DB 에는 'ai' 도 있지만(migration 24) AI 초안 채택 RPC 로만 들어가고 폼은 보내지 않는다(QA-FINAL-E-01 O4) */
 export const COPY_ORIGINS = ["manual", "template"] as const;
 
 export const BRIEF_LIMITS = {

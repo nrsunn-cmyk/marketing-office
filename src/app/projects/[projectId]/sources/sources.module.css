@@ -1,0 +1,189 @@
+/* 외부 출처 화면(SOURCES-UI-01). 색·간격은 토큰만 쓴다.
+ * 누르는 곳은 모두 44px 이상(공용 .touchPage·.touchLink 규격), 옅은 배경 위 글자는 --text-main(대비 4.5:1 이상). */
+
+.back {
+  margin: 0;
+}
+
+/* 검토 상태 거르기: 링크 3개, 각 44px */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-3);
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.filter:hover {
+  background: var(--bg-subtle);
+}
+
+.filterActive,
+.filterActive:hover {
+  border-color: var(--primary-600);
+  background: var(--primary-600);
+  color: var(--text-on-primary);
+}
+
+.filterCount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 출처 카드 목록 */
+.cards {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.card {
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.cardInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cardTitle {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.meta > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* 원문 주소: 한 줄 말줄임(전체 주소는 title), 누르는 높이 44px */
+.url {
+  margin: 0;
+  min-width: 0;
+}
+
+.urlLink {
+  /* 안의 화면 읽기 전용 글자(srOnly, 절대 위치)가 이 링크 기준으로 놓이게 한다(없으면 페이지 기준으로 화면 밖에 놓여 가로 스크롤이 생김) */
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  min-height: 44px;
+  line-height: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.excerpt {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.excerpt p {
+  margin: 0;
+}
+
+/* 인용한 브리프 */
+.cites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.citesTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.citeList {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.citeLink {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.citeClaims {
+  margin: 0 0 var(--space-1);
+  padding-left: var(--space-5);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.noCites {
+  margin: 0;
+}
+
+/* 보관한 브리프 표시: 링크 안 글자라 링크 색을 따르되 굵기만 낮춘다 */
+.archivedTag {
+  font-weight: var(--font-weight-regular);
+}

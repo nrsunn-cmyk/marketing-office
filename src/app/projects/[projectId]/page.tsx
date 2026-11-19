@@ -16,6 +16,7 @@ import { changeProjectStatusAction } from "@/features/projects/actions";
 import { createTaskAction } from "@/features/tasks/actions";
 import { listTasks } from "@/features/tasks/server";
 import { getProject } from "@/features/projects/server";
+import { listResearchSources } from "@/features/research-sources/server";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
@@ -57,6 +58,15 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
     unstable_rethrow(e);
     console.error("[project tasks]", e);
   }
+  // 외부 출처 건수(SOURCES-UI-01). 실패해도 출처 화면으로 가는 링크는 보인다
+  let sourceCounts: { all: number; unverified: number } | null = null;
+  try {
+    const sources = await listResearchSources(project.id);
+    sourceCounts = { all: sources.length, unverified: sources.filter((x) => x.review_status === "unverified").length };
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[project sources]", e);
+  }
 
   return (
     <>
@@ -75,7 +85,10 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
             {project.client_id && (
               <>
                 {" · "}
-                <Link href={`/clients/${project.client_id}`}>{project.client_name}</Link>
+                {/* QA-SOURCES-UI-01 O3: 누르는 높이 44px(글자 크기는 그대로) */}
+                <Link href={`/clients/${project.client_id}`} className={styles.touchLink}>
+                  {project.client_name}
+                </Link>
               </>
             )}
           </dd>
@@ -152,6 +165,23 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
         </MobileActionSheet>
       </section>
       <AssetsPanel owner={{ projectId: project.id }} heading="프로젝트 자료" />
+      <section className={styles.section} aria-labelledby="project-sources">
+        <h2 id="project-sources" className={styles.subtitle}>
+          외부 출처
+        </h2>
+        <p className={styles.muted}>
+          {sourceCounts === null
+            ? "외부 출처 건수를 불러오지 못했습니다."
+            : sourceCounts.all === 0
+              ? "아직 등록한 외부 출처가 없습니다. 통계·보고서·기사 주소를 적어 두면 콘텐츠 브리프에서 근거로 고를 수 있습니다."
+              : `${sourceCounts.all}건${sourceCounts.unverified > 0 ? ` (확인 전 ${sourceCounts.unverified}건)` : ""}`}
+        </p>
+        <p>
+          <Link href={`/projects/${project.id}/sources`} className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            외부 출처 관리
+          </Link>
+        </p>
+      </section>
     </>
   );
 }

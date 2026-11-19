@@ -19,6 +19,7 @@ import {
   type ClaimWithSources,
   type ProfileField,
 } from "@/domain/brief";
+import { assetSendLabel } from "@/domain/brief/ai-copy";
 import { funnelStageLabel } from "@/domain/funnel";
 import { getFunnelBoard, type FunnelBoard } from "@/features/funnel/server";
 import { requireWorkspace } from "@/server/auth/session";
@@ -44,16 +45,24 @@ export interface BriefSourceView {
   id: string;
   kind: "profile" | "asset" | "research";
   label: string;
+  /**
+   * DEC-08-R2(QA-FINAL-E-01 D3·O5): AI 문구 요청에 보내는 근거 이름. 자료 원문·전체 주소를 넣지 않는다.
+   * 파일 → "파일 · 파일 이름", 링크 → "링크 · 제목"(제목 없으면 도메인만), 메모 → "메모 · 제목"(제목 없으면 "메모 자료 n"),
+   * 프로필 → "회사 프로필 · 항목 이름", 외부 출처 → "외부 출처 · 제목". 화면용 이름(label)은 그대로다.
+   */
+  aiLabel: string;
   note: string | null;
 }
 export interface BriefClaimView extends ClaimWithSources {
   revision: number;
   sourceRows: BriefSourceView[];
 }
+export type BriefAssetScope = "project" | "client";
 export interface BriefSourceOptions {
   /** 브리프가 참조한 전략의 회사 프로필 버전(없으면 null). 항목별로 근거를 고른다 */
   profile: { id: string; version: number; fields: { field: ProfileField; label: string; value: string }[] } | null;
-  assets: { id: string; label: string }[];
+  /** scope: project = 이 프로젝트 자료, client = 같은 고객 공통 자료(DEC-09 B, 프로젝트 없이 고객에게 올린 자료) */
+  assets: { id: string; label: string; scope: BriefAssetScope }[];
   research: { id: string; label: string; reviewStatus: string }[];
 }
 export interface BriefDetail {
@@ -70,6 +79,8 @@ export interface BriefDetail {
     channelSpec: BriefSpec;
     copyDraft: string | null;
     copyOrigin: "manual" | "template";
+    /** DEC-08: 지금 카피 초안이 AI 초안을 채택한 것(DB copy_origin = 'ai'). 이때 copyOrigin 은 "manual" 로 오며, 글을 바꾸지 않고 저장하면 DB 가 ai 를 유지한다 */
+    copyOriginAi: boolean;
     imageGuide: string | null;
     status: BriefStatus;
     revision: number;
@@ -151,6 +162,11 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
   const profileId = (versionRes.data?.content as { profileRef?: { id?: unknown } } | null)?.profileRef?.id;
 
   const projectId = (await sb.from("funnels").select("project_id").eq("workspace_id", workspace.id).eq("id", board.funnel.id).single()).data?.project_id;
+  // DEC-09 B: 근거 후보에 "같은 고객 공통 자료"(프로젝트 없이 그 고객에게 올린 자료)도 넣는다. 고객 없는 프로젝트는 이 프로젝트 자료만.
+  const clientId = projectId
+    ? (await sb.from("projects").select("client_id").eq("workspace_id", workspace.id).eq("id", projectId).maybeSingle()).data?.client_id ?? null
+    : null;
+  const assetQuery = sb.from("source_assets").select("id, display_name, url, file_name, project_id, kind").eq("workspace_id", workspace.id);
   const [srcRes, profRes, assetRes, researchRes] = await Promise.all([
     claimRows.length
       ? sb.from("content_claim_sources")
@@ -160,7 +176,10 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
     typeof profileId === "string"
       ? sb.from("company_profile_versions").select("id, version, products, audience, strengths, brand_rules, channel_urls").eq("workspace_id", workspace.id).eq("id", profileId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    sb.from("source_assets").select("id, display_name, url, file_name").eq("workspace_id", workspace.id).eq("project_id", projectId ?? "").order("created_at", { ascending: false }).limit(100),
+    (clientId
+      ? assetQuery.or(`project_id.eq.${projectId},and(project_id.is.null,client_id.eq.${clientId})`)
+      : assetQuery.eq("project_id", projectId ?? "")
+    ).order("created_at", { ascending: false }).limit(100),
     sb.from("research_sources").select("id, title, review_status").eq("workspace_id", workspace.id).eq("project_id", projectId ?? "").order("created_at", { ascending: false }).limit(100),
   ]);
   for (const r of [srcRes, profRes, assetRes, researchRes]) if (r.error) throw new Error(`근거를 불러오지 못했습니다: ${r.error.message}`);
@@ -175,9 +194,23 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
         })
         .filter((x) => x.value.trim() !== "")
     : [];
-  const assets = (assetRes.data ?? []).map((a) => ({ id: a.id, label: a.display_name ?? a.file_name ?? a.url ?? "이름 없는 자료" }));
+  const assets = (assetRes.data ?? []).map((a) => ({
+    id: a.id,
+    label: a.display_name ?? a.file_name ?? a.url ?? "이름 없는 자료",
+    scope: (a.project_id ? "project" : "client") as BriefAssetScope,
+  }));
   const research = (researchRes.data ?? []).map((r) => ({ id: r.id, label: r.title, reviewStatus: r.review_status }));
-  const assetLabel = new Map(assets.map((a) => [a.id, a.label]));
+  const assetLabel = new Map(assets.map((a) => [a.id, a.scope === "client" ? `고객 공통 · ${a.label}` : a.label]));
+  const assetRow = new Map((assetRes.data ?? []).map((a) => [a.id, a]));
+  const untitledMemo = new Map<string, number>();
+  const aiAssetLabel = (id: string | null): string => {
+    const a = id ? assetRow.get(id) : undefined;
+    if (!a) return "자료";
+    return assetSendLabel(a, () => {
+      if (!untitledMemo.has(a.id)) untitledMemo.set(a.id, untitledMemo.size + 1);
+      return untitledMemo.get(a.id)!;
+    });
+  };
   const researchLabel = new Map(research.map((r) => [r.id, r.label]));
 
   const byClaim = new Map<string, BriefSourceView[]>();
@@ -189,7 +222,13 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
           ? `자료 · ${assetLabel.get(s.source_asset_id ?? "") ?? "목록 밖 자료"}`
           : `외부 출처 · ${researchLabel.get(s.research_source_id ?? "") ?? "목록 밖 출처"}`;
     const list = byClaim.get(s.claim_id) ?? [];
-    list.push({ id: s.id, kind: s.kind as BriefSourceView["kind"], label, note: s.note });
+    const aiLabel =
+      s.kind === "profile"
+        ? `회사 프로필 · ${PROFILE_FIELDS[s.profile_field as ProfileField] ?? "항목"}`
+        : s.kind === "asset"
+          ? aiAssetLabel(s.source_asset_id)
+          : `외부 출처 · ${researchLabel.get(s.research_source_id ?? "") ?? "출처"}`;
+    list.push({ id: s.id, kind: s.kind as BriefSourceView["kind"], label, aiLabel, note: s.note });
     byClaim.set(s.claim_id, list);
   }
   const claims: BriefClaimView[] = claimRows.map((c) => {
@@ -210,7 +249,8 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
     cta: b.cta,
     channelSpec: (b.channel_spec ?? {}) as BriefSpec,
     copyDraft: b.copy_draft,
-    copyOrigin: b.copy_origin as "manual" | "template",
+    copyOrigin: b.copy_origin === "template" ? "template" : "manual",
+    copyOriginAi: b.copy_origin === "ai",
     imageGuide: b.image_guide,
     status: b.status as BriefStatus,
     revision: b.revision,

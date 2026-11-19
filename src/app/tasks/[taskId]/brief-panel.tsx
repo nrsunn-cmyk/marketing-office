@@ -17,9 +17,12 @@ import type { FunnelBoard } from "@/features/funnel/server";
 import { ActionForm } from "../../_components/action-form";
 import { CopyButton } from "../../_components/copy-button";
 import styles from "../../ui.module.css";
+import { listBriefCopyChoices } from "@/features/brief/ai-copy";
+import { BriefAiCopy } from "./brief-ai-copy";
 import { BriefEditForm } from "./brief-edit-form";
 import { specToForm } from "./brief-form";
-import { ClaimForm, SourceLinkForm, type SourceChoice } from "./claim-forms";
+import { ClaimForm, SourceLinkForm } from "./claim-forms";
+import { sourceChoiceGroups } from "./source-choices";
 import f from "./funnel.module.css";
 
 /**
@@ -27,7 +30,20 @@ import f from "./funnel.module.css";
  * 서버: src/features/brief (P2F-BACKEND-01). 주장마다 근거를 연결하고, 근거가 없으면 [미확인 주장]으로 보인다.
  * 보관한 프로젝트·취소한 작업·보관한 브리프는 읽기 전용(서버도 거절한다). 자동 문구 생성 버튼은 없다(미결정).
  */
-export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: FunnelBoard; taskId: string; briefId: string; readOnly: boolean }) {
+export async function BriefPanel({
+  board,
+  taskId,
+  projectId,
+  briefId,
+  readOnly,
+}: {
+  board: FunnelBoard;
+  taskId: string;
+  /** 외부 출처 화면으로 가는 링크용(SOURCES-UI-01) */
+  projectId?: string;
+  briefId: string;
+  readOnly: boolean;
+}) {
   const back = `/tasks/${taskId}#funnel`;
   let detail: BriefDetail | null;
   try {
@@ -72,14 +88,8 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
   const cardArchived = !board.stages.some((st) => st.items.some((i) => i.id === brief.funnelItemId));
   const locked = readOnly || brief.archived || cardArchived;
   const unverified = warnings.find((w) => w.kind === "unverified");
-  const groups: Array<{ label: string; choices: SourceChoice[] }> = [
-    {
-      label: options.profile ? `회사 프로필 ${options.profile.version}번 버전` : "회사 프로필",
-      choices: (options.profile?.fields ?? []).map((p) => ({ value: `profile:${options.profile!.id}:${p.field}`, label: `${p.label}: ${p.value.slice(0, 60)}${p.value.length > 60 ? "…" : ""}` })),
-    },
-    { label: "프로젝트 자료", choices: options.assets.map((a) => ({ value: `asset:${a.id}`, label: a.label.slice(0, 80) })) },
-    { label: "외부 출처", choices: options.research.map((r) => ({ value: `research:${r.id}`, label: r.label.slice(0, 80) })) },
-  ];
+  const groups = sourceChoiceGroups(options);
+  const aiChoices = listBriefCopyChoices(); // 키 있는 공급자만(키 값은 돌려주지 않음, DEC-08-R1)
   const mdId = `brief-md-${brief.id}`;
 
   return (
@@ -90,6 +100,7 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
         <span className={styles.badge}>{BRIEF_STATUSES[brief.status]}</span>
         {brief.stale && <span className={`${styles.badge} ${f.warnBadge}`}>브리프: 이전 전략 기준</span>}
         {brief.archived && <span className={styles.badge}>보관한 브리프</span>}
+        {brief.copyOriginAi && <span className={`${styles.badge} ${f.warnBadge}`}>카피: AI 초안(검토 전)</span>}
         <Link href={back} className={f.inlineLink}>
           퍼널 보드로
         </Link>
@@ -144,6 +155,15 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
           주장과 근거
           <span className={styles.badge}>{claims.length}개</span>
         </h3>
+        {projectId && !locked && (
+          <p className={styles.muted}>
+            통계·기사 같은 외부 근거는{" "}
+            <Link href={`/projects/${projectId}/sources`} className={styles.touchLink}>
+              외부 출처 화면
+            </Link>
+            에서 먼저 추가하면 &lsquo;근거 연결하기&rsquo;에서 고를 수 있습니다.
+          </p>
+        )}
         {claims.length === 0 ? (
           <p className={styles.muted}>아직 주장이 없습니다.</p>
         ) : (
@@ -219,6 +239,9 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
         </details>
       </section>
 
+      {/* DEC08-UI-01: 키가 있는 공급자가 하나도 없으면(선택지 0개) 이 영역을 그리지 않는다. revision 이 바뀌면(채택·저장) 새로 시작 */}
+      {!locked && aiChoices.length > 0 && <BriefAiCopy key={brief.revision} taskId={taskId} briefId={brief.id} revision={brief.revision} choices={aiChoices} />}
+
       {!locked && (
         <>
           <details className={f.basis}>
@@ -229,6 +252,7 @@ export async function BriefPanel({ board, taskId, briefId, readOnly }: { board: 
               briefId={brief.id}
               revision={brief.revision}
               channel={brief.channel}
+              copyAi={brief.copyOriginAi}
               initial={{
                 title: brief.title,
                 audience: brief.audience ?? "",

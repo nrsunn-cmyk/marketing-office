@@ -66,7 +66,7 @@ export function SourceLinkForm({ action, claimId, groups }: { action: Action; cl
   const first = groups.flatMap((g) => g.choices)[0]?.value ?? "";
   const [choice, setChoice] = useState(first);
   const [note, setNote] = useState("");
-  if (!first) return <p className={styles.muted}>연결할 수 있는 근거가 없습니다. 이 프로젝트에 자료를 올리거나, 전략이 기준으로 삼은 회사 프로필 버전에 내용을 채워 주세요(고객 공통 자료는 근거로 고를 수 없습니다).</p>;
+  if (!first) return <p className={styles.muted}>연결할 수 있는 근거가 없습니다. 이 프로젝트에 자료(또는 같은 고객의 공통 자료)를 올리거나, 전략이 기준으로 삼은 회사 프로필 버전에 내용을 채워 주세요.</p>;
   return (
     <ActionForm action={action} submitLabel="근거 연결" variant="secondary" className={f.form}>
       <input type="hidden" name="claimId" value={claimId} />
@@ -86,9 +86,9 @@ export function SourceLinkForm({ action, claimId, groups }: { action: Action; cl
               </optgroup>
             ))}
         </select>
-        {/* QA-P2F-BACKEND-01 O1: 서버가 허용하는 범위를 미리 알린다(그 밖은 SOURCE_MISMATCH 로 거절) */}
+        {/* QA-P2F-BACKEND-01 O1: 서버가 허용하는 범위를 미리 알린다(그 밖은 SOURCE_MISMATCH 로 거절). 문구는 AGY 확정 COPY-DEC09-01 */}
         <span id={`${id}-src-help`} className={styles.muted}>
-          고를 수 있는 근거: 이 브리프가 기준으로 삼은 전략의 회사 프로필 항목, 이 프로젝트에 올린 자료·외부 출처. 고객 공통 자료와 다른 프로젝트의 자료는 고를 수 없습니다.
+          고를 수 있는 근거: 이 브리프가 기준으로 삼은 전략의 회사 프로필 항목, 이 프로젝트의 자료·외부 출처, 같은 고객의 공통 자료. 다른 프로젝트의 자료는 고를 수 없습니다.
         </span>
       </div>
       <div className={styles.field}>

@@ -1,0 +1,130 @@
+/* 브리프 AI 문구 초안(DEC08-UI-01). 색·간격은 토큰만. 누르는 곳은 공용 .touchPage 규격(44px).
+ * 초안이 있으면 상자 테두리를 점선(--info-border)으로 바꾼다(AGY 시안 BRIEF-AI-UI-01 3번 상태). */
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.boxDraft {
+  border: 2px dashed var(--info-border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.note p {
+  margin: 0;
+}
+
+/* 개인정보 주의(COPY-DEC08-01 2번): 흐린 글자보다 눈에 띄게, 경고 토큰 글자색 */
+.caution {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--warning-text);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pending {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.variants {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.variant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--info-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.variantHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.variantTitle {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.variantText {
+  margin: 0;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 휴대폰: 단추는 폭을 다 쓴다(시안 390·360px) */
+@media (max-width: 640px) {
+  .row > button,
+  .variant form button {
+    width: 100%;
+  }
+}
+
+/* 공급자·모델 고르기(DEC-08-R1). 넓은 화면은 두 칸 나란히, 좁으면 한 줄씩 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.choices select {
+  max-width: 100%;
+}
+
+.single {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
+}

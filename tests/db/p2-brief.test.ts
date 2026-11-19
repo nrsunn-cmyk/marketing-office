@@ -145,12 +145,12 @@ describe("근거 무결성", () => {
     await expectDbError(asA((tx) => link(tx, c, "profile", a.profileA1, null)), /알 수 없는 프로필 항목/);
     await expectDbError(asA((tx) => link(tx, c, "profile", a.profileA1, "price")), /알 수 없는 프로필 항목/);
     const otherAsset = await asset(a, a.projectB, "https://example.com/other");
-    await expectDbError(asA((tx) => link(tx, c, "asset", otherAsset)), /이 프로젝트의 자료만/);
+    await expectDbError(asA((tx) => link(tx, c, "asset", otherAsset)), /이 프로젝트의 자료나 같은 고객의 공통 자료만/);
     const otherResearch = await research(a, a.projectB);
     await expectDbError(asA((tx) => link(tx, c, "research", otherResearch)), /이 프로젝트의 외부 출처만/);
     // 남의 업무실 자료는 같은 문구
     const bAsset = await asset(b, b.projectA, "https://example.com/b");
-    await expectDbError(asA((tx) => link(tx, c, "asset", bAsset)), /이 프로젝트의 자료만/);
+    await expectDbError(asA((tx) => link(tx, c, "asset", bAsset)), /이 프로젝트의 자료나 같은 고객의 공통 자료만/);
     await expectDbError(asA((tx) => link(tx, c, "url", bAsset)), /알 수 없는 근거 종류/);
 
     const id = await asA((tx) => link(tx, c, "profile", a.profileA1, "products"));
@@ -190,6 +190,72 @@ describe("근거 무결성", () => {
     await asA((tx) => tx.query("select unlink_claim_source($1)", [ids[0]]));
     await asA((tx) => link(tx, c, "asset", assets[10]));
   }, 60_000);
+});
+
+describe("DEC-09 B: 같은 고객 공통 자료(20261119001000_dec09_client_assets)", () => {
+  /** 프로젝트 없이 고객에게 올린 자료 */
+  const clientAsset = (f: Fixture, clientId: string, url: string) =>
+    asUser(db, f.userId, async (tx) =>
+      (await one<{ id: string }>(tx, "insert into source_assets (workspace_id, client_id, kind, url) values ($1, $2, 'url', $3) returning id", [f.workspaceId, clientId, url])).id,
+    );
+  const scopeOf = async (sourceId: string) =>
+    (await one<{ scope: string | null }>(db, "select details ->> 'scope' as scope from audit_events where entity_type = 'content_brief' and action = 'source_link' and details ->> 'source_id' = $1", [sourceId])).scope;
+
+  it("같은 고객 공통 자료는 허용(감사 scope=client), 이 프로젝트 자료는 그대로(scope=project)", async () => {
+    const s = await setup();
+    const br = await asA((tx) => createBrief(tx, s.itemId));
+    const c = await asA((tx) => addClaim(tx, br.brief_id));
+    const common = await clientAsset(a, a.clientA, "https://example.com/common-a");
+    const own = await asset(a, a.projectA, "https://example.com/own-a");
+    // 고객과 이 프로젝트를 둘 다 지정한 자료도 프로젝트 자료다
+    const both = await asUser(db, a.userId, async (tx) =>
+      (await one<{ id: string }>(tx, "insert into source_assets (workspace_id, client_id, project_id, kind, url) values ($1, $2, $3, 'url', 'https://example.com/both') returning id", [a.workspaceId, a.clientA, a.projectA])).id,
+    );
+    const s1 = await asA((tx) => link(tx, c, "asset", common));
+    const s2 = await asA((tx) => link(tx, c, "asset", own));
+    const s3 = await asA((tx) => link(tx, c, "asset", both));
+    expect([await scopeOf(s1), await scopeOf(s2), await scopeOf(s3)]).toEqual(["client", "project", "project"]);
+    // 같은 공통 자료 중복은 그대로 거절, 해제 뒤 다시 연결 가능
+    await expectDbError(asA((tx) => link(tx, c, "asset", common)), /이미 연결한 근거/);
+    await asA((tx) => tx.query("select unlink_claim_source($1)", [s1]));
+    await asA((tx) => link(tx, c, "asset", common));
+    // 프로필·외부 출처 연결의 감사 기록에는 scope 가 없다
+    const sp = await asA((tx) => link(tx, c, "profile", a.profileA1, "products"));
+    expect(await scopeOf(sp)).toBeNull();
+  });
+
+  it("다른 고객 공통 자료·같은 고객의 다른 프로젝트 자료·남의 업무실 공통 자료는 같은 문구로 거절", async () => {
+    const s = await setup();
+    const br = await asA((tx) => createBrief(tx, s.itemId));
+    const c = await asA((tx) => addClaim(tx, br.brief_id));
+    const otherClient = await clientAsset(a, a.clientB, "https://example.com/common-b");
+    await expectDbError(asA((tx) => link(tx, c, "asset", otherClient)), /이 프로젝트의 자료나 같은 고객의 공통 자료만/);
+    // 같은 고객(A)의 다른 프로젝트 자료: C안이 아님을 확인
+    const projectA2 = await asUser(db, a.userId, async (tx) =>
+      (await one<{ id: string }>(tx, "insert into projects (workspace_id, client_id, kind, title) values ($1, $2, 'client', 'A 두 번째') returning id", [a.workspaceId, a.clientA])).id,
+    );
+    const siblingAsset = await asset(a, projectA2, "https://example.com/a2");
+    await expectDbError(asA((tx) => link(tx, c, "asset", siblingAsset)), /이 프로젝트의 자료나 같은 고객의 공통 자료만/);
+    // 남의 업무실 공통 자료(그 업무실의 고객 A)
+    const foreign = await clientAsset(b, b.clientA, "https://example.com/foreign");
+    await expectDbError(asA((tx) => link(tx, c, "asset", foreign)), /이 프로젝트의 자료나 같은 고객의 공통 자료만/);
+    // 프로필 항목을 붙인 asset 은 여전히 거절
+    const common = await clientAsset(a, a.clientA, "https://example.com/common-a2");
+    await expectDbError(asA((tx) => link(tx, c, "asset", common, "products")), /SOURCE_MISMATCH/);
+    expect(await count("select 1 from content_claim_sources where claim_id = $1", [c])).toBe(0);
+  });
+
+  it("함수 정의: 정의자·search_path 고정·실행 권한(authenticated 만)은 그대로", async () => {
+    const f = await one<{ secdef: boolean; cfg: string[]; anon: boolean; auth: boolean; pub: boolean }>(
+      db,
+      `select p.prosecdef as secdef, p.proconfig as cfg,
+              has_function_privilege('anon', p.oid, 'execute') as anon,
+              has_function_privilege('authenticated', p.oid, 'execute') as auth,
+              exists (select 1 from aclexplode(p.proacl) x where x.grantee = 0 and x.privilege_type = 'EXECUTE') as pub
+         from pg_proc p where p.oid = 'public.link_claim_source(uuid, text, uuid, text, text)'::regprocedure`,
+    );
+    expect(f).toEqual({ secdef: true, cfg: ['search_path=""'], anon: false, auth: true, pub: false });
+  });
 });
 
 describe("전략 기준·정책", () => {
@@ -356,8 +422,8 @@ describe("값 규칙", () => {
     expect(await one(db, "select hook, copy_draft from content_briefs where id = $1", [briefId])).toEqual({ hook: null, copy_draft: null });
     await expectDbError(asA((tx) => addClaim(tx, briefId, "   ")), /주장 문장은 1~500자/);
     await expectDbError(asA((tx) => addClaim(tx, briefId, "x", "rumor")), /알 수 없는 주장 종류/);
-    // 표 CHECK: 정리되지 않은 값·ai 는 관리자도 넣지 못한다
-    await expectDbError(db.query("update content_briefs set copy_origin = 'ai' where id = $1", [briefId]), /check constraint/);
+    // 표 CHECK: 정리되지 않은 값·모르는 작성 방식은 관리자도 넣지 못한다('ai' 는 24번부터 허용, 채택 RPC 로만 들어감 — p2-brief-ai.test.ts)
+    await expectDbError(db.query("update content_briefs set copy_origin = 'robot' where id = $1", [briefId]), /check constraint/);
     await expectDbError(db.query("update content_briefs set hook = '  훅' where id = $1", [briefId]), /check constraint/);
     // 고정 열
     await expectDbError(db.query("update content_briefs set channel = 'linkedin' where id = $1", [briefId]), /FROZEN_COLUMN/);
