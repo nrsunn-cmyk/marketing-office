@@ -70,11 +70,11 @@ describe("P3-d 영상 구성 화면 모델(P3D-HANDOFF·P3-COPY-FINAL)", () => {
   it("점검: 제목·장면 이름 필수(정리 뒤), 길이 1~600 정수, 글자 수·자산 한도", () => {
     expect(checkVideoPlan("  제목 ", [sc("A", 1)], [])).toEqual({});
     const issues = checkVideoPlan(" \n", [sc(" ", 1, { durationSec: 0, narration: "가".repeat(1001), subtitle: "a".repeat(301), assetIds: ["zz"] }), sc("B", 2, { assetIds: Array.from({ length: 11 }, (_, i) => `a${i}`) })], Array.from({ length: 11 }, (_, i) => `a${i}`));
-    expect(issues.title).toBe("영상 제목을(를) 입력해 주세요.");
-    expect(issues[sceneKey(0, "sceneTitle")]).toBe("장면 이름을(를) 입력해 주세요.");
+    expect(issues.title).toBe("영상 제목을 입력해 주세요.");
+    expect(issues[sceneKey(0, "sceneTitle")]).toBe("장면 이름을 입력해 주세요.");
     expect(issues[sceneKey(0, "durationSec")]).toBe("길이는 1초부터 600초까지 정수로 적어 주세요.");
-    expect(issues[sceneKey(0, "narration")]).toBe("대사 / 내레이션은(는) 1,000자까지 쓸 수 있습니다.");
-    expect(issues[sceneKey(0, "subtitle")]).toBe("화면 자막은(는) 300자까지 쓸 수 있습니다.");
+    expect(issues[sceneKey(0, "narration")]).toBe("대사 / 내레이션은 1,000자까지 쓸 수 있습니다.");
+    expect(issues[sceneKey(0, "subtitle")]).toBe("화면 자막은 300자까지 쓸 수 있습니다.");
     expect(issues[sceneKey(0, "assetIds")]).toBe("목록에 없는 자산 1개가 연결되어 있습니다.");
     expect(issues[sceneKey(1, "assetIds")]).toBe("디자인 자산은 10개까지 연결할 수 있습니다.");
     expect(checkVideoPlan("t", [], []).scenes).toBe("장면이 1개 이상 있어야 합니다.");

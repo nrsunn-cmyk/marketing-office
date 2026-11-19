@@ -5,6 +5,7 @@
  * 영상 생성·편집·자막 합성은 하지 않는다(기획과 완성 파일 버전 관리만, 인계표 3절 1).
  */
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
+import { maxLengthMessage, requiredMessage } from "../../_components/josa";
 
 export { P3_COMMON_COPY } from "./design-assets-model";
 
@@ -199,17 +200,17 @@ export function checkVideoPlan(title: string, scenes: readonly VideoSceneView[],
   const L = VIDEO_PLAN_LIMITS;
   const out: VideoPlanIssues = {};
   const t = countChars(title);
-  if (t === 0) out.title = `${VP_LABELS.title}을(를) 입력해 주세요.`;
-  else if (t > L.title) out.title = `${VP_LABELS.title}은(는) ${L.title}자까지 쓸 수 있습니다.`;
+  if (t === 0) out.title = requiredMessage(VP_LABELS.title);
+  else if (t > L.title) out.title = maxLengthMessage(VP_LABELS.title, L.title);
   if (scenes.length < 1) out.scenes = "장면이 1개 이상 있어야 합니다.";
   if (scenes.length > L.scenesMax) out.scenes = VP_COPY.sceneLimitReached;
   sortedScenes(scenes).forEach((s, i) => {
     const n = countChars(s.sceneTitle);
-    if (n === 0) out[sceneKey(i, "sceneTitle")] = `${VP_LABELS.sceneTitle}을(를) 입력해 주세요.`;
-    else if (n > L.sceneTitle) out[sceneKey(i, "sceneTitle")] = `${VP_LABELS.sceneTitle}은(는) ${L.sceneTitle}자까지 쓸 수 있습니다.`;
+    if (n === 0) out[sceneKey(i, "sceneTitle")] = requiredMessage(VP_LABELS.sceneTitle);
+    else if (n > L.sceneTitle) out[sceneKey(i, "sceneTitle")] = maxLengthMessage(VP_LABELS.sceneTitle, L.sceneTitle);
     if (!validDuration(s.durationSec)) out[sceneKey(i, "durationSec")] = "길이는 1초부터 600초까지 정수로 적어 주세요.";
-    if (countChars(s.narration) > L.narration) out[sceneKey(i, "narration")] = `${VP_LABELS.narration}은(는) ${L.narration.toLocaleString("ko-KR")}자까지 쓸 수 있습니다.`;
-    if (countChars(s.subtitle) > L.subtitle) out[sceneKey(i, "subtitle")] = `${VP_LABELS.subtitle}은(는) ${L.subtitle}자까지 쓸 수 있습니다.`;
+    if (countChars(s.narration) > L.narration) out[sceneKey(i, "narration")] = maxLengthMessage(VP_LABELS.narration, L.narration);
+    if (countChars(s.subtitle) > L.subtitle) out[sceneKey(i, "subtitle")] = maxLengthMessage(VP_LABELS.subtitle, L.subtitle);
     const unknown = s.assetIds.filter((x) => !knownAssetIds.includes(x)).length;
     if (s.assetIds.length > L.assetsPerScene) out[sceneKey(i, "assetIds")] = `디자인 자산은 ${L.assetsPerScene}개까지 연결할 수 있습니다.`;
     else if (unknown) out[sceneKey(i, "assetIds")] = `목록에 없는 자산 ${unknown}개가 연결되어 있습니다.`;
