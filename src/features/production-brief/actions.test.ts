@@ -46,7 +46,7 @@ describe("제작 브리프 폼 동작", () => {
 
   it("payload 가 비었거나 너무 길거나 JSON 이 아니면 거절", async () => {
     expect((await createProductionBriefAction({}, fd({ projectId: P, strategyArtifactId: S, payload: "" }))).message).toBe("입력이 비었거나 너무 깁니다.");
-    expect((await createProductionBriefAction({}, fd({ projectId: P, strategyArtifactId: S, payload: "x".repeat(16_001) }))).message).toBe("입력이 비었거나 너무 깁니다.");
+    expect((await createProductionBriefAction({}, fd({ projectId: P, strategyArtifactId: S, payload: "x".repeat(32_001) }))).message).toBe("입력이 비었거나 너무 깁니다.");
     expect((await createProductionBriefAction({}, fd({ projectId: P, strategyArtifactId: S, payload: "{" }))).message).toBe("입력을 읽을 수 없습니다. 화면을 새로 고쳐 주세요.");
     expect(m.create).not.toHaveBeenCalled();
   });

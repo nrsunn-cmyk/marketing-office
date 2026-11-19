@@ -15,8 +15,9 @@ import { archiveProductionBrief, createProductionBrief, rebaseProductionBrief, u
  */
 const uuid = z.uuid();
 const revision = z.coerce.number().int().positive();
-// 글자 수 상한 합(120+500+1000+2000+1000+1000) + 산출물·JSON 따옴표 여유. 코드 포인트가 아니라 UTF-16 길이로 잰다
-const MAX_PAYLOAD = 16_000;
+// 글자 수 상한 합(120+500+1000+2000+1000+1000 = 5,620 코드 포인트)이 모두 이모지(UTF-16 2단위)이고 따옴표·역슬래시가
+// JSON 이스케이프로 두 배가 되어도 들어가는 여유(Backend 검토 낮음 의견). 칸별 상한은 서버 zod 가 막는다
+const MAX_PAYLOAD = 32_000;
 const BAD = { message: "잘못된 요청입니다." } as const;
 
 function readPayload(fd: FormData): { ok: true; data: unknown } | { ok: false; message: string } {
