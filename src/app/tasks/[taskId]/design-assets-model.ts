@@ -7,6 +7,7 @@
  * 글자 수 정리는 P3-a 와 같은 briefTrim(서버 funnel_trim 과 같은 규칙)을 쓴다.
  */
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
+import { maxLengthMessage, requiredMessage } from "../../_components/josa";
 
 /** 한도(P3C-HANDOFF 1·2절, 글자 수는 코드 포인트) */
 export const DESIGN_ASSET_LIMITS = {
@@ -192,9 +193,9 @@ export function checkAssetForm(v: DesignAssetFormValue): Partial<Record<"title" 
   const L = DESIGN_ASSET_LIMITS;
   const out: Partial<Record<"title" | "licenseNote", string>> = {};
   const t = countChars(v.title);
-  if (t === 0) out.title = `${DA_LABELS.title}을(를) 입력해 주세요.`;
-  else if (t > L.title) out.title = `${DA_LABELS.title}은(는) ${L.title}자까지 쓸 수 있습니다.`;
-  if (countChars(v.licenseNote) > L.licenseNote) out.licenseNote = `${DA_LABELS.licenseNote}은(는) ${L.licenseNote}자까지 쓸 수 있습니다.`;
+  if (t === 0) out.title = requiredMessage(DA_LABELS.title);
+  else if (t > L.title) out.title = maxLengthMessage(DA_LABELS.title, L.title);
+  if (countChars(v.licenseNote) > L.licenseNote) out.licenseNote = maxLengthMessage(DA_LABELS.licenseNote, L.licenseNote);
   return out;
 }
 export const toAssetPayload = (v: DesignAssetFormValue) => ({ title: v.title, licenseNote: v.licenseNote, status: v.status });

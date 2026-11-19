@@ -85,7 +85,7 @@ describe("P3-c 디자인 자산 화면 모델(P3C-HANDOFF·P3-COPY-FINAL)", () =
   it("점검: 서버처럼 앞뒤 정리 뒤 셈, 이름 1~100자·메모 500자", () => {
     expect(countChars("  가나\n")).toBe(2);
     expect(checkAssetForm({ title: `  ${"가".repeat(100)} `, licenseNote: "", status: "drafting" })).toEqual({});
-    expect(checkAssetForm({ title: " \n", licenseNote: "", status: "drafting" }).title).toBe("자산 이름을(를) 입력해 주세요.");
-    expect(checkAssetForm({ title: "가".repeat(101), licenseNote: "a".repeat(501), status: "drafting" })).toEqual({ title: "자산 이름은(는) 100자까지 쓸 수 있습니다.", licenseNote: "라이선스·주의 메모은(는) 500자까지 쓸 수 있습니다." });
+    expect(checkAssetForm({ title: " \n", licenseNote: "", status: "drafting" }).title).toBe("자산 이름을 입력해 주세요.");
+    expect(checkAssetForm({ title: "가".repeat(101), licenseNote: "a".repeat(501), status: "drafting" })).toEqual({ title: "자산 이름은 100자까지 쓸 수 있습니다.", licenseNote: "라이선스·주의 메모는 500자까지 쓸 수 있습니다." });
   });
 });
