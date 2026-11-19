@@ -21,6 +21,7 @@ import { dockerPortLookup, preflight, SHARED_PROJECT_IDS } from "./stack-guard";
  * - app.admins 는 PostgREST 로 닿지 않는 app 스키마라 DB 소유자 SQL(docker exec psql)로만 넣고 뺀다.
  *   안전 장치(Master 조건): 부를 때마다 stack-guard.preflight 로 환경·설정·실제 컨테이너를 다시 대조하고,
  *   공용 스택·Tester 전용(claude-tester-*)이 아닌 스택·DB 포트가 설정과 다른 컨테이너면 실행 전에 멈춘다. 끝나면 행을 지운다.
+ * - 끝나면 합성 계정도 지운다(CLEANUP-G-01 O3, deleteAccount 설명 참고).
  * 자기 전용 시험 스택에서만 돈다. 모든 값은 합성이다.
  */
 test.describe.configure({ mode: "serial" });
@@ -94,10 +95,29 @@ test.beforeAll(async () => {
   ACCOUNT.id = created.data.user.id;
 });
 
+/**
+ * 합성 계정 삭제(CLEANUP-G-01 O3). 관리자 열람 기록(admin_access_log)은 이 계정을 외래 키로 가리키고
+ * 고치기·지우기가 트리거로 막혀 있다(migration 25). 그래서 기록이 남은 계정은 완전 삭제가 실패한다.
+ * 기록이 없으면 완전 삭제하고, 있으면 GoTrue 소프트 삭제(행은 남고 이메일·로그인 정보가 지워져 다시 쓸 수 없음)를 한다.
+ * 기록 개수 조회도 stackSql 안전 장치(전용 스택 대조)를 거친다.
+ */
+async function deleteAccount(): Promise<string> {
+  if (!UUID.test(ACCOUNT.id)) return "계정 없음";
+  const logs = Number(stackSql(`select count(*) from public.admin_access_log where admin_id = '${ACCOUNT.id}'`));
+  const soft = logs > 0;
+  const { error } = await adminClient().auth.admin.deleteUser(ACCOUNT.id, soft);
+  expect(error, "시험 계정 삭제").toBeNull();
+  const again = await createClient(url(), key(), { auth: { persistSession: false } }).auth.signInWithPassword({ email: ACCOUNT.email, password: ACCOUNT.password });
+  expect(again.error, "삭제한 계정으로 로그인이 되면 안 된다").not.toBeNull();
+  return soft ? `소프트 삭제(열람 기록 ${logs}행이 계정을 가리킴)` : "완전 삭제";
+}
+
 test.afterAll(async () => {
   if (ACCOUNT.id) setAdmin(false);
   const removed = (await adminClient().from("signup_allowlist").delete().eq("email", ACCOUNT.email).select("email")).data?.length ?? 0;
-  test.info().annotations.push({ type: "정리", description: `관리자 명단 행 ${ACCOUNT.id ? adminRows() : "?"}개 남음, 허용 목록 행 삭제 ${removed}건` });
+  const left = ACCOUNT.id ? adminRows() : "?";
+  const deleted = await deleteAccount();
+  test.info().annotations.push({ type: "정리", description: `관리자 명단 행 ${left}개 남음, 허용 목록 행 삭제 ${removed}건, 계정 ${deleted}` });
 });
 
 async function expectHidden(page: Page) {
