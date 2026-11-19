@@ -130,10 +130,17 @@ describe("브리프 AI 문구 초안 영역(BriefAiCopy)", () => {
     for (const k of ["실패", "한도"]) {
       use(k);
       const html = render();
-      expect(html).toMatch(new RegExp(`role="alert"[^>]*>${STATES[k].state.message!.slice(0, 10)}`));
-      expect(html).toContain("지금까지 입력한 브리프 내용은 그대로입니다.");
+      expect(html).toContain(`role="alert">AI 문구를 만들지 못했습니다. ${STATES[k].state.message} 기존 입력 내용은 그대로 유지됩니다.</p>`);
       expect(button(html)![2]).toBe("다시 시도");
     }
+  });
+
+  it("일반 저장 오류 문구(예: DB 24 없이 키만 있을 때)는 AI 생성 실패로 구분해 보인다(QA-RELEASE-PREP-E-01 O1)", () => {
+    Object.assign(ctl, { state: { message: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." }, pending: false });
+    const html = render();
+    expect(html).toContain('role="alert">AI 문구를 만들지 못했습니다. 일시적인 오류가 났습니다. 잠시 후 다시 시도해 주세요. 기존 입력 내용은 그대로 유지됩니다.</p>');
+    expect(html).not.toContain("저장하지 못했습니다");
+    expect(button(html)![2]).toBe("다시 시도");
   });
 
   it("완료: 만든 모델 이름, 변형마다 '초안' 표시와 채택 단추(runId·변형 번호·revision), 상자는 점선 강조", () => {

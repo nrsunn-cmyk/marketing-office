@@ -12,6 +12,17 @@ import a from "./brief-ai.module.css";
 
 const EMPTY: BriefCopyFormState = {};
 
+/** 서버의 일반 저장 오류 문구(src/server/result.ts). AI 생성 실패에서는 이 문구 대신 일시 오류로 알린다 */
+const GENERIC_SAVE_ERROR = /^저장하지 못했습니다/;
+/**
+ * AI 생성 실패 안내(QA-RELEASE-PREP-E-01 O1): 늘 'AI 문구를 만들지 못했습니다.'로 시작해 일반 저장 실패와 구분하고,
+ * 서버가 이유(한도·꺼짐·시간 초과 등)를 주면 그대로 잇는다. 끝은 AGY 시안 실패 상태 문구('기존 입력 내용은 그대로 유지됩니다.')
+ */
+export function aiFailureText(serverMessage: string): string {
+  const reason = GENERIC_SAVE_ERROR.test(serverMessage) ? "일시적인 오류가 났습니다. 잠시 후 다시 시도해 주세요." : serverMessage;
+  return `AI 문구를 만들지 못했습니다. ${reason} 기존 입력 내용은 그대로 유지됩니다.`;
+}
+
 /**
  * 브리프 AI 문구 초안(DEC08-UI-01, 주인님 DEC-08 B·DEC-08-R1, AGY 시안 BRIEF-AI-UI-01 의 6상태).
  * - 공급자·모델: 서버가 준 선택지(listBriefCopyChoices — 키 있는 공급자만, 서버 고정 목록)에서만 고른다.
@@ -127,7 +138,7 @@ export function BriefAiCopy({ taskId, briefId, revision, choices }: { taskId: st
       </p>
       {failed && state.message && (
         <p className={styles.error} role="alert">
-          {state.message} 지금까지 입력한 브리프 내용은 그대로입니다.
+          {aiFailureText(state.message)}
         </p>
       )}
       {variants.length > 0 && state.runId && (
