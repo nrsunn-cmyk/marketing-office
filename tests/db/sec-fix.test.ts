@@ -172,11 +172,11 @@ describe("record_delivery 정상 경로·경계", () => {
 });
 
 describe("열 권한·행위자 트리거·서버 작업 역할", () => {
-  it("본인은 current_draft_version_id 는 바꿀 수 있고(invoker RPC 경로) approved_version_id 는 직접 바꿀 수 없다", async () => {
+  it("본인은 결과물 포인터(current_draft_version_id·approved_version_id)를 직접 바꿀 수 없다(PERM-CLEANUP-01: 쓰는 RPC 가 모두 정의자)", async () => {
     const g = await generated();
-    // 같은 값으로 갱신: 열 권한만 확인
-    const ok = await codeOf(asA((tx) => tx.query("update artifacts set current_draft_version_id = $1 where id = $2", [g.versionId, g.artifactId])));
-    expect(ok.code).toBeNull();
+    // 같은 값으로 갱신: 열 권한만 확인. record_generation·save_manual_version 이 20261117003000 부터 정의자라 이 열 권한도 회수했다
+    const cur = await codeOf(asA((tx) => tx.query("update artifacts set current_draft_version_id = $1 where id = $2", [g.versionId, g.artifactId])));
+    expect(cur.code).toBe("42501");
     const ng = await codeOf(asA((tx) => tx.query("update artifacts set approved_version_id = $1 where id = $2", [g.versionId, g.artifactId])));
     expect(ng.code).toBe("42501");
     expect(ng.message).toMatch(/permission denied for table artifacts/);
@@ -247,13 +247,13 @@ describe("함수 속성·정책·권한 (수정 후 상태)", () => {
     expect(rows).toEqual([]);
   });
 
-  it("artifacts UPDATE 권한: authenticated 는 current_draft_version_id 열만", async () => {
+  it("artifacts UPDATE 권한: authenticated 는 어느 열도 없다", async () => {
     const cols = (
       await db.query<{ column_name: string }>(
         "select column_name from information_schema.column_privileges where table_schema = 'public' and table_name = 'artifacts' and grantee = 'authenticated' and privilege_type = 'UPDATE' order by 1",
       )
     ).rows.map((r) => r.column_name);
-    expect(cols).toEqual(["current_draft_version_id"]);
+    expect(cols).toEqual([]);
   });
 });
 

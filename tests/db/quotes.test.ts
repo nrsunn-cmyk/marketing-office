@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { calculateQuote, type TaxMode } from "@/domain/quote";
-import { asUser, createDb, createTask, createUser, type Db, expectDbError, type Fixture, one, seedOwner } from "./harness";
+import { asUser, createDb, createTask, createUser, type Db, expectDbError, type Fixture, one, seedOwner, DENIED } from "./harness";
 
 let db: Db;
 let f: Fixture;
@@ -204,7 +204,7 @@ describe("CR03 확정 견적은 finalize_quote 경로로만", () => {
     const d = await draft();
     await expectDbError(
       asOwner((tx) => tx.query("insert into quotes (workspace_id, task_id, artifact_id) values ($1, $2, $3)", [f.workspaceId, d.task, d.artifact_id])),
-      /row-level security/,
+      DENIED,
     );
     const r = await finalize(d, priced("EXCLUSIVE", 1000, [[100, 1_000]]));
     await expectDbError(
@@ -215,11 +215,11 @@ describe("CR03 확정 견적은 finalize_quote 경로로만", () => {
           [f.workspaceId, r.quote_id, d.artifact_id, d.version_id],
         ),
       ),
-      /row-level security/,
+      DENIED,
     );
     await expectDbError(
       asOwner((tx) => tx.query("insert into quote_number_sequences (workspace_id, year, last_number) values ($1, 2099, 1)", [f.workspaceId])),
-      /row-level security/,
+      DENIED,
     );
   });
 
@@ -236,7 +236,7 @@ describe("CR03 확정 견적은 finalize_quote 경로로만", () => {
           [f.workspaceId, r.quote_version_id],
         ),
       ),
-      /row-level security/,
+      DENIED,
     );
     expect(await count()).toBe(1);
   });
@@ -261,7 +261,7 @@ describe("CR03 확정 견적은 finalize_quote 경로로만", () => {
 
 describe("CR04 결과 버전의 입력 스냅샷은 같은 작업의 것", () => {
   it("같은 작업의 스냅샷은 연결되고(직접 수정 흐름), 다른 작업 것은 거절", async () => {
-    await asOwner(async (tx) => {
+    await db.transaction(async (tx) => {
       const taskA = await createTask(tx, f, f.projectA);
       const taskA2 = await createTask(tx, f, f.projectA);
       const snapA = await one<{ id: string }>(
