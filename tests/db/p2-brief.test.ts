@@ -422,8 +422,8 @@ describe("값 규칙", () => {
     expect(await one(db, "select hook, copy_draft from content_briefs where id = $1", [briefId])).toEqual({ hook: null, copy_draft: null });
     await expectDbError(asA((tx) => addClaim(tx, briefId, "   ")), /주장 문장은 1~500자/);
     await expectDbError(asA((tx) => addClaim(tx, briefId, "x", "rumor")), /알 수 없는 주장 종류/);
-    // 표 CHECK: 정리되지 않은 값·ai 는 관리자도 넣지 못한다
-    await expectDbError(db.query("update content_briefs set copy_origin = 'ai' where id = $1", [briefId]), /check constraint/);
+    // 표 CHECK: 정리되지 않은 값·모르는 작성 방식은 관리자도 넣지 못한다('ai' 는 24번부터 허용, 채택 RPC 로만 들어감 — p2-brief-ai.test.ts)
+    await expectDbError(db.query("update content_briefs set copy_origin = 'robot' where id = $1", [briefId]), /check constraint/);
     await expectDbError(db.query("update content_briefs set hook = '  훅' where id = $1", [briefId]), /check constraint/);
     // 고정 열
     await expectDbError(db.query("update content_briefs set channel = 'linkedin' where id = $1", [briefId]), /FROZEN_COLUMN/);

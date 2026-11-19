@@ -72,6 +72,8 @@ export interface BriefDetail {
     channelSpec: BriefSpec;
     copyDraft: string | null;
     copyOrigin: "manual" | "template";
+    /** DEC-08: 지금 카피 초안이 AI 초안을 채택한 것(DB copy_origin = 'ai'). 이때 copyOrigin 은 "manual" 로 오며, 글을 바꾸지 않고 저장하면 DB 가 ai 를 유지한다 */
+    copyOriginAi: boolean;
     imageGuide: string | null;
     status: BriefStatus;
     revision: number;
@@ -224,7 +226,8 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
     cta: b.cta,
     channelSpec: (b.channel_spec ?? {}) as BriefSpec,
     copyDraft: b.copy_draft,
-    copyOrigin: b.copy_origin as "manual" | "template",
+    copyOrigin: b.copy_origin === "template" ? "template" : "manual",
+    copyOriginAi: b.copy_origin === "ai",
     imageGuide: b.image_guide,
     status: b.status as BriefStatus,
     revision: b.revision,

@@ -147,6 +147,9 @@ export function briefToMarkdown(b: {
 export function briefErrorFromDb(message: string | null | undefined): { code: string; message: string } {
   const m = /^\s*SOURCE_MISMATCH:\s*(.+)$/s.exec(message ?? "");
   if (m && /[가-힣]/.test(m[1]) && m[1].length <= 200) return { code: "SOURCE_MISMATCH", message: m[1].trim() };
+  // DEC08-AI-COPY-01: AI 문구 생성 한도는 DB 의 한국어 설명을 그대로
+  const lim = /^\s*(RATE_LIMITED|BUDGET_EXCEEDED):\s*(.+)$/s.exec(message ?? "");
+  if (lim && /[가-힣]/.test(lim[2]) && lim[2].length <= 200) return { code: lim[1], message: lim[2].trim().replace(/([^.])$/, "$1.") };
   return funnelErrorFromDb(message);
 }
 
