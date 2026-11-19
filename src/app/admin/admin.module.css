@@ -1,0 +1,177 @@
+/* 관리자 페이지(ADMIN-UI-01). 색·간격은 토큰만, 누르는 곳은 44px(공용 .touchPage·.touchLink 규격) */
+
+.kicker {
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.tab:hover {
+  background: var(--bg-subtle);
+}
+
+.tabActive,
+.tabActive:hover {
+  border-color: var(--primary-600);
+  background: var(--primary-600);
+  color: var(--text-on-primary);
+}
+
+.readonly {
+  margin: 0;
+}
+
+/* 넓은 표: 영역 안에서만 가로로 밀린다 */
+.tableWrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.tableWrap:focus-visible {
+  outline: var(--focus-ring-width, 2px) solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* 넓은 화면: 표 그대로(필요하면 영역 안에서 가로로 밀림).
+ * 휴대폰(640px 이하): 공용 .table 규칙대로 줄마다 카드로 쌓고 칸 이름표(data-label)를 붙인다 */
+@media (min-width: 641px) {
+  .tableWrap table {
+    min-width: 720px;
+  }
+
+  .tableWrap td,
+  .tableWrap th {
+    white-space: nowrap;
+  }
+
+  .wrapCell {
+    white-space: normal !important;
+    min-width: 180px;
+    max-width: 320px;
+  }
+
+  .num {
+    text-align: right !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .tableWrap {
+    border: 0;
+    background: transparent;
+  }
+}
+
+.wrapCell {
+  overflow-wrap: anywhere;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 조회 조건 폼 */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.filters > div {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.filters input,
+.filters select {
+  width: 100%;
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.details pre {
+  max-width: 420px;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-xs);
+}
+
+/* 이용 현황 합계 */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.totalValue {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
