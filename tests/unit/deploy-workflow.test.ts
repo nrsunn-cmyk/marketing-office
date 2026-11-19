@@ -168,6 +168,34 @@ describe("운영 배포 워크플로(vercel-deploy.yml)", () => {
     expect(v.integrity).toMatch(/^sha512-/);
   });
 
+  it("도구 잠금 파일의 모든 패키지가 npm 공식 등록소 주소와 sha512 무결성 값을 가진다(R4: 다른 출처·링크·검증 없는 항목 금지)", () => {
+    const lock = readJson("tools/vercel-cli/package-lock.json");
+    expect(lock.lockfileVersion).toBe(3);
+    const entries = Object.entries(lock.packages as Record<string, Record<string, unknown>>).filter(([k]) => k !== "");
+    expect(entries.length, "패키지 수가 너무 적으면 잠금 파일을 잘못 읽은 것").toBeGreaterThan(100);
+    const bad = entries
+      .filter(([k, p]) => {
+        const resolved = typeof p.resolved === "string" ? p.resolved : "";
+        const integrity = typeof p.integrity === "string" ? p.integrity : "";
+        return (
+          !k.startsWith("node_modules/") ||
+          p.link === true ||
+          p.inBundle === true ||
+          !/^https:\/\/registry\.npmjs\.org\/[^?#]+\.tgz$/.test(resolved) ||
+          !/^sha512-[A-Za-z0-9+/]{86}==$/.test(integrity)
+        );
+      })
+      .map(([k]) => k);
+    expect(bad, `규칙 밖 항목 ${bad.length}개`).toEqual([]);
+  });
+
+  it("Node 메이저는 .nvmrc 와 package.json engines 가 같은 판 하나로 고정된다(O5: Vercel 이 최신 메이저로 저절로 올리지 않게)", () => {
+    const nvmrc = readFileSync(join(root, ".nvmrc"), "utf8").trim();
+    expect(nvmrc).toMatch(/^\d+$/);
+    expect(readJson("package.json").engines.node).toBe(`${nvmrc}.x`);
+    expect(readJson("package-lock.json").packages[""].engines.node).toBe(`${nvmrc}.x`);
+  });
+
   it("앱 의존성에는 vercel CLI 가 없다(앱 설치·Vercel 자체 빌드에 끼지 않게, R2)", () => {
     const app = readJson("package.json");
     expect({ ...app.dependencies, ...app.devDependencies }).not.toHaveProperty("vercel");
