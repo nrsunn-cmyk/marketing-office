@@ -50,10 +50,12 @@ export interface BriefClaimView extends ClaimWithSources {
   revision: number;
   sourceRows: BriefSourceView[];
 }
+export type BriefAssetScope = "project" | "client";
 export interface BriefSourceOptions {
   /** 브리프가 참조한 전략의 회사 프로필 버전(없으면 null). 항목별로 근거를 고른다 */
   profile: { id: string; version: number; fields: { field: ProfileField; label: string; value: string }[] } | null;
-  assets: { id: string; label: string }[];
+  /** scope: project = 이 프로젝트 자료, client = 같은 고객 공통 자료(DEC-09 B, 프로젝트 없이 고객에게 올린 자료) */
+  assets: { id: string; label: string; scope: BriefAssetScope }[];
   research: { id: string; label: string; reviewStatus: string }[];
 }
 export interface BriefDetail {
@@ -151,6 +153,11 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
   const profileId = (versionRes.data?.content as { profileRef?: { id?: unknown } } | null)?.profileRef?.id;
 
   const projectId = (await sb.from("funnels").select("project_id").eq("workspace_id", workspace.id).eq("id", board.funnel.id).single()).data?.project_id;
+  // DEC-09 B: 근거 후보에 "같은 고객 공통 자료"(프로젝트 없이 그 고객에게 올린 자료)도 넣는다. 고객 없는 프로젝트는 이 프로젝트 자료만.
+  const clientId = projectId
+    ? (await sb.from("projects").select("client_id").eq("workspace_id", workspace.id).eq("id", projectId).maybeSingle()).data?.client_id ?? null
+    : null;
+  const assetQuery = sb.from("source_assets").select("id, display_name, url, file_name, project_id").eq("workspace_id", workspace.id);
   const [srcRes, profRes, assetRes, researchRes] = await Promise.all([
     claimRows.length
       ? sb.from("content_claim_sources")
@@ -160,7 +167,10 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
     typeof profileId === "string"
       ? sb.from("company_profile_versions").select("id, version, products, audience, strengths, brand_rules, channel_urls").eq("workspace_id", workspace.id).eq("id", profileId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    sb.from("source_assets").select("id, display_name, url, file_name").eq("workspace_id", workspace.id).eq("project_id", projectId ?? "").order("created_at", { ascending: false }).limit(100),
+    (clientId
+      ? assetQuery.or(`project_id.eq.${projectId},and(project_id.is.null,client_id.eq.${clientId})`)
+      : assetQuery.eq("project_id", projectId ?? "")
+    ).order("created_at", { ascending: false }).limit(100),
     sb.from("research_sources").select("id, title, review_status").eq("workspace_id", workspace.id).eq("project_id", projectId ?? "").order("created_at", { ascending: false }).limit(100),
   ]);
   for (const r of [srcRes, profRes, assetRes, researchRes]) if (r.error) throw new Error(`근거를 불러오지 못했습니다: ${r.error.message}`);
@@ -175,9 +185,13 @@ export async function getContentBriefFor(board: FunnelBoard | null, briefId: str
         })
         .filter((x) => x.value.trim() !== "")
     : [];
-  const assets = (assetRes.data ?? []).map((a) => ({ id: a.id, label: a.display_name ?? a.file_name ?? a.url ?? "이름 없는 자료" }));
+  const assets = (assetRes.data ?? []).map((a) => ({
+    id: a.id,
+    label: a.display_name ?? a.file_name ?? a.url ?? "이름 없는 자료",
+    scope: (a.project_id ? "project" : "client") as BriefAssetScope,
+  }));
   const research = (researchRes.data ?? []).map((r) => ({ id: r.id, label: r.title, reviewStatus: r.review_status }));
-  const assetLabel = new Map(assets.map((a) => [a.id, a.label]));
+  const assetLabel = new Map(assets.map((a) => [a.id, a.scope === "client" ? `고객 공통 · ${a.label}` : a.label]));
   const researchLabel = new Map(research.map((r) => [r.id, r.label]));
 
   const byClaim = new Map<string, BriefSourceView[]>();
