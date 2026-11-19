@@ -47,6 +47,8 @@ export interface ResearchSourceCitation {
   /** 화면 링크용: /tasks/{taskId}?brief={briefId}#brief */
   taskId: string;
   claimText: string;
+  /** 브리프가 보관됐거나 그 퍼널 카드가 보관됨(브리프 화면이 읽기 전용이 되는 두 경우). 화면은 "(보관)"으로 표시한다 */
+  briefArchived: boolean;
 }
 
 /** in(...) 목록이 길어 주소가 너무 길어지지 않게 나눈다 */
@@ -56,6 +58,7 @@ const chunks = <T,>(xs: T[]) => Array.from({ length: Math.ceil(xs.length / CHUNK
 /**
  * SOURCES-SERVER-01(Front SOURCES-UI-01 요청): 프로젝트 출처별로 그 출처를 근거로 연결한 브리프 목록.
  * 경로: 이 프로젝트 출처 → 해제 안 된 research 근거 연결 → 보관 안 된 주장 → 같은 프로젝트 브리프 → 전략 결과물의 task_id.
+ * 보관한 브리프·보관한 카드의 브리프도 근거 추적을 위해 포함하고 briefArchived 로 알린다(QA-DEC09-01 O2, Master 판단).
  * 모든 조회에 본인 업무실 조건을 걸고 RLS(본인 업무실 select)도 함께 적용된다. 인용이 없는 출처는 키가 없다.
  */
 export async function listResearchSourceCitations(projectId: string): Promise<Record<string, ResearchSourceCitation[]>> {
@@ -89,16 +92,24 @@ export async function listResearchSourceCitations(projectId: string): Promise<Re
     for (const c of r.data) claims.set(c.id, { text: c.text, brief_id: c.brief_id });
   }
 
-  const briefs = new Map<string, { title: string; channel: string; strategy_artifact_id: string }>();
+  const briefs = new Map<string, { title: string; channel: string; strategy_artifact_id: string; archived: boolean; funnel_item_id: string }>();
   for (const ids of chunks([...new Set([...claims.values()].map((c) => c.brief_id))])) {
     const r = await sb
       .from("content_briefs")
-      .select("id, title, channel, strategy_artifact_id")
+      .select("id, title, channel, strategy_artifact_id, archived_at, funnel_item_id")
       .eq("workspace_id", workspace.id)
       .eq("project_id", projectId)
       .in("id", ids);
     if (r.error) throw fail("브리프", r.error);
-    for (const b of r.data) briefs.set(b.id, { title: b.title, channel: b.channel, strategy_artifact_id: b.strategy_artifact_id });
+    for (const b of r.data)
+      briefs.set(b.id, { title: b.title, channel: b.channel, strategy_artifact_id: b.strategy_artifact_id, archived: b.archived_at !== null, funnel_item_id: b.funnel_item_id });
+  }
+
+  const archivedItems = new Set<string>();
+  for (const ids of chunks([...new Set([...briefs.values()].map((b) => b.funnel_item_id))])) {
+    const r = await sb.from("funnel_items").select("id").eq("workspace_id", workspace.id).not("archived_at", "is", null).in("id", ids);
+    if (r.error) throw fail("퍼널 카드", r.error);
+    for (const i of r.data) archivedItems.add(i.id);
   }
 
   const taskOf = new Map<string, string>();
@@ -114,7 +125,14 @@ export async function listResearchSourceCitations(projectId: string): Promise<Re
     const b = c && briefs.get(c.brief_id);
     const taskId = b && taskOf.get(b.strategy_artifact_id);
     if (!l.research_source_id || !c || !b || !taskId) continue;
-    (out[l.research_source_id] ??= []).push({ briefId: c.brief_id, briefTitle: b.title, channel: b.channel, taskId, claimText: c.text });
+    (out[l.research_source_id] ??= []).push({
+      briefId: c.brief_id,
+      briefTitle: b.title,
+      channel: b.channel,
+      taskId,
+      claimText: c.text,
+      briefArchived: b.archived || archivedItems.has(b.funnel_item_id),
+    });
   }
   for (const rows of Object.values(out)) rows.sort((x, y) => x.briefTitle.localeCompare(y.briefTitle, "ko") || x.briefId.localeCompare(y.briefId));
   return out;

@@ -33,6 +33,11 @@ vi.mock("@/server/supabase/server", () => ({
           rows = rows.filter((r) => (r[k] ?? null) === v);
           return chain;
         },
+        not(k: string, op: string, v: unknown) {
+          q.ops.push(`not(${k},${op},${String(v)})`);
+          if (op === "is" && v === null) rows = rows.filter((r) => (r[k] ?? null) !== null);
+          return chain;
+        },
         in(k: string, vs: unknown[]) {
           q.ops.push(`in(${k},${vs.length})`);
           rows = rows.filter((r) => vs.includes(r[k]));
@@ -80,9 +85,13 @@ beforeEach(() => {
       { id: "cW", text: "남의 주장", brief_id: "bW", workspace_id: "w2", archived_at: null },
     ],
     content_briefs: [
-      { id: "b1", title: "나 블로그", channel: "blog", strategy_artifact_id: "a1", project_id: "p1", workspace_id: "w1" },
-      { id: "b2", title: "가 인스타", channel: "instagram", strategy_artifact_id: "a1", project_id: "p1", workspace_id: "w1" },
-      { id: "bX", title: "다른 프로젝트", channel: "blog", strategy_artifact_id: "a2", project_id: "p2", workspace_id: "w1" },
+      { id: "b1", title: "나 블로그", channel: "blog", strategy_artifact_id: "a1", project_id: "p1", workspace_id: "w1", archived_at: null, funnel_item_id: "i1" },
+      { id: "b2", title: "가 인스타", channel: "instagram", strategy_artifact_id: "a1", project_id: "p1", workspace_id: "w1", archived_at: null, funnel_item_id: "i2" },
+      { id: "bX", title: "다른 프로젝트", channel: "blog", strategy_artifact_id: "a2", project_id: "p2", workspace_id: "w1", archived_at: null, funnel_item_id: "i1" },
+    ],
+    funnel_items: [
+      { id: "i1", workspace_id: "w1", archived_at: null },
+      { id: "i2", workspace_id: "w1", archived_at: null },
     ],
     artifacts: [
       { id: "a1", task_id: "t1", workspace_id: "w1" },
@@ -96,9 +105,9 @@ describe("listResearchSourceCitations", () => {
     const out = await listResearchSourceCitations("p1");
     expect(out).toEqual({
       rs1: [
-        { briefId: "b2", briefTitle: "가 인스타", channel: "instagram", taskId: "t1", claimText: "주장 3" },
-        { briefId: "b1", briefTitle: "나 블로그", channel: "blog", taskId: "t1", claimText: "주장 1" },
-        { briefId: "b1", briefTitle: "나 블로그", channel: "blog", taskId: "t1", claimText: "주장 2" },
+        { briefId: "b2", briefTitle: "가 인스타", channel: "instagram", taskId: "t1", claimText: "주장 3", briefArchived: false },
+        { briefId: "b1", briefTitle: "나 블로그", channel: "blog", taskId: "t1", claimText: "주장 1", briefArchived: false },
+        { briefId: "b1", briefTitle: "나 블로그", channel: "blog", taskId: "t1", claimText: "주장 2", briefArchived: false },
       ],
     });
     // rs2 는 해제(c4)·보관 주장(c5)·다른 프로젝트 브리프(c6)뿐이라 키가 없다. rs3 은 인용 없음.
@@ -108,13 +117,23 @@ describe("listResearchSourceCitations", () => {
 
   it("모든 조회에 본인 업무실 조건, 근거 연결은 research·해제 안 됨, 주장은 보관 안 됨, 브리프는 같은 프로젝트", async () => {
     await listResearchSourceCitations("p1");
-    expect(db.queries.map((q) => q.table)).toEqual(["research_sources", "content_claim_sources", "content_brief_claims", "content_briefs", "artifacts"]);
+    expect(db.queries.map((q) => q.table)).toEqual(["research_sources", "content_claim_sources", "content_brief_claims", "content_briefs", "funnel_items", "artifacts"]);
     for (const q of db.queries) expect(q.ops).toContain("eq(workspace_id,w1)");
     const op = (t: string) => db.queries.find((q) => q.table === t)!.ops;
     expect(op("research_sources")).toContain("eq(project_id,p1)");
     expect(op("content_claim_sources")).toEqual(expect.arrayContaining(["eq(kind,research)", "is(unlinked_at,null)"]));
     expect(op("content_brief_claims")).toContain("is(archived_at,null)");
     expect(op("content_briefs")).toContain("eq(project_id,p1)");
+    expect(op("funnel_items")).toContain("not(archived_at,is,null)");
+  });
+
+  it("보관한 브리프·보관한 카드의 브리프도 포함하고 briefArchived 로 알린다(근거 추적)", async () => {
+    db.tables.content_briefs[0].archived_at = "2026-11-19T00:00:00Z"; // b1 보관
+    (db.tables.funnel_items as Row[])[1].archived_at = "2026-11-19T00:00:00Z"; // b2 의 카드 보관
+    const out = await listResearchSourceCitations("p1");
+    expect(out.rs1.map((r) => [r.briefId, r.briefArchived])).toEqual([["b2", true], ["b1", true], ["b1", true]]);
+    db.tables.content_briefs[0].archived_at = null;
+    expect((await listResearchSourceCitations("p1")).rs1.map((r) => r.briefArchived)).toEqual([true, false, false]);
   });
 
   it("출처가 없거나 인용이 없으면 빈 객체, 그 뒤 조회는 하지 않는다", async () => {
@@ -132,6 +151,6 @@ describe("listResearchSourceCitations", () => {
     const out = await listResearchSourceCitations("p1");
     const ins = db.queries.filter((q) => q.table === "content_claim_sources").map((q) => q.ops.find((o) => o.startsWith("in("))!);
     expect(ins).toEqual(["in(research_source_id,100)", "in(research_source_id,100)", "in(research_source_id,30)"]);
-    expect(out.r229).toEqual([{ briefId: "b1", briefTitle: "나 블로그", channel: "blog", taskId: "t1", claimText: "주장 1" }]);
+    expect(out.r229).toEqual([{ briefId: "b1", briefTitle: "나 블로그", channel: "blog", taskId: "t1", claimText: "주장 1", briefArchived: false }]);
   });
 });
