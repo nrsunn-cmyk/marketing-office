@@ -103,7 +103,7 @@ export async function FunnelSection({ detail, briefId = null }: { detail: TaskDe
           </p>
         }
       >
-        <BriefPanel board={board} taskId={detail.task.id} briefId={briefId} readOnly={readOnly} />
+        <BriefPanel board={board} taskId={detail.task.id} projectId={detail.task.project_id} briefId={briefId} readOnly={readOnly} />
       </Suspense>
     )}
     </>
