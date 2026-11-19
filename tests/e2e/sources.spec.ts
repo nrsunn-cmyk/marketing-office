@@ -90,7 +90,8 @@ test("S2 검토 상태: 확인함 ↔ 확인 전, 거르기 건수와 목록이 
 
   await filterLink(page, "확인 전").click();
   await expect(page).toHaveURL(/\?status=unverified$/);
-  await expect(page.getByText("'확인 전' 상태인 출처가 없습니다.")).toBeVisible();
+  // 화면은 굽은 따옴표(&lsquo;·&rsquo;)를 쓴다(QA-FINAL-E-01 T1)
+  await expect(page.getByText("‘확인 전’ 상태인 출처가 없습니다.")).toBeVisible();
   await page.getByRole("link", { name: "전체 보기" }).click();
 
   await cardOf(page).getByRole("button", { name: "확인 전으로 되돌리기" }).click();
