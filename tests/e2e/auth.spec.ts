@@ -41,7 +41,7 @@ test("비로그인: 업무 화면은 로그인으로, 가입·비밀번호 찾�
     "page",
   );
   await page.goto("/login");
-  await page.getByRole("link", { name: "비밀번호 찾기?" }).click();
+  await page.getByRole("link", { name: "비밀번호 찾기" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "비밀번호 재설정" })).toBeVisible();
 });
 

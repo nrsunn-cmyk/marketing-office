@@ -16,15 +16,25 @@ export function LandingPage() {
       <header className={styles.landingHeader}>
         <div className={`${styles.container} ${styles.landingHeaderInner}`}>
           <Link href="/" className={styles.brandLogoLink}>
-            {/* SVG 로고는 변환 없이 그대로(머리글 AppNav 와 같은 방식), 첫 화면이라 먼저 불러온다 */}
+            {/* SVG 로고는 변환 없이 그대로(머리글 AppNav 와 같은 방식), 첫 화면이라 먼저 불러온다.
+                SITE-FIX-01(AGY SITE-FIX-HANDOFF 4절): 어두운 헤더(#0b1120)에서 글자가 묻히지 않게 테마별 판을 쓴다(보이지 않는 쪽은 display:none) */}
             <Image
               src="/brand/logo-horizontal.svg"
-              alt="나다움 마케팅 오피스"
+              alt="마케팅 업무실"
               width={260}
               height={48}
               unoptimized
               priority
-              className={styles.logoImg}
+              className={`${styles.logoImg} ${styles.logoLight}`}
+            />
+            <Image
+              src="/brand/logo-horizontal-dark.svg"
+              alt="마케팅 업무실"
+              width={260}
+              height={48}
+              unoptimized
+              priority
+              className={`${styles.logoImg} ${styles.logoDark}`}
             />
           </Link>
 
@@ -75,7 +85,11 @@ export function LandingPage() {
       <section className={styles.heroSection}>
         <div className={styles.container}>
           <div className={`${styles.badgePill} ${styles.heroBadge}`}>
-            <span>⚡ 1인 에이전시를 위한 전문 AI 마케팅 업무실</span>
+            {/* SITE-FIX-01: ⚡ 이모지 대신 AGY Design/site/hero-spark.svg(currentColor, 장식) */}
+            <svg className={styles.heroSpark} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable={false}>
+              <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z" />
+            </svg>
+            <span>1인 에이전시를 위한 전문 AI 마케팅 업무실</span>
           </div>
 
           <h1 className={styles.heroTitle}>

@@ -853,7 +853,7 @@
   .headerActions .btnSm {
     padding: 6px 10px;
     font-size: 12px;
-    min-height: 38px;
+    min-height: 44px; /* SITE-FIX-01: 38px → 44px(클릭 영역) */
     line-height: 1;
   }
 
@@ -882,4 +882,95 @@
     width: 100%;
     gap: 10px;
   }
+}
+
+/* ── SITE-FIX-01 (AGY DESIGN-SITE-AUDIT-01 · SITE-FIX-HANDOFF) ──
+ * 원인: globals.css 의 [data-theme="dark"] a(0,1,1)·:root:not([data-theme="light"]) a(0,2,1) 링크 색이
+ * 랜딩의 .btnPrimary·.navLink(0,1,0)를 덮어 다크에서 CTA 글자가 배경과 같은 #38bdf8(1.00:1), 내비 링크가 2.14:1 이었다.
+ * 그래서 아래 규칙은 .landingWrapper a.… 로 구체성을 올리고, 다크는 앱의 두 방식(data-theme·OS 설정)을 모두 따른다. */
+
+/* 1) 주요 CTA(무료 시작하기·내 업무실 열기): 안 A — 배경 --primary-600, 글자 --text-on-primary
+ *    밝음 #ffffff on #2563eb 5.17:1, 어두움 #0b1220 on #38bdf8 8.74:1 */
+.landingWrapper a.btn.btnPrimary {
+  color: var(--text-on-primary);
+}
+.landingWrapper a.btn.btnSecondary {
+  color: var(--text-main);
+}
+.landingWrapper a.btn.btnSecondary:hover {
+  color: var(--primary-600);
+}
+
+/* 2) 헤더: 어두운 화면은 rgba(11,17,32,0.9)(= --header-nav-bg #0b1120) + --header-nav-border */
+[data-theme="dark"] .landingHeader {
+  background: rgba(11, 17, 32, 0.9);
+  border-bottom-color: var(--header-nav-border);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .landingHeader {
+    background: rgba(11, 17, 32, 0.9);
+    border-bottom-color: var(--header-nav-border);
+  }
+}
+
+/* 3) 내비 링크: 기본 --text-muted, 호버·초점 밝음 --primary-600 / 어두움 --header-nav-text
+ *    어두움 #94a3b8 on #0b1120 7.34:1, #f8fafc 18.00:1 */
+.landingWrapper .landingHeader a.navLink {
+  color: var(--text-muted);
+}
+.landingWrapper .landingHeader a.navLink:hover,
+.landingWrapper .landingHeader a.navLink:focus-visible {
+  color: var(--primary-600);
+}
+[data-theme="dark"] .landingWrapper .landingHeader a.navLink:hover,
+[data-theme="dark"] .landingWrapper .landingHeader a.navLink:focus-visible {
+  color: var(--header-nav-text);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .landingWrapper .landingHeader a.navLink:hover,
+  :root:not([data-theme="light"]) .landingWrapper .landingHeader a.navLink:focus-visible {
+    color: var(--header-nav-text);
+  }
+}
+
+/* 4) 클릭 영역 44px: 로고·헤더 버튼·내비 링크·바닥글 바로가기 */
+.brandLogoLink {
+  min-height: 44px;
+}
+.btnSm {
+  min-height: 44px;
+}
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.footerLoginLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* 5) 로고 테마 전환(밝은 판·어두운 판 중 하나만) */
+.logoDark {
+  display: none;
+}
+[data-theme="dark"] .logoLight {
+  display: none;
+}
+[data-theme="dark"] .logoDark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logoLight {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .logoDark {
+    display: block;
+  }
+}
+
+/* 6) 히어로 배지 별 그림(⚡ 대체) */
+.heroSpark {
+  flex: none;
 }
