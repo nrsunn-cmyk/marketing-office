@@ -313,6 +313,20 @@ describe("업무실 경계·권한 (P0)", () => {
       expect(x.src, x.proname).toMatch(/and exists \(select 1 from public\.workspaces w where w\.id = x\.workspace_id and w\.owner_user_id = uid\)\s+for update of x/);
   });
 
+  it("R1 잠금 순서: create_lead_magnet 은 단계(KEY SHARE) → 퍼널(NO KEY UPDATE), add_funnel_item 과 같은 방향", async () => {
+    // PGlite 는 한 연결이라 교착을 재현할 수 없다. 실제 동시 재현은 PG 17 전용 스택 스크립트(P2E-BACKEND-01/deadlock-check.sh)가 맡는다
+    const src = (await one<{ s: string }>(db, "select prosrc as s from pg_proc where proname = 'create_lead_magnet'")).s;
+    const stage = src.search(/from public\.funnel_stages x\s+where x\.id = p_stage_id[\s\S]*?for key share of x;/);
+    const funnelLock = src.search(/from public\.funnels x where x\.id = s\.funnel_id for no key update of x;/);
+    expect(stage, "단계를 먼저 KEY SHARE").toBeGreaterThan(-1);
+    expect(funnelLock, "퍼널은 NO KEY UPDATE").toBeGreaterThan(stage);
+    expect(src).not.toMatch(/public\.funnels x[^;]*for update of x/);
+    // 기존 카드 넣기는 단계 FOR UPDATE 가 먼저(퍼널은 FK 로 나중에) — 같은 방향
+    const add = (await one<{ s: string }>(db, "select prosrc as s from pg_proc where proname = 'add_funnel_item'")).s;
+    expect(add).toMatch(/from public\.funnel_stages x[\s\S]*?for update of x;/);
+    expect(add).not.toMatch(/public\.funnels x[^;]*for (no key )?update/);
+  });
+
   it("직접 쓰기 거절, 남의 업무실 조회 0행, anon 거절, 도우미 함수 실행 불가", async () => {
     const f = await funnel(a);
     const lm = await asA((tx) => createLm(tx, f.stages[2]));

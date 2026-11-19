@@ -128,6 +128,11 @@ revoke execute on function app.lead_magnet_audit(uuid, uuid, text, integer, json
 -- 4) RPC
 -- ─────────────────────────────────────────────
 -- 4-1) 만들기. 퍼널 행을 잠가 개수 한도 계산이 겹치지 않게 한다
+--   잠금 순서(R1, QA-P2E-BACKEND-01 O1): 퍼널 RPC 전체가 "카드 → 리드마그넷 → 단계 → 퍼널" 한 방향으로 잠근다.
+--   add_funnel_item 은 단계 FOR UPDATE → (카드 FK) 퍼널 KEY SHARE 다. 여기서 퍼널을 먼저 잠그면 순서가 반대라
+--   PG 17 에서 40P01(교착)이 났다. 그래서 단계를 FOR KEY SHARE 로 먼저 잡고, 퍼널은 그 뒤에 잠근다.
+--   퍼널은 FOR NO KEY UPDATE 로 잠근다: 만들기끼리는 서로 기다려 한도 계산이 겹치지 않고,
+--   카드·브리프를 넣을 때의 FK KEY SHARE 와는 부딪치지 않아 기다림도 줄어든다.
 create or replace function public.create_lead_magnet(
   p_stage_id    uuid,
   p_title       text,
@@ -153,11 +158,12 @@ begin
   select x.* into s
     from public.funnel_stages x
    where x.id = p_stage_id
-     and exists (select 1 from public.workspaces w where w.id = x.workspace_id and w.owner_user_id = uid);
+     and exists (select 1 from public.workspaces w where w.id = x.workspace_id and w.owner_user_id = uid)
+     for key share of x;
   if not found then
     raise exception 'NOT_FOUND: 퍼널 단계를 찾을 수 없습니다' using errcode = 'P0002';
   end if;
-  select x.* into f from public.funnels x where x.id = s.funnel_id for update of x;
+  select x.* into f from public.funnels x where x.id = s.funnel_id for no key update of x;
   perform app.assert_funnel_open(f.id);
   perform app.check_lead_magnet(p_title, p_format, nullif(app.funnel_trim(p_audience), ''), nullif(app.funnel_trim(p_promise), ''),
                                 p_delivery, p_lead_fields, p_outline, p_status);
