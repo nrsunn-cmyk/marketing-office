@@ -17,6 +17,8 @@ import type { FunnelBoard } from "@/features/funnel/server";
 import { ActionForm } from "../../_components/action-form";
 import { CopyButton } from "../../_components/copy-button";
 import styles from "../../ui.module.css";
+import { isBriefCopyAiEnabled } from "@/features/brief/ai-copy";
+import { BriefAiCopy } from "./brief-ai-copy";
 import { BriefEditForm } from "./brief-edit-form";
 import { specToForm } from "./brief-form";
 import { ClaimForm, SourceLinkForm } from "./claim-forms";
@@ -97,6 +99,7 @@ export async function BriefPanel({
         <span className={styles.badge}>{BRIEF_STATUSES[brief.status]}</span>
         {brief.stale && <span className={`${styles.badge} ${f.warnBadge}`}>브리프: 이전 전략 기준</span>}
         {brief.archived && <span className={styles.badge}>보관한 브리프</span>}
+        {brief.copyOriginAi && <span className={`${styles.badge} ${f.warnBadge}`}>카피: AI 초안(검토 전)</span>}
         <Link href={back} className={f.inlineLink}>
           퍼널 보드로
         </Link>
@@ -235,6 +238,9 @@ export async function BriefPanel({
         </details>
       </section>
 
+      {/* DEC08-UI-01: 키(ANTHROPIC_API_KEY)가 없으면 이 영역을 그리지 않는다. revision 이 바뀌면(채택·저장) 새로 시작 */}
+      {!locked && isBriefCopyAiEnabled() && <BriefAiCopy key={brief.revision} taskId={taskId} briefId={brief.id} revision={brief.revision} />}
+
       {!locked && (
         <>
           <details className={f.basis}>
@@ -245,6 +251,7 @@ export async function BriefPanel({
               briefId={brief.id}
               revision={brief.revision}
               channel={brief.channel}
+              copyAi={brief.copyOriginAi}
               initial={{
                 title: brief.title,
                 audience: brief.audience ?? "",

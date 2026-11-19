@@ -1,0 +1,91 @@
+/* 브리프 AI 문구 초안(DEC08-UI-01). 색·간격은 토큰만. 누르는 곳은 공용 .touchPage 규격(44px).
+ * 초안이 있으면 상자 테두리를 점선(--info-border)으로 바꾼다(AGY 시안 BRIEF-AI-UI-01 3번 상태). */
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.boxDraft {
+  border: 2px dashed var(--info-border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.note {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pending {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.variants {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.variant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--info-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.variantHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.variantTitle {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.variantText {
+  margin: 0;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 휴대폰: 단추는 폭을 다 쓴다(시안 390·360px) */
+@media (max-width: 640px) {
+  .row > button,
+  .variant form button {
+    width: 100%;
+  }
+}

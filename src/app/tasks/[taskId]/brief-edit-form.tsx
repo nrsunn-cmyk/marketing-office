@@ -10,19 +10,24 @@ import f from "./funnel.module.css";
 
 /**
  * 콘텐츠 브리프 고치기 폼(P2F-FRONT-01). 값 전체를 payload(JSON)로 보낸다(서버: 값 전체 교체).
- * 카피 초안을 손으로 고치면 작성 방식을 '직접 작성(manual)'으로 바꾼다. 자동 문구 생성 버튼은 넣지 않는다(미결정).
+ * 카피 초안을 손으로 고치면 작성 방식을 '직접 작성(manual)'으로 바꾼다.
+ * DEC08-UI-01: 지금 카피가 AI 초안(copyAi)이면 'AI 초안' 표시를 하고, 카피 글을 직접 고치면 '직접 수정됨'으로 바꾼다
+ * (저장하면 서버가 manual 로 바꾼다. 글을 그대로 두고 다른 칸만 고치면 AI 초안 표시가 남는다).
  */
 export function BriefEditForm({
   action,
   briefId,
   revision,
   channel,
+  copyAi = false,
   initial,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
   briefId: string;
   revision: number;
   channel: BriefChannel;
+  /** 지금 카피 초안이 AI 초안을 채택한 것인가(DB copy_origin = 'ai') */
+  copyAi?: boolean;
   initial: BriefFormValue;
 }) {
   const id = useId();
@@ -111,6 +116,11 @@ export function BriefEditForm({
 
       <div className={styles.field}>
         <label htmlFor={`${id}-copy`}>카피 초안</label>
+        {copyAi && (
+          <span className={`${styles.pill} ${v.copyDraft === initial.copyDraft ? styles.pillInfo : styles.pillNeutral}`} role="note">
+            {v.copyDraft === initial.copyDraft ? "AI 초안 — 검토 후 직접 수정하세요" : "직접 수정됨 — 저장하면 'AI 초안' 표시가 사라집니다"}
+          </span>
+        )}
         <textarea
           id={`${id}-copy`}
           value={v.copyDraft}
@@ -119,7 +129,7 @@ export function BriefEditForm({
           aria-describedby={`${id}-copy-help`}
         />
         <span id={`${id}-copy-help`} className={styles.muted}>
-          작성 방식: {v.copyOrigin === "template" ? "틀에서 시작(템플릿)" : "직접 작성"}. 근거가 없는 주장은 카피에 쓰기 전에 아래에서 근거를 연결해 주세요.
+          작성 방식: {copyAi && v.copyDraft === initial.copyDraft ? "AI 초안" : v.copyOrigin === "template" ? "틀에서 시작(템플릿)" : "직접 작성"}. 근거가 없는 주장은 카피에 쓰기 전에 아래에서 근거를 연결해 주세요.
         </span>
         {count(v.copyDraft.length, L.copyDraft)}
       </div>
