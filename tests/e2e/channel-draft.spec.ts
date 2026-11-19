@@ -137,7 +137,7 @@ test("복사: 서식째(text/html + text/plain)·HTML 소스·글자 — 서버 
   await expect(card.locator("script")).toHaveCount(0);
 
   await card.getByRole("button", { name: "서식째 복사 (기본 모드)" }).click();
-  await expect(card.getByRole("status").filter({ hasText: "서식째 복사했습니다." })).toBeVisible();
+  await expect(card.getByRole("status").filter({ hasText: "서식째 복사했습니다. 티스토리 기본 모드에 붙여 넣으세요." })).toBeVisible();
   const both = await page.evaluate(async () => {
     const [item] = await navigator.clipboard.read();
     return { types: item!.types, html: await (await item!.getType("text/html")).text(), text: await (await item!.getType("text/plain")).text() };
@@ -179,12 +179,12 @@ test("게시 기록: 잘못된 주소 거절 → 개인 도메인 기록(안내�
   await page.goto(briefUrl);
   let card = draftCard(region(page), TITLE);
   const add = await openDetails(card, "+ 게시 기록 남기기");
-  await add.getByLabel("게시 주소 (https:// 로 시작)").fill("javascript:alert(1)");
+  await add.getByLabel("게시 주소 (https://로 시작)").fill("javascript:alert(1)");
   await add.getByRole("button", { name: "게시 기록 남기기" }).click();
   await expect(add.getByRole("alert")).toContainText("https://");
   await expect(card.getByText("아직 게시 기록이 없습니다.")).toBeVisible();
 
-  await add.getByLabel("게시 주소 (https:// 로 시작)").fill(PERSONAL);
+  await add.getByLabel("게시 주소 (https://로 시작)").fill(PERSONAL);
   await add.getByLabel("메모 (선택)").fill("개인 도메인에 1차 발행");
   await add.getByRole("button", { name: "게시 기록 남기기" }).click();
   card = draftCard(region(page), TITLE);
@@ -193,7 +193,7 @@ test("게시 기록: 잘못된 주소 거절 → 개인 도메인 기록(안내�
   await expect(link).toHaveAttribute("href", PERSONAL);
   await expect(link).toHaveAttribute("target", "_blank");
   await expect(link).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(list.getByText("티스토리 주소가 맞는지 확인하세요")).toBeVisible();
+  await expect(list.getByText("티스토리 주소(*.tistory.com)가 아닙니다. 개인 도메인 블로그라면 그대로 두어도 됩니다.")).toBeVisible();
   await expect(list.getByText("메모: 개인 도메인에 1차 발행")).toBeVisible();
   await expect(badges(card)).toContainText("게시 기록됨");
   await expect(card.getByText("취소 안 된 기록 1/50")).toBeVisible();

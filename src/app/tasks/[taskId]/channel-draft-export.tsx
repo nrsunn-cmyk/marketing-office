@@ -58,7 +58,7 @@ export function ChannelDraftExportPanel({ exp, title }: { exp: ChannelDraftExpor
         복사·파일 내보내기
       </h4>
       <p className={`${styles.muted} ${f.keep}`}>
-        자동 게시는 하지 않습니다. 복사하거나 파일로 내려받아 티스토리 편집기에 직접 붙여 넣어 주세요. 이미지는 본문의 [이미지: …] 자리에 티스토리에서 직접 올립니다.
+        자동 게시는 하지 않습니다. 복사하거나 파일(.html·.md)로 내려받아 티스토리 편집기에 직접 붙여 넣어 주세요. 이미지는 본문의 [이미지: …] 자리에 티스토리에서 직접 올립니다.
       </p>
       <div className={cd.cdButtons} role="group" aria-label={`${title} 복사`}>
         <button type="button" className={`${styles.button} ${f.touch}`} onClick={onRich}>

@@ -135,8 +135,12 @@ describe("copyHtmlSource: HTML 모드용 소스 복사", () => {
 
 describe("copyMessage: 안내 문구", () => {
   it("결과마다 한글 안내, 실패는 직접 복사 방법을 알려 준다", () => {
-    expect(copyMessage({ ok: true, mode: "rich" })).toBe("서식째 복사했습니다.");
-    expect(copyMessage({ ok: true, mode: "fallback" })).toMatch(/^글자만 복사했습니다/);
+    // AGY 확정본 COPY-P2G-01 1절과 글자 하나까지 같다
+    expect(copyMessage({ ok: true, mode: "rich" })).toBe("서식째 복사했습니다. 티스토리 기본 모드에 붙여 넣으세요.");
+    expect(copyMessage({ ok: true, mode: "fallback" })).toBe("서식 복사를 지원하지 않는 브라우저라 글자만 복사했습니다.");
+    expect(copyMessage({ ok: false, reason: "denied" })).toBe("브라우저가 복사를 막았습니다. 단추를 다시 누르거나 아래 글 상자에서 Ctrl+C로 복사해 주세요.");
+    expect(copyMessage({ ok: false, reason: "unsupported" })).toBe("이 브라우저에서는 자동 복사를 쓸 수 없습니다. 아래 글 상자에서 Ctrl+C로 복사해 주세요.");
+    expect(copyMessage({ ok: false, reason: "failed" })).toBe("복사하지 못했습니다. 아래 글 상자에서 Ctrl+C로 복사해 주세요.");
     expect(copyMessage({ ok: true, mode: "plain" })).toBe("복사했습니다.");
     for (const reason of ["denied", "unsupported", "failed"] as const) expect(copyMessage({ ok: false, reason })).toMatch(/Ctrl\+C/);
   });

@@ -225,7 +225,13 @@ describe("채널 초안 영역: 상태별 화면", () => {
     expect(html).toContain("<s>https://coffee-office.tistory.com/1</s>");
     expect(text(html)).toContain("취소됨");
     expect(text(html)).toContain("취소 이유: 주소를 잘못 적음");
-    expect(text(html)).toContain("티스토리 주소가 맞는지 확인하세요");
+    // 확정 문구(AGY COPY-P2G-01 3절)
+    expect(text(html)).toContain("티스토리 주소(*.tistory.com)가 아닙니다. 개인 도메인 블로그라면 그대로 두어도 됩니다.");
+    expect(text(html)).toContain("티스토리에 직접 올린 뒤 주소와 시각을 남겨 두는 기록입니다. 남긴 기록은 고치거나 지울 수 없고 취소만 할 수 있습니다. 취소하지 않은 기록이 있으면 '게시 기록됨' 표시가 붙습니다.");
+    expect(text(html)).toContain("취소한 기록도 취소선과 함께 목록에 남습니다. 취소는 되돌릴 수 없습니다.");
+    expect(text(html)).toContain("게시 주소 (https://로 시작)");
+    expect(text(html)).toContain("개인 도메인 블로그 주소도 남길 수 있습니다.");
+    expect(text(html)).toContain("자동 게시는 하지 않습니다. 복사하거나 파일(.html·.md)로 내려받아 티스토리 편집기에 직접 붙여 넣어 주세요. 이미지는 본문의 [이미지: …] 자리에 티스토리에서 직접 올립니다.");
     expect(text(html)).toContain("메모: 개인 도메인에 1차 발행");
     // 취소 행 자체는 목록에 따로 보이지 않는다(기록 2개만)
     expect((html.match(/class="cdPub /g) ?? []).length).toBe(2);
@@ -236,10 +242,21 @@ describe("채널 초안 영역: 상태별 화면", () => {
   it("이전 전략 기준: 배지·안내·맞추기 단추(편집은 막지 않음)", () => {
     const html = render("이전전략");
     expect(text(html)).toContain("이전 전략 기준");
-    expect(text(html)).toContain("지금 승인본(2번 버전)보다 앞선 전략");
+    expect(text(html)).toContain("지금 승인본(2번 버전)보다 앞선 전략으로 만든 초안입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요. 맞추지 않아도 고치고 복사할 수 있습니다.");
     expect(text(html)).toContain("전략 1번 버전 기준");
     expect(buttons(html)).toContain("지금 승인본 기준으로 맞추기");
     expect(buttons(html)).toContain("초안 저장");
+  });
+
+  it('O2: 보이는 ASCII 만 든 주소(예: "><script>)도 href 속성·글자로만 들어간다(이스케이프)', () => {
+    const evil = 'https://a.tistory.com/x"><script>alert(1)</script><a href="javascript:1';
+    const d = draft(1, { displayStatus: "published", publications: [pub(1, { url: evil, note: '<img src=x onerror=alert(1)>' })] });
+    const html = renderToString(createElement(ChannelDraftBody, { data: data([d]), briefId: BRIEF, briefArchived: false, readOnly: false, approvedVersion: 2 }));
+    expect(html).not.toMatch(/<script/i);
+    expect(html).not.toMatch(/<img/i);
+    expect(html).not.toContain('href="javascript');
+    expect(html).toContain('href="https://a.tistory.com/x&quot;&gt;&lt;script&gt;');
+    expect((html.match(/<a /g) ?? []).length).toBe(1);
   });
 
   it("브리프 변경: 안내만(초안 내용은 그대로)", () => {

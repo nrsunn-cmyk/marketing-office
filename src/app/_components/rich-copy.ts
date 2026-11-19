@@ -80,12 +80,12 @@ export function copyPlainText(text: string, env: ClipboardEnv = browserClipboard
 /** HTML 소스 복사: 티스토리 HTML 모드에 붙여 넣을 소스를 글자(text/plain)로 넣는다 */
 export const copyHtmlSource = copyPlainText;
 
-/** 결과 안내 문구(화면 문구는 AGY 확정 시 바꾼다) */
+/** 결과 안내 문구(AGY 확정본 COPY-P2G-01 1절) */
 export function copyMessage(r: CopyResult): string {
-  if (r.ok) return r.mode === "rich" ? "서식째 복사했습니다." : r.mode === "fallback" ? "글자만 복사했습니다(이 브라우저는 서식 복사를 지원하지 않습니다)." : "복사했습니다.";
-  if (r.reason === "denied") return "브라우저가 복사를 막았습니다. 단추를 다시 누르거나, 아래 글을 선택해 Ctrl+C로 복사해 주세요.";
-  if (r.reason === "unsupported") return "이 브라우저에서는 자동 복사를 쓸 수 없습니다. 아래 글을 선택해 Ctrl+C로 복사해 주세요.";
-  return "복사하지 못했습니다. 아래 글을 선택해 Ctrl+C로 복사해 주세요.";
+  if (r.ok) return r.mode === "rich" ? "서식째 복사했습니다. 티스토리 기본 모드에 붙여 넣으세요." : r.mode === "fallback" ? "서식 복사를 지원하지 않는 브라우저라 글자만 복사했습니다." : "복사했습니다.";
+  if (r.reason === "denied") return "브라우저가 복사를 막았습니다. 단추를 다시 누르거나 아래 글 상자에서 Ctrl+C로 복사해 주세요.";
+  if (r.reason === "unsupported") return "이 브라우저에서는 자동 복사를 쓸 수 없습니다. 아래 글 상자에서 Ctrl+C로 복사해 주세요.";
+  return "복사하지 못했습니다. 아래 글 상자에서 Ctrl+C로 복사해 주세요.";
 }
 
 // ── 파일 내보내기 ──────────────────────────────────────────────

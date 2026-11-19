@@ -153,7 +153,7 @@ function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; read
         {d.stale && (
           <div className={`${styles.notice} ${f.warnBox}`} role="note">
             <p className={f.keep}>
-              <strong>이전 전략 기준:</strong> 지금 승인본{approvedVersion !== null ? `(${approvedVersion}번 버전)` : ""}보다 앞선 전략으로 만든 초안입니다. 대상·메시지가 지금 전략과 맞는지 확인해 주세요. 맞추지 않아도 고치고 복사할 수 있습니다.
+              <strong>이전 전략 기준:</strong> 지금 승인본{approvedVersion !== null ? `(${approvedVersion}번 버전)` : ""}보다 앞선 전략으로 만든 초안입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요. 맞추지 않아도 고치고 복사할 수 있습니다.
             </p>
             {editable && (
               <ActionForm action={rebaseChannelDraftAction} submitLabel="지금 승인본 기준으로 맞추기" pendingLabel="맞추는 중…" variant="secondary" className={f.inlineForm}>
@@ -194,7 +194,7 @@ function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; read
             </span>
           </h4>
           <p className={`${styles.muted} ${f.keep}`}>
-            티스토리에 직접 올린 뒤 주소와 시각을 남겨 두는 기록입니다. 기록은 고치거나 지울 수 없고 취소만 할 수 있습니다. 취소하지 않은 기록이 있으면 &lsquo;게시 기록됨&rsquo;이 붙습니다.
+            티스토리에 직접 올린 뒤 주소와 시각을 남겨 두는 기록입니다. 남긴 기록은 고치거나 지울 수 없고 취소만 할 수 있습니다. 취소하지 않은 기록이 있으면 &apos;게시 기록됨&apos; 표시가 붙습니다.
           </p>
           {editable &&
             (pubFull ? (
@@ -207,7 +207,7 @@ function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; read
                 <ActionForm key={rows.length} action={recordChannelPublicationAction} submitLabel="게시 기록 남기기" pendingLabel="남기는 중…" className={f.form}>
                   <input type="hidden" name="draftId" value={d.id} />
                   <div className={styles.field}>
-                    <label htmlFor={`${headingId}-url`}>게시 주소 (https:// 로 시작)</label>
+                    <label htmlFor={`${headingId}-url`}>게시 주소 (https://로 시작)</label>
                     <input id={`${headingId}-url`} name="url" type="url" inputMode="url" autoComplete="off" required aria-required="true" placeholder="https://example.tistory.com/123" />
                     <span className={styles.muted}>개인 도메인 블로그 주소도 남길 수 있습니다.</span>
                   </div>
@@ -247,7 +247,7 @@ function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; read
                       <span className={styles.muted}>주소를 보일 수 없습니다.</span>
                     )}
                   </p>
-                  {p.nonTistoryHost && !p.voided && <p className={`${styles.muted} ${cd.cdWarnText}`}>티스토리 주소가 맞는지 확인하세요(개인 도메인이면 그대로 두어도 됩니다).</p>}
+                  {p.nonTistoryHost && !p.voided && <p className={`${styles.muted} ${cd.cdWarnText}`}>티스토리 주소(*.tistory.com)가 아닙니다. 개인 도메인 블로그라면 그대로 두어도 됩니다.</p>}
                   {p.note && <p className={styles.muted}>메모: {p.note}</p>}
                   {p.voided && <p className={styles.muted}>취소 이유: {p.voidReason ?? "(없음)"}</p>}
                   {editable && !p.voided && (
@@ -259,7 +259,7 @@ function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; read
                           <label htmlFor={`${p.id}-reason`}>취소 이유 (필수)</label>
                           <input id={`${p.id}-reason`} name="reason" required aria-required="true" placeholder="예: 주소를 잘못 적음" />
                         </div>
-                        <p className={styles.muted}>취소한 기록도 목록에 남습니다(취소선). 취소는 되돌릴 수 없습니다.</p>
+                        <p className={styles.muted}>취소한 기록도 취소선과 함께 목록에 남습니다. 취소는 되돌릴 수 없습니다.</p>
                       </ActionForm>
                     </details>
                   )}
