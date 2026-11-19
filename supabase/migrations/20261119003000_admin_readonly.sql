@@ -65,6 +65,8 @@ language plpgsql set search_path = '' as $$
 begin
   raise exception 'IMMUTABLE_ROW: 관리자 열람 기록은 바꾸거나 지울 수 없습니다' using errcode = 'P0001';
 end $$;
+-- 트리거 함수도 직접 실행 권한을 회수한다(기존 app.unlink_once 와 같은 관례, RELEASE-PREP-F-01 점검에서 발견)
+revoke execute on function app.admin_log_immutable() from public, anon, authenticated;
 create trigger admin_access_log_no_update before update or delete on public.admin_access_log
   for each row execute function app.admin_log_immutable();
 create trigger admin_access_log_no_truncate before truncate on public.admin_access_log

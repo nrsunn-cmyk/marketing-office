@@ -171,5 +171,12 @@ describe("열람 기록 보호·회수", () => {
     )).rows;
     expect(fns.map((f) => f.name)).toEqual(["admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_usage_summary", "admin_whoami"]);
     for (const f of fns) expect(f).toEqual({ name: f.name, secdef: true, cfg: ['search_path=""'], anon: false, auth: true });
+    // app 보조 함수 5개(트리거 함수 포함)는 로그인·익명·public 모두 실행 불가
+    const helpers = (await db.query<{ name: string; anon: boolean; auth: boolean }>(
+      `select p.proname as name, has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth
+         from pg_proc p where p.pronamespace = 'app'::regnamespace and p.proname in ('is_admin', 'assert_admin', 'admin_log', 'admin_log_immutable', 'jsonb_truncate_strings') order by 1`,
+    )).rows;
+    expect(helpers).toHaveLength(5);
+    for (const h of helpers) expect(h).toEqual({ name: h.name, anon: false, auth: false });
   });
 });
