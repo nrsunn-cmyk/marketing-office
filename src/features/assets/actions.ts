@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import type { FormState } from "@/app/_components/form-state";
 import type { SourceUploadErrorCode } from "@/domain/assets/direct-upload";
-import { addTextAsset, addUrlAsset, confirmPendingUpload, confirmSourceUpload, prepareSourceUpload, uploadFileAsset, type AssetOwner } from "./server";
+import { addTextAsset, addUrlAsset, confirmPendingUpload, confirmSourceUpload, prepareSourceUpload, type AssetOwner } from "./server";
 
 function ownerFrom(fd: FormData): AssetOwner | null {
   const id = z.uuid();
@@ -17,17 +17,6 @@ function ownerFrom(fd: FormData): AssetOwner | null {
 }
 
 const title = (fd: FormData) => String(fd.get("title") ?? "").trim().slice(0, 200) || null;
-
-export async function uploadAssetAction(_prev: FormState, fd: FormData): Promise<FormState> {
-  const owner = ownerFrom(fd);
-  if (!owner) return { message: "잘못된 요청입니다." };
-  const file = fd.get("file");
-  if (!(file instanceof File) || file.size === 0) return { errors: { file: "올릴 파일을 선택해 주세요." } };
-  const r = await uploadFileAsset(owner, file);
-  refresh();
-  if (!r.ok) return { message: r.message };
-  return { ok: true, message: "파일을 보관했습니다. (내용은 아직 읽지 않았습니다)" };
-}
 
 export async function addTextAssetAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const owner = ownerFrom(fd);

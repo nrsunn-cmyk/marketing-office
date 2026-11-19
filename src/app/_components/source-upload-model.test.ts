@@ -74,14 +74,14 @@ describe("문구·미리 막기(AGY SOURCE-UPLOAD-COPY.md 그대로)", () => {
     expect(uploadProgressText(512, 2048)).toBe("512 B / 2.0 KB 올리는 중…");
   });
 
-  it("서버 실패 코드 → 확정 문구, 동시 업로드 한도는 서버 한글 문구로 알아본다, 그 밖은 서버 문구 그대로", () => {
+  it("서버 실패 코드 → 확정 문구(동시 업로드 한도 CONCURRENT_LIMIT 포함), 그 밖은 서버 문구 그대로", () => {
     expect(sourceUploadErrorText({ message: "x", uploadCode: "EMPTY" })).toBe(SOURCE_UPLOAD_COPY.uploadErrEmpty);
     expect(sourceUploadErrorText({ message: "x", uploadCode: "TOO_LARGE" })).toBe(SOURCE_UPLOAD_COPY.uploadErrTooLarge);
     expect(sourceUploadErrorText({ message: "x", uploadCode: "UNSUPPORTED_TYPE" })).toBe(SOURCE_UPLOAD_COPY.uploadErrUnsupportedType);
     expect(sourceUploadErrorText({ message: "x", uploadCode: "TYPE_MISMATCH" })).toBe("파일 실제 내용이 확장자·크기와 달라 올릴 수 없습니다.");
     expect(sourceUploadErrorText({ message: "x", uploadCode: "UPLOAD_MISSING" })).toBe("올린 파일을 저장소에서 찾지 못했습니다. 다시 시도를 눌러 주세요.");
     expect(sourceUploadErrorText({ message: "x", uploadCode: "UPLOAD_EXPIRED" })).toBe(SOURCE_UPLOAD_COPY.uploadErrExpired);
-    expect(sourceUploadErrorText({ message: "진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요." })).toBe("동시에 올릴 수 있는 작업 수(20개)가 가득 찼습니다. 잠시 후 다시 시도해 주세요.");
+    expect(sourceUploadErrorText({ message: "진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요.", uploadCode: "CONCURRENT_LIMIT" })).toBe("동시에 올릴 수 있는 작업 수(20개)가 가득 찼습니다. 잠시 후 다시 시도해 주세요.");
     expect(sourceUploadErrorText({ message: "파일 올리기가 아직 켜져 있지 않습니다. 관리자에게 문의해 주세요." })).toBe("파일 올리기가 아직 켜져 있지 않습니다. 관리자에게 문의해 주세요.");
   });
 
@@ -153,7 +153,7 @@ describe("올리기 흐름(준비 → 올리기 → 확정)", () => {
   });
 
   it("예약 실패·확정 실패(내용 불일치)·끊김·만료·취소", async () => {
-    expect(await run(actions({ prepare: vi.fn(async () => ({ ok: false as const, message: "진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요." })) }), fakeXhr()).p).toEqual({ k: "error", text: SOURCE_UPLOAD_COPY.uploadErrConcurrentLimit });
+    expect(await run(actions({ prepare: vi.fn(async () => ({ ok: false as const, message: "진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요.", uploadCode: "CONCURRENT_LIMIT" as const })) }), fakeXhr()).p).toEqual({ k: "error", text: SOURCE_UPLOAD_COPY.uploadErrConcurrentLimit });
 
     const x1 = fakeXhr();
     const r1 = run(actions({ confirm: vi.fn(async () => ({ ok: false as const, message: "x", uploadCode: "TYPE_MISMATCH" as const })) }), x1);

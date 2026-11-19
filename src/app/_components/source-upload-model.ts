@@ -34,7 +34,7 @@ export function formatUploadBytes(n: number): string {
 /** uploadProgressBytes "{loaded} / {total} 올리는 중…"(실측 바이트) */
 export const uploadProgressText = (loaded: number, total: number) => `${formatUploadBytes(loaded)} / ${formatUploadBytes(total)} 올리는 중…`;
 
-/** 서버 실패 → 확정 문구. 동시 업로드 한도는 서버가 코드 없이 한글 문구로 준다(LIMIT_REACHED) */
+/** 서버 실패 코드(uploadCode) → 확정 문구. 모르는 코드면 서버 한글 문구 그대로 */
 export function sourceUploadErrorText(r: { message: string; uploadCode?: string }): string {
   switch (r.uploadCode) {
     case "EMPTY":
@@ -49,8 +49,10 @@ export function sourceUploadErrorText(r: { message: string; uploadCode?: string 
       return SOURCE_UPLOAD_COPY.uploadErrMissing;
     case "UPLOAD_EXPIRED":
       return SOURCE_UPLOAD_COPY.uploadErrExpired;
+    case "CONCURRENT_LIMIT":
+      return SOURCE_UPLOAD_COPY.uploadErrConcurrentLimit;
     default:
-      return /진행 중인 업로드가 너무 많/.test(r.message) ? SOURCE_UPLOAD_COPY.uploadErrConcurrentLimit : r.message;
+      return r.message;
   }
 }
 

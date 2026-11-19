@@ -8,7 +8,6 @@ vi.mock("./server", () => ({
   addTextAsset: vi.fn(),
   addUrlAsset: vi.fn(),
   confirmPendingUpload: vi.fn(),
-  uploadFileAsset: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ refresh: () => m.refresh() }));
 
@@ -44,6 +43,10 @@ describe("자료 직접 업로드 동작", () => {
     expect(m.prepare).not.toHaveBeenCalled();
     m.prepare.mockResolvedValue({ ok: false, code: "UPLOAD_FAILED", message: "파일은 10MB까지 올릴 수 있습니다.", errors: { uploadCode: "TOO_LARGE" } });
     expect(await prepareSourceUploadAction({ clientId: P, projectId: null }, { name: "a.pdf", size: 99 })).toEqual({ ok: false, message: "파일은 10MB까지 올릴 수 있습니다.", uploadCode: "TOO_LARGE" });
+  });
+
+  it("파일 본문을 받는 예전 동작(uploadAssetAction)은 없다(Backend 검토: 외부에서 부를 수 있는 입구 제거)", async () => {
+    expect("uploadAssetAction" in (await import("./actions"))).toBe(false);
   });
 
   it("공개 저장소 주소가 없으면 예약 성공이어도 실패로", async () => {
