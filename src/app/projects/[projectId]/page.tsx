@@ -85,7 +85,10 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
             {project.client_id && (
               <>
                 {" · "}
-                <Link href={`/clients/${project.client_id}`}>{project.client_name}</Link>
+                {/* QA-SOURCES-UI-01 O3: 누르는 높이 44px(글자 크기는 그대로) */}
+                <Link href={`/clients/${project.client_id}`} className={styles.touchLink}>
+                  {project.client_name}
+                </Link>
               </>
             )}
           </dd>
