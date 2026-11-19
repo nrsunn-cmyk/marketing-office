@@ -1,18 +1,22 @@
 import { describe, expect, it } from "vitest";
+import { briefTrim as serverTrim, productionBriefCreateSchema, productionBriefUpdateSchema } from "@/domain/production-brief";
+import type { ProductionBriefView } from "@/features/production-brief/server";
 import {
-  DELIVERABLE_TYPE_KEYS,
-  PRODUCTION_BRIEF_LIMITS,
+  DELIVERABLE_TYPES,
   TEXT_FIELDS,
-  charLength,
+  briefTrim,
   checkProductionBrief,
+  countChars,
   counterText,
+  deliverableText,
   emptyProductionBrief,
+  nearLimit,
   productionBriefToForm,
   staleText,
-  toProductionBriefPayload,
+  toCreatePayload,
+  toUpdatePayload,
   toggleDeliverable,
   type ProductionBriefFormValue,
-  type ProductionBriefView,
 } from "./production-brief-model";
 
 const full = (): ProductionBriefFormValue => ({
@@ -26,88 +30,74 @@ const full = (): ProductionBriefFormValue => ({
   status: "drafting",
 });
 
-describe("P3-a 공통 제작 브리프 화면 모델(인계표 P3A-HANDOFF.md)", () => {
-  it("한도는 인계표 1절과 같다", () => {
-    expect(PRODUCTION_BRIEF_LIMITS).toEqual({
-      title: 120,
-      targetAudience: 500,
-      coreMessage: 1000,
-      scopeSummary: 2000,
-      brandToneConstraints: 1000,
-      referenceNotes: 1000,
-      deliverableTypesMin: 1,
-      deliverableTypesMax: 4,
-    });
-    expect(DELIVERABLE_TYPE_KEYS).toEqual(["web_copy", "design_asset", "video_script", "ppt_template"]);
+describe("P3-a 공통 제작 브리프 화면 모델(서버 계약 P3A-BACKEND-01)", () => {
+  it("산출물 코드 4종·필수 칸은 서버 도메인과 같다", () => {
+    expect(DELIVERABLE_TYPES).toEqual(["web_copy", "design_assets", "video_plan", "ppt_deck"]);
     expect(TEXT_FIELDS.filter((f) => f.required).map((f) => f.key)).toEqual(["title", "targetAudience", "coreMessage", "scopeSummary"]);
   });
 
-  it("글자 수는 코드 포인트 기준(이모지 1자, 한글 1자)", () => {
-    expect(charLength("가나다")).toBe(3);
-    expect(charLength("😀a")).toBe(2);
-    expect("😀a".length).toBe(3); // UTF-16 길이와 다르다
+  it("U1: 서버처럼 앞뒤 공백·줄바꿈·NBSP·BOM 을 정리한 뒤 센다", () => {
+    for (const s of ["  가나  ", "\n\n가나\n", " 가나﻿", "　가나\t"]) {
+      expect(briefTrim(s)).toBe(serverTrim(s));
+      expect(countChars(s)).toBe(2);
+    }
+    // 「␠␠ + 가×120 + ␠」은 서버가 받는 값이므로 넘침이 아니다(QA-P3A-UI-01 U1 재현)
+    expect(checkProductionBrief({ ...full(), title: `  ${"가".repeat(120)} ` })).toEqual({});
+    expect(checkProductionBrief({ ...full(), scopeSummary: `${"a".repeat(2000)}\n` })).toEqual({});
+    expect(checkProductionBrief({ ...full(), title: "가".repeat(121) }).title).toBe("제작 브리프 제목은(는) 120자까지 쓸 수 있습니다.");
+    expect(countChars("😀a")).toBe(2);
     expect(counterText(1234, 2000)).toBe("1,234 / 2,000자");
-    expect(counterText(0, 120)).toBe("0 / 120자");
   });
 
-  it("점검: 다 채우면 문제 없음", () => {
+  it("글자 수 읽기: 한도 90% 이상·넘침일 때만", () => {
+    expect(nearLimit(107, 120)).toBe(false);
+    expect(nearLimit(108, 120)).toBe(true);
+    expect(nearLimit(130, 120)).toBe(true);
+  });
+
+  it("점검: 필수는 정리 뒤 1자 이상, 산출물 1~4개", () => {
     expect(checkProductionBrief(full())).toEqual({});
-  });
-
-  it("점검: 필수 칸은 공백만이면 안 됨, 선택 칸은 비어도 됨", () => {
-    const v = { ...full(), title: "   ", coreMessage: "" };
-    const issues = checkProductionBrief(v);
+    const issues = checkProductionBrief({ ...full(), title: " \n ", coreMessage: "" });
     expect(Object.keys(issues).sort()).toEqual(["coreMessage", "title"]);
-    expect(issues.title).toBe("제작 브리프 제목을(를) 입력해 주세요.");
     expect(checkProductionBrief(emptyProductionBrief())).toMatchObject({ deliverableTypes: "포함 산출물 종류를 1개 이상 선택해 주세요." });
   });
 
-  it("점검: 한도 넘음(코드 포인트로 셈), 경계값은 통과", () => {
-    expect(checkProductionBrief({ ...full(), title: "가".repeat(120) })).toEqual({});
-    expect(checkProductionBrief({ ...full(), title: "가".repeat(121) }).title).toBe("제작 브리프 제목은(는) 120자까지 쓸 수 있습니다.");
-    // 이모지 120개 = 120자(UTF-16 으로는 240)
-    expect(checkProductionBrief({ ...full(), title: "😀".repeat(120) })).toEqual({});
-    expect(checkProductionBrief({ ...full(), scopeSummary: "a".repeat(2001) }).scopeSummary).toBe("제작 범위 및 제외 사항은(는) 2,000자까지 쓸 수 있습니다.");
-    expect(checkProductionBrief({ ...full(), referenceNotes: "a".repeat(1001) }).referenceNotes).toMatch(/1,000자/);
-  });
-
-  it("산출물 종류: 켜고 끄기, 화면 순서 유지, 중복·모르는 값 없음", () => {
-    let list = toggleDeliverable([], "ppt_template", true);
+  it("산출물: 켜고 끄기, 화면 순서 유지, 모르는 값 없음", () => {
+    let list = toggleDeliverable([], "ppt_deck", true);
     list = toggleDeliverable(list, "web_copy", true);
-    list = toggleDeliverable(list, "web_copy", true);
-    expect(list).toEqual(["web_copy", "ppt_template"]);
-    expect(toggleDeliverable(list, "web_copy", false)).toEqual(["ppt_template"]);
-    expect(toggleDeliverable(["x" as never, "design_asset"], "video_script", true)).toEqual(["design_asset", "video_script"]);
+    expect(list).toEqual(["web_copy", "ppt_deck"]);
+    expect(toggleDeliverable(["design_asset" as never, "video_plan"], "web_copy", true)).toEqual(["web_copy", "video_plan"]);
+    expect(deliverableText(["web_copy", "design_assets"])).toBe("홈페이지 구조·문구, 디자인 자산");
   });
 
-  it("보기 → 폼 값 → 보낼 값(자르지 않음, 보관 상태는 폼에 오지 않음)", () => {
-    const view: ProductionBriefView = {
-      id: "b1",
-      title: "가".repeat(130),
-      targetAudience: "대상",
-      coreMessage: "메시지",
-      deliverableTypes: ["ppt_template", "web_copy"],
-      scopeSummary: "범위",
-      brandToneConstraints: "톤",
-      referenceNotes: "",
-      status: "confirmed",
-      revision: 3,
-      strategyVersion: { id: "s", version: 2 },
-      stale: false,
-    };
-    const form = productionBriefToForm(view);
-    expect(form.deliverableTypes).toEqual(["web_copy", "ppt_template"]);
-    expect(form.status).toBe("confirmed");
-    expect(productionBriefToForm({ ...view, status: "archived" }).status).toBe("drafting");
-    const payload = toProductionBriefPayload(form);
-    expect(payload.title).toHaveLength(130);
-    expect(Object.keys(payload)).toEqual(["title", "targetAudience", "coreMessage", "deliverableTypes", "scopeSummary", "brandToneConstraints", "referenceNotes", "status"]);
+  it("보낼 값이 서버 zod 계약을 그대로 통과한다(만들기는 status 없음, 빈 선택 칸은 null)", () => {
+    const c = toCreatePayload(full());
+    expect(Object.keys(c)).not.toContain("status");
+    const pc = productionBriefCreateSchema.safeParse(c);
+    expect(pc.success).toBe(true);
+    expect(pc.success && pc.data.brandToneConstraints).toBeNull();
+    const pu = productionBriefUpdateSchema.safeParse(toUpdatePayload({ ...full(), status: "ready", title: "  제목  " }));
+    expect(pu.success).toBe(true);
+    expect(pu.success && pu.data).toMatchObject({ status: "ready", title: "제목" });
   });
 
-  it("이전 전략 안내: 시안 문구에 버전 번호를 넣는다", () => {
-    expect(staleText(2, 3)).toBe(
-      "지금 승인본(3번 버전)보다 앞선 전략(2번 버전)으로 만든 제작 브리프입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요. 맞추지 않아도 고칠 수 있습니다.",
-    );
-    expect(staleText(null, null)).toMatch(/^지금 승인본보다 앞선 전략으로/);
+  it("서버 보기 → 폼 값(선택 칸 null 은 빈 글)", () => {
+    const view = {
+      title: "t",
+      targetAudience: "a",
+      coreMessage: "m",
+      deliverableTypes: ["ppt_deck", "web_copy"],
+      scopeSummary: "s",
+      brandToneConstraints: null,
+      referenceNotes: "r",
+      status: "ready",
+    } as unknown as ProductionBriefView;
+    expect(productionBriefToForm(view)).toEqual({ title: "t", targetAudience: "a", coreMessage: "m", deliverableTypes: ["web_copy", "ppt_deck"], scopeSummary: "s", brandToneConstraints: "", referenceNotes: "r", status: "ready" });
+  });
+
+  it("이전 전략 안내: 고칠 수 없으면 '맞추지 않아도 고칠 수 있습니다'를 뺀다(U2), 승인본이 없으면 그렇게 알린다", () => {
+    expect(staleText(2, 3)).toBe("지금 승인본(3번 버전)보다 앞선 전략(2번 버전)으로 만든 제작 브리프입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요. 맞추지 않아도 고칠 수 있습니다.");
+    expect(staleText(2, 3, false)).toBe("지금 승인본(3번 버전)보다 앞선 전략(2번 버전)으로 만든 제작 브리프입니다. 대상과 메시지가 지금 전략과 맞는지 확인해 주세요.");
+    expect(staleText(2, null)).toMatch(/^바탕 전략의 승인본이 지금 없습니다/);
   });
 });
