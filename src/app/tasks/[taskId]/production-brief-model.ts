@@ -10,21 +10,20 @@ import {
   PRODUCTION_BRIEF_DISPLAY,
   PRODUCTION_BRIEF_LIMITS,
   PRODUCTION_BRIEF_STATUSES,
+  briefTrim,
   charLength,
   type DeliverableType,
   type ProductionBriefStatus,
 } from "@/domain/production-brief/constants";
 import type { ProductionBriefView } from "@/features/production-brief/server";
 
-export { DELIVERABLE_TYPES, DELIVERABLE_TYPE_LABELS, PRODUCTION_BRIEF_DISPLAY, PRODUCTION_BRIEF_LIMITS, PRODUCTION_BRIEF_STATUSES, charLength };
+export { DELIVERABLE_TYPES, DELIVERABLE_TYPE_LABELS, PRODUCTION_BRIEF_DISPLAY, PRODUCTION_BRIEF_LIMITS, PRODUCTION_BRIEF_STATUSES, briefTrim, charLength };
 export type { DeliverableType, ProductionBriefStatus };
 
 /**
- * 서버(briefTrim = DB app.funnel_trim)와 같은 앞뒤 정리. JS 의 \s 는 공백·탭·줄바꿈·NBSP·BOM·전각 공백을 모두 포함한다.
- * 글자 수 표시·점검은 이 값으로 잰다(Tester QA-P3A-UI-01 U1: 끝 줄바꿈 하나로 '넘침'이 뜨던 문제).
+ * 서버가 받는 글자 수: 서버와 같은 briefTrim(DB app.funnel_trim, Backend a5f9a77 에서 constants.ts 로 옮김 — Tester I6)으로
+ * 앞뒤를 정리한 뒤 코드 포인트로 잰다(Tester QA-P3A-UI-01 U1: 끝 줄바꿈 하나로 '넘침'이 뜨던 문제).
  */
-export const briefTrim = (s: string) => s.replace(/^[\s\u00a0\ufeff]+|[\s\u00a0\ufeff]+$/g, "");
-/** 서버가 받는 글자 수(정리한 뒤 코드 포인트) */
 export const countChars = (s: string) => charLength(briefTrim(s));
 
 /** "1,234 / 2,000자" */
