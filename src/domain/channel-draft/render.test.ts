@@ -229,40 +229,52 @@ describe("R1-1 XSS 사례(X1~X19): 모두 허용 태그·a[href](https)만, 입�
   });
 });
 
-describe("X20 큰 입력: 빠르게 끝나고 예외 없음", () => {
-  for (const [name, body] of [
-    ["별표 20000", "*".repeat(20000)],
-    ["여는 대괄호 20000", "[".repeat(20000)],
-    ["세로 막대 20000", "|".repeat(20000)],
-    ["링크 비슷한 것 반복", "[a](".repeat(5000)],
-    ["강조 비슷한 것 반복", "**a*".repeat(5000)],
-    ["중첩 인용 1000단계", `${"> ".repeat(1000)}x`],
-    ["표 줄 반복", `| a | b |\n|---|---|\n${"| x | y |\n".repeat(2000)}`],
-  ] as const) {
-    it(name, () => {
+/**
+ * 시간 기준(QA-FINAL-H-01 O1): 절대 시간은 병렬 부하에 흔들리므로, 같은 모양의 전체 길이와 1/4 길이를 각각 3번 재서 가장 짧은 값끼리 비교한다.
+ * 선형이면 약 4배, 제곱이면 약 16배다. 8배 + 20ms 여유보다 작아야 통과한다. 아주 느린 회귀를 막는 절대 상한(2초)도 함께 둔다.
+ */
+function expectLinear(make: (n: number) => string, n: number) {
+  const best = (s: string) => {
+    let m = Infinity;
+    for (let k = 0; k < 3; k++) {
       const t = performance.now();
-      expectSafe(body);
-      toPlainText(body);
-      expect(performance.now() - t).toBeLessThan(500);
-    });
+      renderTistoryHtml(s);
+      toPlainText(s);
+      m = Math.min(m, performance.now() - t);
+    }
+    return m;
+  };
+  const big = make(n);
+  expectSafe(big);
+  const tBig = best(big);
+  const tSmall = best(make(Math.floor(n / 4)));
+  expect(tBig, `전체 ${tBig.toFixed(1)}ms · 1/4 ${tSmall.toFixed(1)}ms`).toBeLessThan(tSmall * 8 + 20);
+  expect(tBig).toBeLessThan(2000);
+}
+
+describe("X20 큰 입력: 길이에 비례해 끝나고 예외 없음", () => {
+  for (const [name, make, n] of [
+    ["별표", (k: number) => "*".repeat(k), 20000],
+    ["여는 대괄호", (k: number) => "[".repeat(k), 20000],
+    ["세로 막대", (k: number) => "|".repeat(k), 20000],
+    ["링크 비슷한 것 반복", (k: number) => "[a](".repeat(k), 5000],
+    ["강조 비슷한 것 반복", (k: number) => "**a*".repeat(k), 5000],
+    ["중첩 인용", (k: number) => `${"> ".repeat(k)}x`, 1000],
+    ["표 줄 반복", (k: number) => `| a | b |\n|---|---|\n${"| x | y |\n".repeat(k)}`, 2000],
+  ] as const) {
+    it(name, () => expectLinear(make, n));
   }
 });
 
-describe("X20b 되감기(QA-P2G-BACKEND-01 O1): 줄 끝 앞 U+2028·표 구분선 공백 19990개도 50ms 안", () => {
-  for (const [name, body] of [
-    ["목록", `-${" ".repeat(19990)} `],
-    ["번호 목록", `1.${" ".repeat(19990)} `],
-    ["소제목", `##${" ".repeat(19990)} `],
-    ["작은 소제목", `###${" ".repeat(19990)} `],
-    ["표 구분선", `| a |\n|---${" ".repeat(19980)}x`],
+describe("X20b 되감기(QA-P2G-BACKEND-01 O1): 줄 끝 앞 U+2028·표 구분선 공백 19990개도 길이에 비례", () => {
+  for (const [name, make] of [
+    ["목록", (k: number) => `-${" ".repeat(k)} `],
+    ["번호 목록", (k: number) => `1.${" ".repeat(k)} `],
+    ["소제목", (k: number) => `##${" ".repeat(k)} `],
+    ["작은 소제목", (k: number) => `###${" ".repeat(k)} `],
+    ["표 구분선", (k: number) => `| a |\n|---${" ".repeat(k)}x`],
   ] as const) {
-    it(name, () => {
-      expectSafe(body);
-      const t = performance.now();
-      renderTistoryHtml(body);
-      toPlainText(body);
-      expect(performance.now() - t).toBeLessThan(50);
-    });
+    it(name, () => expectLinear(make, 19990));
   }
 });
 
