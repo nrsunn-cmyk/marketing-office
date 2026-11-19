@@ -143,6 +143,11 @@ describe("브리프 AI 문구 초안 영역(BriefAiCopy)", () => {
     expect(button(html)![2]).toBe("다시 시도");
   });
 
+  it("서버 설정 오류 문구(DEC-08-R2 서명 키 불일치 등)도 AI 생성 실패로 이어서 보인다", () => {
+    Object.assign(ctl, { state: { message: "AI 문구 만들기 설정이 맞지 않습니다. 관리자에게 알려 주세요." }, pending: false });
+    expect(render()).toContain('role="alert">AI 문구를 만들지 못했습니다. AI 문구 만들기 설정이 맞지 않습니다. 관리자에게 알려 주세요. 기존 입력 내용은 그대로 유지됩니다.</p>');
+  });
+
   it("완료: 만든 모델 이름, 변형마다 '초안' 표시와 채택 단추(runId·변형 번호·revision), 상자는 점선 강조", () => {
     use("완료");
     const html = render();
