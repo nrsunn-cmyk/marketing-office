@@ -62,6 +62,39 @@ export function P3QaIcon({ width = 24, height = 24, ...p }: P) {
   );
 }
 
+/** icons/p3-bundle.svg — 납품 묶음 아이콘 */
+export function P3BundleIcon({ width = 24, height = 24, ...p }: P) {
+  return (
+    <svg {...base24} width={width} height={height} {...p}>
+      <path d="M4 8l8-4 8 4-8 4-8-4z" />
+      <path d="M4 12l8 4 8-4M4 16l8 4 8-4" />
+    </svg>
+  );
+}
+
+/** empty/empty-execution.svg — 아직 실행(생성)된 것이 없음을 나타내는 그림(P3-g 납품 묶음 빈 상태, ASSETS-HANDOFF 5절) */
+export function EmptyExecutionArt({ width = 96, height = 72, ...p }: P) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 96 72"
+      width={width}
+      height={height}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable={false}
+      {...p}
+    >
+      <circle cx="48" cy="36" r="22" strokeOpacity="0.45" />
+      <path d="M42 27l16 9-16 9V27z" fill="currentColor" fillOpacity="0.14" />
+    </svg>
+  );
+}
+
 /** empty/empty-brief.svg — 아직 작성된 문서가 없음을 나타내는 문서 그림(P3-a·b·d·e·f 빈 상태, ASSETS-HANDOFF 4절) */
 export function EmptyBriefArt({ width = 96, height = 72, ...p }: P) {
   return (
