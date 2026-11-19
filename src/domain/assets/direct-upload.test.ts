@@ -17,5 +17,10 @@ describe("자료 직접 업로드 규칙(SOURCE-UPLOAD-FIX-01)", () => {
     expect(sourceUploadErrorFromDb("VALIDATION: 다른 고객의 프로젝트에는 자료를 붙일 수 없습니다")).toEqual({ code: "VALIDATION", message: "다른 고객의 프로젝트에는 자료를 붙일 수 없습니다" });
     expect(sourceUploadErrorFromDb("NOT_CONFIGURED: x").message).toContain("켜져 있지 않습니다");
     expect(sourceUploadErrorFromDb("BAD_SIGNATURE: x").code).toBe("ERROR");
+    expect(sourceUploadErrorFromDb("LIMIT_REACHED: 진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요")).toEqual({
+      code: "UPLOAD_FAILED",
+      message: "진행 중인 업로드가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+      uploadCode: "CONCURRENT_LIMIT",
+    });
   });
 });
