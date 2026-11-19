@@ -1,0 +1,369 @@
+/* P3B-UI-PREP-01 홈페이지 구조·문구. 시안 Design/p3-production/web-copy.html.
+ * 색·간격은 기존 토큰만(src/styles/tokens.css). 넓은 화면은 페이지 목록(왼쪽) + 섹션 편집(오른쪽), 900px 이하는 한 열.
+ * 44px 규칙은 funnel.module.css 의 .funnel 범위, 체크 상자는 감싸는 라벨 전체가 누름 영역. */
+
+.wcSection_root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(리드마그넷·제작 브리프와 같은 방식) */
+}
+:global([data-theme="dark"]) .wcSection_root {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .wcSection_root {
+    --text-muted: inherit;
+  }
+}
+
+.wcHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.wcTitle,
+.wcSubhead,
+.wcSectionTitle,
+.wcVersionName {
+  margin: 0;
+}
+.wcSubhead {
+  font-size: var(--font-size-base, 1rem);
+}
+.wcBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+.wcStatus {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.wcStatus_drafting {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.wcStatus_reviewed {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.wcStatus_archived {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-style: dashed;
+}
+.wcEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.wcEmpty p {
+  margin: 0;
+}
+
+.wcForm {
+  min-width: 0;
+  container-type: inline-size;
+}
+/* 화면 폭이 아니라 담는 상자 폭으로 나눈다(작업 상세 본문은 넓은 화면에서도 폭이 제한됨).
+ * 상자가 넓을 때만 페이지 목록(왼쪽) + 섹션 편집(오른쪽), 좁으면 목록을 위에 둔 한 열 */
+.wcWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@container (min-width: 860px) {
+  .wcWorkspace {
+    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  }
+}
+
+.wcPages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.wcPagesHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.wcPageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wcPageTab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wcPageTab[aria-pressed="true"] {
+  border: 2px solid var(--info-border);
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-weight: var(--font-weight-semibold);
+}
+.wcPageTab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+.wcPageName {
+  min-width: 0;
+}
+.wcPageSlug {
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+.wcPageTab[aria-pressed="true"] .wcPageSlug {
+  color: inherit;
+}
+.wcPageWarn {
+  font-size: var(--font-size-sm);
+  color: var(--danger-text);
+}
+
+.wcPagePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.wcPanelHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.wcGrid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+.wcFieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.wcReq {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.wcCount {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wcCountOver {
+  color: var(--danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.wcSections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wcSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.wcSectionExcluded {
+  border-style: dashed;
+  background: var(--bg-subtle);
+}
+.wcSectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.wcSectionTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-base, 1rem);
+}
+.wcExcludedTag {
+  border-style: dashed;
+}
+.wcSectionTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.wcCites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.wcCites legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+.wcCiteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-2);
+}
+.wcCheck {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.wcCheck:has(input:checked) {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+}
+.wcCheck input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 0;
+}
+.wcCheck:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.wcDanger {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.wcVersions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.wcVersions > p {
+  margin: 0;
+}
+.wcVersionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wcVersion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.wcVersion p {
+  margin: 0;
+}
+.wcVersionCurrent {
+  border: 2px solid var(--info-border);
+}
+.wcVersionName {
+  font-weight: var(--font-weight-semibold);
+}
+
+.wcReadOnly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.wcReadPage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.wcView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+.wcViewRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wcViewRow dt {
+  font-weight: var(--font-weight-semibold);
+}
+.wcViewRow dd {
+  margin: 0;
+}
+.wcViewText {
+  white-space: pre-wrap;
+}
+
+/* 한 열일 때 페이지 목록은 가로로 감아 자리를 덜 쓴다(기본 규칙보다 뒤에 두어야 이긴다) */
+@container (max-width: 859px) {
+  .wcPageList {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .wcPageList > li {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+}

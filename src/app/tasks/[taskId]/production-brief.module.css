@@ -1,0 +1,172 @@
+/* P3A-UI-PREP-01 공통 제작 브리프. 시안 Design/p3-production/production-brief.html.
+ * 색·간격은 기존 토큰만 쓴다(src/styles/tokens.css). 44px 규칙은 funnel.module.css 의 .funnel 범위를 같이 쓰고,
+ * 체크 상자는 감싸는 라벨 전체(44px)를 누름 영역으로 한다. */
+
+.pbSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+}
+/* 회색 글 대비 보강(리드마그넷 카드와 같은 방식): 밝은 화면에서만 --text-muted 를 #475569 로 */
+.pbSection {
+  --text-muted: #475569;
+}
+:global([data-theme="dark"]) .pbSection {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .pbSection {
+    --text-muted: inherit;
+  }
+}
+
+.pbHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pbTitle {
+  margin: 0;
+}
+.pbBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+
+.pbStatus {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.pbStatus_drafting {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.pbStatus_confirmed {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.pbStatus_archived {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-style: dashed;
+}
+
+.pbBanner p,
+.pbEmpty p {
+  margin: 0;
+}
+.pbEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.pbForm {
+  max-width: 760px;
+}
+.pbFieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.pbReq {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.pbCount {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pbCountOver {
+  color: var(--danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pbChecks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.pbChecks legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+.pbCheckGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-2);
+}
+.pbCheck {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.pbCheck:has(input:checked) {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+}
+.pbCheck input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 0;
+}
+.pbCheck:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.pbDanger {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* 읽기 전용 보기 */
+.pbView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  max-width: 760px;
+}
+.pbViewRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pbViewRow dt {
+  font-weight: var(--font-weight-semibold);
+}
+.pbViewRow dd {
+  margin: 0;
+}
+.pbViewText {
+  white-space: pre-wrap;
+}
