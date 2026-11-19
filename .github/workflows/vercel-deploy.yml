@@ -12,8 +12,9 @@
 #   명령 인자(--token, -t)로 넘기지 않는다. 명령 인자는 로그·프로세스 목록에 남을 수 있다(Vercel 외부 파이프라인 문서).
 # - main 이 아닌 브랜치를 골라 돌리면 배포 작업을 건너뛴다. pull_request 계열로는 돌지 않는다.
 # - 공급망: 액션은 커밋 SHA 로 고정(옆 주석이 태그, 2026-11-19 git ls-remote 확인).
-#   Vercel CLI 는 devDependencies 의 vercel 65.11.0(2026-11-03 배포)을 package-lock.json 무결성 안에서
-#   npx --no-install 로만 부른다. 실행 때 따로 내려받지 않는다.
+#   Vercel CLI 는 앱 의존성과 떼어 tools/vercel-cli/(자기 package.json·package-lock.json, vercel 65.11.0)에 둔다
+#   (DEPLOY-ACTIONS-01-R2). 앱 설치·Vercel 자체 빌드에 CLI 의존성(설치 스크립트·audit 경고 포함)이 끼지 않는다.
+#   토큰 없는 단계에서 잠금 파일 그대로 --ignore-scripts 로 설치하고, 그 경로의 실행 파일만 부른다.
 # - 자세한 절차·되돌리기: docs/deploy-actions.md. 안전 장치 시험: tests/unit/deploy-workflow.test.ts
 name: vercel-deploy
 
@@ -76,8 +77,11 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tools/vercel-cli/package-lock.json
 
-      # 잠금 파일 그대로 설치한다(vercel CLI 포함). 이 단계에는 토큰이 없다.
+      # 앱 잠금 파일 그대로 설치한다. 이 단계에는 토큰이 없다.
       - name: 의존성 설치
         run: npm ci
 
@@ -85,12 +89,20 @@ jobs:
       - name: 형식검사·린트·시험
         run: npm run verify
 
+      # 배포 도구 설치. 토큰이 없는 단계이고, 설치 스크립트(esbuild·koffi 등)는 돌리지 않는다.
+      - name: Vercel CLI 설치
+        run: npm ci --prefix tools/vercel-cli --ignore-scripts
+
+      # 설치 스크립트 없이도 CLI 가 뜨는지 토큰 없이 먼저 본다. 안 뜨면 여기서 멈춘다(토큰 단계로 가지 않음).
+      - name: Vercel CLI 동작 확인
+        run: ./tools/vercel-cli/node_modules/.bin/vercel --version
+
       - name: Vercel 환경 설정 내려받기
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx --no-install vercel pull --yes --environment="$TARGET"
+        run: ./tools/vercel-cli/node_modules/.bin/vercel pull --yes --environment="$TARGET"
 
       - name: 빌드
         env:
@@ -99,9 +111,9 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ "$TARGET" = production ]; then
-            npx --no-install vercel build --prod
+            ./tools/vercel-cli/node_modules/.bin/vercel build --prod
           else
-            npx --no-install vercel build
+            ./tools/vercel-cli/node_modules/.bin/vercel build
           fi
 
       - name: 배포
@@ -111,9 +123,9 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ "$TARGET" = production ]; then
-            url=$(npx --no-install vercel deploy --prebuilt --prod)
+            url=$(./tools/vercel-cli/node_modules/.bin/vercel deploy --prebuilt --prod)
           else
-            url=$(npx --no-install vercel deploy --prebuilt)
+            url=$(./tools/vercel-cli/node_modules/.bin/vercel deploy --prebuilt)
           fi
           echo "배포 주소: $url"
           {

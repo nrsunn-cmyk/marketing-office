@@ -1,0 +1,2 @@
+# 배포 워크플로가 설치하는 Vercel CLI(로컬에서 설치해도 커밋하지 않는다)
+node_modules/

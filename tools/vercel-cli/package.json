@@ -1,0 +1,9 @@
+{
+  "name": "marketing-office-vercel-cli",
+  "private": true,
+  "description": "배포 워크플로(.github/workflows/vercel-deploy.yml) 전용 Vercel CLI. 앱 의존성과 분리한다(DEPLOY-ACTIONS-01-R2). 판을 올릴 때는 이 파일·잠금 파일·tests/unit/deploy-workflow.test.ts 를 함께 고친다.",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "vercel": "65.11.0"
+  }
+}

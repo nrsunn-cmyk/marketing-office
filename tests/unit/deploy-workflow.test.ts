@@ -3,16 +3,18 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * DEPLOY-ACTIONS-01(-R1): 운영 배포 워크플로의 안전 장치가 빠지지 않게 지킨다.
+ * DEPLOY-ACTIONS-01(-R1·R2): 운영 배포 워크플로의 안전 장치가 빠지지 않게 지킨다.
  * 배포 경로를 바꾸는 변경이므로, 아래 조건을 바꾸려면 이 시험도 함께 고치고 Master 확인을 받는다.
  * Tester QA-DEPLOY-ACTIONS-01 의 우회 변형(짧은 토큰 인자, 토큰 출력, `|| true`, write-all,
  * persist-credentials 옮기기, 판 없는 npx, @latest, `${{ }}` 끼워 넣기, 태그 고정 등)을 잡도록 짰다.
+ * R2: Vercel CLI 는 앱 의존성과 떼어 tools/vercel-cli 에 둔다.
  */
 const root = process.cwd();
 const wf = readFileSync(join(root, ".github/workflows/vercel-deploy.yml"), "utf8").replace(/\r\n/g, "\n");
 // 주석 줄을 뺀 실제 설정만 본다(줄 끝 주석은 남는다: uses 옆 태그 주석)
 const lines = wf.split("\n").filter((l) => !l.trimStart().startsWith("#"));
 const body = lines.join("\n");
+const readJson = (rel: string) => JSON.parse(readFileSync(join(root, rel), "utf8"));
 
 const indent = (l: string) => l.length - l.trimStart().length;
 
@@ -63,12 +65,18 @@ function parseSteps(): { jobHead: string; steps: Step[] } {
 const { jobHead, steps } = parseSteps();
 const runs = steps.filter((s) => s.run);
 const TOKEN_KEYS = ["VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"];
-const isVercelStep = (s: Step) => /npx --no-install vercel /.test(s.run);
+const CLI = "./tools/vercel-cli/node_modules/.bin/vercel";
+const TOOL_INSTALL = "npm ci --prefix tools/vercel-cli --ignore-scripts";
+const TOOL_CHECK = `${CLI} --version`;
+const escapeRe = (x: string) => x.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+const CLI_CMD = new RegExp(`${escapeRe(CLI)} (pull|build|deploy)\\b`);
+/** 토큰을 쓰는 Vercel 단계(pull·build·deploy) */
+const isVercelStep = (s: Step) => CLI_CMD.test(s.run);
 const isCheckStep = (s: Step) => s.name === "비밀값 3개와 배포 대상 확인";
 
 describe("운영 배포 워크플로(vercel-deploy.yml)", () => {
   it("단계를 제대로 읽었다(시험 자체 점검)", () => {
-    expect(steps.length).toBe(8);
+    expect(steps.length).toBe(10);
     expect(steps.filter(isVercelStep)).toHaveLength(3);
     expect(steps.filter(isCheckStep)).toHaveLength(1);
   });
@@ -143,29 +151,52 @@ describe("운영 배포 워크플로(vercel-deploy.yml)", () => {
     expect(body).not.toMatch(/continue-on-error/);
   });
 
-  it("Vercel CLI 는 잠금 파일에 고정된 판만 npx --no-install 로 부른다", () => {
+  it("Vercel CLI 는 tools/vercel-cli 잠금 파일에 고정된 판을 그 경로에서만 부른다(npx·따로 설치 금지)", () => {
     for (const s of runs) {
       for (const l of s.run.split("\n")) {
-        if (/\bvercel\b/.test(l) && !/::error::/.test(l)) expect(l, s.name).toMatch(/npx --no-install vercel (pull|build|deploy)\b/);
+        if (!/vercel/.test(l) || /::error::/.test(l)) continue;
+        const ok = l.trim() === TOOL_INSTALL || l.trim() === TOOL_CHECK || CLI_CMD.test(l);
+        expect(ok, `${s.name}: ${l}`).toBe(true);
       }
+      expect(s.run, s.name).not.toMatch(/\bnpx\b|\bnpm (exec|install|i|add)\b/);
     }
-    expect(body).not.toMatch(/@latest|vercel@|npx (-y|--yes)\b/);
-    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-    expect(pkg.devDependencies.vercel).toMatch(/^\d+\.\d+\.\d+$/);
-    const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
-    const v = lock.packages["node_modules/vercel"];
-    expect(v.version).toBe(pkg.devDependencies.vercel);
+    expect(body).not.toMatch(/@latest|vercel@/);
+    const tool = readJson("tools/vercel-cli/package.json");
+    expect(tool.dependencies.vercel).toMatch(/^\d+\.\d+\.\d+$/);
+    const v = readJson("tools/vercel-cli/package-lock.json").packages["node_modules/vercel"];
+    expect(v.version).toBe(tool.dependencies.vercel);
     expect(v.integrity).toMatch(/^sha512-/);
   });
 
-  it("설치·시험 단계는 그대로 돌고, 시험이 Vercel 단계보다 먼저다", () => {
-    const ci = steps.findIndex((s) => s.run === "npm ci");
-    const verify = steps.findIndex((s) => s.run === "npm run verify");
-    const firstVercel = steps.findIndex(isVercelStep);
-    expect(ci).toBeGreaterThan(-1);
-    expect(verify).toBeGreaterThan(ci);
-    expect(firstVercel).toBeGreaterThan(verify);
-    expect(steps[verify].text).not.toMatch(/^\s*if:/m);
+  it("앱 의존성에는 vercel CLI 가 없다(앱 설치·Vercel 자체 빌드에 끼지 않게, R2)", () => {
+    const app = readJson("package.json");
+    expect({ ...app.dependencies, ...app.devDependencies }).not.toHaveProperty("vercel");
+    expect(readJson("package-lock.json").packages).not.toHaveProperty(["node_modules/vercel"]);
+  });
+
+  it("도구 설치·동작 확인 단계에는 토큰이 없고, 설치 스크립트를 돌리지 않는다", () => {
+    const install = steps.filter((s) => s.run === TOOL_INSTALL);
+    const check = steps.filter((s) => s.run === TOOL_CHECK);
+    expect(install).toHaveLength(1);
+    expect(check).toHaveLength(1);
+    for (const s of [...install, ...check]) {
+      expect(s.envText, s.name).toBe("");
+      expect(s.text, s.name).not.toMatch(/secrets\.|VERCEL_TOKEN/);
+    }
+  });
+
+  it("설치 → 시험 → 도구 설치 → 도구 확인 → Vercel 단계 순서이고, 시험을 건너뛰지 않는다", () => {
+    const at = (pred: (s: Step) => boolean) => steps.findIndex(pred);
+    const order = [
+      at((s) => s.run === "npm ci"),
+      at((s) => s.run === "npm run verify"),
+      at((s) => s.run === TOOL_INSTALL),
+      at((s) => s.run === TOOL_CHECK),
+      at(isVercelStep),
+    ];
+    expect(order[0]).toBeGreaterThan(-1);
+    for (let i = 1; i < order.length; i++) expect(order[i], `순서 ${i}`).toBeGreaterThan(order[i - 1]);
+    expect(steps[order[1]].text).not.toMatch(/^\s*if:/m);
   });
 
   it("배포는 한 번에 하나만 돌고 앞의 배포를 끊지 않는다", () => {
