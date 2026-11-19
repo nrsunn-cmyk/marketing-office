@@ -7,7 +7,8 @@
  */
 
 export type CopyResult =
-  | { ok: true; mode: "rich" | "plain" }
+  /** rich = 서식째, plain = 처음부터 글자만, fallback = 서식 복사가 안 되어 글자만 */
+  | { ok: true; mode: "rich" | "plain" | "fallback" }
   | { ok: false; reason: "unsupported" | "denied" | "failed" };
 
 /** 클립보드 쪽 바깥 의존. 기본값은 브라우저 전역 */
@@ -34,10 +35,10 @@ function failure(e: unknown): CopyResult {
   return { ok: false, reason: name === "NotAllowedError" ? "denied" : "failed" };
 }
 
-async function writePlain(clipboard: NonNullable<ClipboardEnv["clipboard"]>, text: string): Promise<CopyResult> {
+async function writePlain(clipboard: NonNullable<ClipboardEnv["clipboard"]>, text: string, mode: "plain" | "fallback" = "plain"): Promise<CopyResult> {
   try {
     await clipboard.writeText(text);
-    return { ok: true, mode: "plain" };
+    return { ok: true, mode };
   } catch (e) {
     return failure(e);
   }
@@ -45,14 +46,14 @@ async function writePlain(clipboard: NonNullable<ClipboardEnv["clipboard"]>, tex
 
 /**
  * 서식째 복사: ClipboardItem 하나에 text/html 과 text/plain 을 함께 넣는다(여러 항목은 첫 항목만 쓰이는 운영체제가 있어 하나로).
- * ClipboardItem·write 가 없거나 text/html 을 지원하지 않으면 text/plain 만 쓴다(mode "plain").
+ * ClipboardItem·write 가 없거나 text/html 을 지원하지 않으면 text/plain 만 쓴다(mode "fallback").
  * 서식째 쓰기가 실패해도 사용자 동작이 끊긴 게 아니면(NotAllowedError 가 아니면) 글자만 한 번 더 시도한다.
  */
 export function copyRich(input: { html: string; text: string }, env: ClipboardEnv = browserClipboard()): Promise<CopyResult> {
   const { clipboard, ClipboardItem: Item, Blob: B } = env;
   if (!clipboard) return Promise.resolve({ ok: false, reason: "unsupported" });
   const richOk = !!(Item && B && clipboard.write) && (Item!.supports ? Item!.supports("text/html") : true);
-  if (!richOk) return writePlain(clipboard, input.text);
+  if (!richOk) return writePlain(clipboard, input.text, "fallback");
 
   let pending: Promise<void>;
   try {
@@ -63,23 +64,25 @@ export function copyRich(input: { html: string; text: string }, env: ClipboardEn
     });
     pending = clipboard.write!([item]);
   } catch {
-    return writePlain(clipboard, input.text);
+    return writePlain(clipboard, input.text, "fallback");
   }
   return pending.then(
     (): CopyResult => ({ ok: true, mode: "rich" }),
-    (e) => ((e as { name?: unknown } | null)?.name === "NotAllowedError" ? failure(e) : writePlain(clipboard, input.text)),
+    (e) => ((e as { name?: unknown } | null)?.name === "NotAllowedError" ? failure(e) : writePlain(clipboard, input.text, "fallback")),
   );
 }
 
-/** HTML 소스 복사: 티스토리 HTML 모드에 붙여 넣을 소스를 글자(text/plain)로 넣는다 */
-export function copyHtmlSource(html: string, env: ClipboardEnv = browserClipboard()): Promise<CopyResult> {
+/** 글자만 복사(제목·태그·메타 설명 같은 글 정보, 또는 HTML 모드에 붙여 넣을 HTML 소스) */
+export function copyPlainText(text: string, env: ClipboardEnv = browserClipboard()): Promise<CopyResult> {
   if (!env.clipboard) return Promise.resolve({ ok: false, reason: "unsupported" });
-  return writePlain(env.clipboard, html);
+  return writePlain(env.clipboard, text);
 }
+/** HTML 소스 복사: 티스토리 HTML 모드에 붙여 넣을 소스를 글자(text/plain)로 넣는다 */
+export const copyHtmlSource = copyPlainText;
 
 /** 결과 안내 문구(화면 문구는 AGY 확정 시 바꾼다) */
 export function copyMessage(r: CopyResult): string {
-  if (r.ok) return r.mode === "rich" ? "서식째 복사했습니다." : "글자만 복사했습니다(이 브라우저는 서식 복사를 지원하지 않습니다).";
+  if (r.ok) return r.mode === "rich" ? "서식째 복사했습니다." : r.mode === "fallback" ? "글자만 복사했습니다(이 브라우저는 서식 복사를 지원하지 않습니다)." : "복사했습니다.";
   if (r.reason === "denied") return "브라우저가 복사를 막았습니다. 단추를 다시 누르거나, 아래 글을 선택해 Ctrl+C로 복사해 주세요.";
   if (r.reason === "unsupported") return "이 브라우저에서는 자동 복사를 쓸 수 없습니다. 아래 글을 선택해 Ctrl+C로 복사해 주세요.";
   return "복사하지 못했습니다. 아래 글을 선택해 Ctrl+C로 복사해 주세요.";
@@ -87,31 +90,23 @@ export function copyMessage(r: CopyResult): string {
 
 // ── 파일 내보내기 ──────────────────────────────────────────────
 
-export type ExportKind = "html" | "md";
+export type ExportKind = "html" | "md" | "txt";
 
 const MIME: Record<ExportKind, string> = {
   html: "text/html;charset=utf-8",
   md: "text/markdown;charset=utf-8",
+  txt: "text/plain;charset=utf-8",
 };
 // .html 조각에는 <meta charset> 이 없으므로 내려받은 파일을 브라우저로 열 때 한글이 깨지지 않게 BOM 을 붙인다(내용은 바꾸지 않음)
-const BOM = "﻿";
-const MAX_NAME = 80;
+const BOM = "\uFEFF";
 
-/** 파일 이름: 공백류는 공백 하나로, Windows·macOS 에서 못 쓰는 글자와 제어 문자는 _ 로, 앞뒤 점·공백 제거, 80자 제한, 비면 "채널-초안" */
-export function exportFileName(title: string, kind: ExportKind): string {
-  const base =
-    Array.from(
-      title
-        .normalize("NFC")
-        .replace(/\s+/g, " ") // 줄바꿈·탭은 공백 하나로(제어 문자보다 먼저)
-        .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, "_")
-        .trim()
-        .replace(/^[.\s]+|[.\s]+$/g, ""),
-    )
-      .slice(0, MAX_NAME)
-      .join("")
-      .trim() || "채널-초안";
-  return `${base}.${kind}`;
+/**
+ * 파일 이름은 서버가 정한 값(export.fileNames)을 그대로 쓴다. 이 도구는 마지막 확인만 한다:
+ * 경로 구분자·제어 문자가 섞였거나 확장자가 다르거나 비었으면 "채널-초안.<확장자>"로 바꾼다.
+ */
+export function safeDownloadName(name: string, kind: ExportKind): string {
+  const ok = name.length > 0 && name.length <= 200 && !/[\\/\u0000-\u001f\u007f]/.test(name) && name.toLowerCase().endsWith(`.${kind}`) && name !== `.${kind}`;
+  return ok ? name : `채널-초안.${kind}`;
 }
 
 export type DownloadEnv = {
@@ -127,7 +122,7 @@ function browserDownload(): DownloadEnv | null {
 
 /** 받은 글을 그대로 파일로 내려받게 한다. 성공하면 true, 브라우저가 아니거나 실패하면 false */
 export function downloadExport(
-  input: { title: string; kind: ExportKind; content: string },
+  input: { fileName: string; kind: ExportKind; content: string },
   env: DownloadEnv | null = browserDownload(),
 ): boolean {
   if (!env) return false;
@@ -136,7 +131,7 @@ export function downloadExport(
     const url = env.URL.createObjectURL(new env.Blob([body], { type: MIME[input.kind] }));
     const a = env.document.createElement("a");
     a.href = url;
-    a.download = exportFileName(input.title, input.kind);
+    a.download = safeDownloadName(input.fileName, input.kind);
     a.rel = "noopener";
     a.style.display = "none";
     env.document.body.appendChild(a);

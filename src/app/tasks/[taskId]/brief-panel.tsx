@@ -20,6 +20,7 @@ import styles from "../../ui.module.css";
 import { listBriefCopyChoices } from "@/features/brief/ai-copy";
 import { BriefAiCopy } from "./brief-ai-copy";
 import { BriefEditForm } from "./brief-edit-form";
+import { ChannelDraftSection } from "./channel-draft-section";
 import { specToForm } from "./brief-form";
 import { ClaimForm, SourceLinkForm } from "./claim-forms";
 import { sourceChoiceGroups } from "./source-choices";
@@ -93,6 +94,7 @@ export async function BriefPanel({
   const mdId = `brief-md-${brief.id}`;
 
   return (
+    <>
     <Shell title={brief.title}>
       <div className={f.refBar}>
         <span className={styles.badge}>{BRIEF_CHANNELS[brief.channel]}</span>
@@ -275,6 +277,9 @@ export async function BriefPanel({
         </>
       )}
     </Shell>
+    {/* P2G-UI-01: 브리프 바로 아래 티스토리 초안. 읽기 전용은 프로젝트 보관·작업 취소만 따른다(브리프·카드 보관은 새로 만들기만 막음, 서버와 같음) */}
+    <ChannelDraftSection board={board} detail={detail} readOnly={readOnly} taskId={taskId} />
+    </>
   );
 }
 

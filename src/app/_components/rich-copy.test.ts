@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { copyHtmlSource, copyMessage, copyRich, downloadExport, exportFileName, type ClipboardEnv, type DownloadEnv } from "./rich-copy";
+import { copyHtmlSource, copyMessage, copyPlainText, copyRich, downloadExport, safeDownloadName, type ClipboardEnv, type DownloadEnv } from "./rich-copy";
 
 /** P2G-CLIPBOARD-01: 가짜 navigator.clipboard·ClipboardItem 으로 복사·내보내기 도구를 시험한다 */
 
@@ -63,7 +63,7 @@ describe("copyRich: 서식째 복사", () => {
     ["clipboard.write 없음", { noWrite: true }],
   ])("%s → text/plain 만으로 떨어진다", async (_n, o) => {
     const { e, texts } = env(o);
-    expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "plain" });
+    expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "fallback" });
     expect(texts).toEqual([INPUT.text]);
   });
 
@@ -71,7 +71,7 @@ describe("copyRich: 서식째 복사", () => {
     FakeItem.supported.delete("text/html");
     try {
       const { e, clipboard, texts } = env();
-      expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "plain" });
+      expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "fallback" });
       expect(clipboard.write).not.toHaveBeenCalled();
       expect(texts).toEqual([INPUT.text]);
     } finally {
@@ -86,7 +86,7 @@ describe("copyRich: 서식째 복사", () => {
 
   it("서식째 쓰기가 다른 이유로 실패하면 글자만 한 번 더 시도한다", async () => {
     const { e, texts } = env({ write: async () => Promise.reject(domError("DataError")) });
-    expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "plain" });
+    expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "fallback" });
     expect(texts).toEqual([INPUT.text]);
   });
 
@@ -110,7 +110,7 @@ describe("copyRich: 서식째 복사", () => {
     };
     const { e, texts } = env();
     e.ClipboardItem = Throwing as unknown as ClipboardEnv["ClipboardItem"];
-    expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "plain" });
+    expect(await copyRich(INPUT, e)).toEqual({ ok: true, mode: "fallback" });
     expect(texts).toEqual([INPUT.text]);
   });
 
@@ -136,25 +136,34 @@ describe("copyHtmlSource: HTML 모드용 소스 복사", () => {
 describe("copyMessage: 안내 문구", () => {
   it("결과마다 한글 안내, 실패는 직접 복사 방법을 알려 준다", () => {
     expect(copyMessage({ ok: true, mode: "rich" })).toBe("서식째 복사했습니다.");
-    expect(copyMessage({ ok: true, mode: "plain" })).toMatch(/^글자만 복사했습니다/);
+    expect(copyMessage({ ok: true, mode: "fallback" })).toMatch(/^글자만 복사했습니다/);
+    expect(copyMessage({ ok: true, mode: "plain" })).toBe("복사했습니다.");
     for (const reason of ["denied", "unsupported", "failed"] as const) expect(copyMessage({ ok: false, reason })).toMatch(/Ctrl\+C/);
   });
 });
 
-describe("exportFileName: 내려받을 파일 이름", () => {
+describe("safeDownloadName: 서버가 준 파일 이름의 마지막 확인", () => {
   it.each([
-    ["출근길 커피 할인 안내", "html", "출근길 커피 할인 안내.html"],
-    ['a/b\\c:d*e?f"g<h>i|j', "md", "a_b_c_d_e_f_g_h_i_j.md"],
-    ["  ..숨김 이름..  ", "md", "숨김 이름.md"],
-    ["줄\n바꿈\t탭", "html", "줄 바꿈 탭.html"],
+    ["합성 초안.html", "html", "합성 초안.html"],
+    ["합성 초안.md", "md", "합성 초안.md"],
+    ["합성 초안.txt", "txt", "합성 초안.txt"],
+    ["../위험.html", "html", "채널-초안.html"],
+    ["a\\b.md", "md", "채널-초안.md"],
+    ["a\u0007b.md", "md", "채널-초안.md"],
+    ["줄\n바꿈.md", "md", "채널-초안.md"],
+    ["확장자다름.md", "html", "채널-초안.html"],
     ["", "md", "채널-초안.md"],
-    ["...", "html", "채널-초안.html"],
-  ] as const)("%j → %s", (title, kind, want) => {
-    expect(exportFileName(title, kind)).toBe(want);
+    [".md", "md", "채널-초안.md"],
+  ] as const)("%j(%s) → %s", (name, kind, want) => {
+    expect(safeDownloadName(name, kind)).toBe(want);
   });
-  it("80자로 자르고 한글 조합 문자를 NFC 로 맞춘다", () => {
-    expect(exportFileName("가".repeat(100), "md")).toBe("가".repeat(80) + ".md");
-    expect(exportFileName("가", "md")).toBe("가.md");
+});
+
+describe("copyPlainText: 글 정보 복사", () => {
+  it("받은 글을 그대로 글자로 넣는다(mode plain)", async () => {
+    const { e, texts } = env();
+    expect(await copyPlainText("태그1, 태그2", e)).toEqual({ ok: true, mode: "plain" });
+    expect(texts).toEqual(["태그1, 태그2"]);
   });
 });
 
@@ -189,7 +198,7 @@ describe("downloadExport: 파일 내보내기", () => {
     vi.useFakeTimers();
     try {
       const { d, anchors, blobs, revoked, appended } = fakeDom();
-      expect(downloadExport({ title: "합성 초안", kind: "html", content: INPUT.html }, d)).toBe(true);
+      expect(downloadExport({ fileName: "합성 초안.html", kind: "html", content: INPUT.html }, d)).toBe(true);
       expect(blobs[0].type).toBe("text/html;charset=utf-8");
       const bytes = new Uint8Array(await blobs[0].arrayBuffer());
       expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // BOM
@@ -204,21 +213,29 @@ describe("downloadExport: 파일 내보내기", () => {
     }
   });
 
+  it(".txt: text/plain, BOM 없음", async () => {
+    const { d, blobs, anchors } = fakeDom();
+    expect(downloadExport({ fileName: "합성 초안.txt", kind: "txt", content: "본문" }, d)).toBe(true);
+    expect(blobs[0].type).toBe("text/plain;charset=utf-8");
+    expect(await blobs[0].text()).toBe("본문");
+    expect(anchors[0].download).toBe("합성 초안.txt");
+  });
+
   it(".md: BOM 없이 받은 글 그대로, text/markdown", async () => {
     const { d, blobs, anchors } = fakeDom();
     const md = "## 소제목\n\n| 가 | 나 |\n| --- | --- |\n| 1 | 2 |\n";
-    expect(downloadExport({ title: "합성 초안", kind: "md", content: md }, d)).toBe(true);
+    expect(downloadExport({ fileName: "합성 초안.md", kind: "md", content: md }, d)).toBe(true);
     expect(blobs[0].type).toBe("text/markdown;charset=utf-8");
     expect(await blobs[0].text()).toBe(md);
     expect(anchors[0].download).toBe("합성 초안.md");
   });
 
   it("브라우저가 아니면 false, 도중 오류도 false", () => {
-    expect(downloadExport({ title: "x", kind: "md", content: "" }, null)).toBe(false);
+    expect(downloadExport({ fileName: "x.md", kind: "md", content: "" }, null)).toBe(false);
     const { d } = fakeDom();
     d.URL.createObjectURL = () => {
       throw new Error("막힘");
     };
-    expect(downloadExport({ title: "x", kind: "md", content: "" }, d)).toBe(false);
+    expect(downloadExport({ fileName: "x.md", kind: "md", content: "" }, d)).toBe(false);
   });
 });
