@@ -17,7 +17,7 @@ import type { FunnelBoard } from "@/features/funnel/server";
 import { ActionForm } from "../../_components/action-form";
 import { CopyButton } from "../../_components/copy-button";
 import styles from "../../ui.module.css";
-import { isBriefCopyAiEnabled } from "@/features/brief/ai-copy";
+import { listBriefCopyChoices } from "@/features/brief/ai-copy";
 import { BriefAiCopy } from "./brief-ai-copy";
 import { BriefEditForm } from "./brief-edit-form";
 import { specToForm } from "./brief-form";
@@ -89,6 +89,7 @@ export async function BriefPanel({
   const locked = readOnly || brief.archived || cardArchived;
   const unverified = warnings.find((w) => w.kind === "unverified");
   const groups = sourceChoiceGroups(options);
+  const aiChoices = listBriefCopyChoices(); // 키 있는 공급자만(키 값은 돌려주지 않음, DEC-08-R1)
   const mdId = `brief-md-${brief.id}`;
 
   return (
@@ -238,8 +239,8 @@ export async function BriefPanel({
         </details>
       </section>
 
-      {/* DEC08-UI-01: 키(ANTHROPIC_API_KEY)가 없으면 이 영역을 그리지 않는다. revision 이 바뀌면(채택·저장) 새로 시작 */}
-      {!locked && isBriefCopyAiEnabled() && <BriefAiCopy key={brief.revision} taskId={taskId} briefId={brief.id} revision={brief.revision} />}
+      {/* DEC08-UI-01: 키가 있는 공급자가 하나도 없으면(선택지 0개) 이 영역을 그리지 않는다. revision 이 바뀌면(채택·저장) 새로 시작 */}
+      {!locked && aiChoices.length > 0 && <BriefAiCopy key={brief.revision} taskId={taskId} briefId={brief.id} revision={brief.revision} choices={aiChoices} />}
 
       {!locked && (
         <>

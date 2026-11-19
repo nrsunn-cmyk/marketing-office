@@ -23,8 +23,21 @@
 }
 
 .note {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   overflow-wrap: anywhere;
+}
+
+.note p {
+  margin: 0;
+}
+
+/* 개인정보 주의(COPY-DEC08-01 2번): 흐린 글자보다 눈에 띄게, 경고 토큰 글자색 */
+.caution {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--warning-text);
 }
 
 .row {
@@ -88,4 +101,30 @@
   .variant form button {
     width: 100%;
   }
+}
+
+/* 공급자·모델 고르기(DEC-08-R1). 넓은 화면은 두 칸 나란히, 좁으면 한 줄씩 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.choices select {
+  max-width: 100%;
+}
+
+.single {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
 }
