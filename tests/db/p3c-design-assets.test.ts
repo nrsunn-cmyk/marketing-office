@@ -263,6 +263,13 @@ describe("확정(만들기)", () => {
     const u2 = await asA((tx) => reserve(tx, br.id));
     await asA((tx) => putObject(tx, u2.storage_key, 1234, "text/html", a.userId));
     await expectDbError(asA((tx) => create(tx, u2.upload_id)), /TYPE_MISMATCH/);
+    // 형식 매개변수(charset)는 떼고 비교: CSS 에 charset 이 붙어도 확정, 매개변수 앞이 다르면 거절
+    const css = await asA((tx) => reserve(tx, br.id, { kind: "color", mime: "text/css", fileName: "토큰.css", size: 50 }));
+    await asA((tx) => putObject(tx, css.storage_key, 50, "text/css; charset=UTF-8", a.userId));
+    await asA((tx) => create(tx, css.upload_id, { title: "토큰" }));
+    const js = await asA((tx) => reserve(tx, br.id, { kind: "color", mime: "application/json", fileName: "t.json", size: 50 }));
+    await asA((tx) => putObject(tx, js.storage_key, 50, "text/html;charset=UTF-8", a.userId));
+    await expectDbError(asA((tx) => create(tx, js.upload_id)), /TYPE_MISMATCH/);
 
     const u3 = await asA((tx) => reserve(tx, br.id));
     await asA((tx) => putObject(tx, u3.storage_key, 1234, "image/svg+xml", a.userId));

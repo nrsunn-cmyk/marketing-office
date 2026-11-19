@@ -350,9 +350,10 @@ begin
   if not found then
     raise exception 'UPLOAD_MISSING: 저장소에 올린 파일이 없습니다' using errcode = 'P0001';
   end if;
-  -- 칸이 없으면(NULL) is distinct from 이 참이 되어 거절된다
+  -- 칸이 없으면(NULL) is distinct from 이 참이 되어 거절된다. 형식은 "text/css;charset=UTF-8" 같은 매개변수를 떼고 본다
+  -- (저장소가 올린 쪽 content-type 을 그대로 기록함 — SOURCE-UPLOAD-FIX-01 실측)
   if (md ->> 'size') is distinct from p_upload.file_size_bytes::text
-     or (md ->> 'mimetype') is distinct from p_upload.mime_type then
+     or btrim(split_part(md ->> 'mimetype', ';', 1)) is distinct from p_upload.mime_type then
     raise exception 'TYPE_MISMATCH: 올린 파일의 크기·형식이 예약과 다릅니다' using errcode = 'P0001';
   end if;
 end $$;
