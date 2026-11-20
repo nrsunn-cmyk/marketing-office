@@ -670,29 +670,26 @@ describe.skipIf(!present)("P3-e 내보내기 공격 시험", () => {
 
   // D3(Tester, 낮음): DB(app.ppt_text_ok)는 CR 을 허용하고 .md 는 CR 을 그대로 내보낸다. 앱 스키마(clean)는 \r\n→\n 으로 바꾸지만
   //   로그인 사용자가 RPC 를 직접 부르면 CR 이 든 글이 저장되고 .md 의 'LF 만' 약속이 깨진다. 고쳐지면 it 으로 바꾼다.
-  it.fails(
-    "D3 .md 에 CR 이 나가지 않음(DB 에 CR 이 든 글이 저장된 경우)",
-    async () => {
-      const { buildDeckMarkdown } = await load<{
-        buildDeckMarkdown: (i: Input) => string;
-      }>("md");
-      const md = buildDeckMarkdown(
-        base({
-          title: "제목\r# 가짜",
-          slides: [
-            {
-              id: uuid(1),
-              title: "슬라이드",
-              bullets: "요점\r\n둘째",
-              notes: "메모\r끝",
-              assets: [],
-            },
-          ],
-        }),
-      );
-      expect(md.includes("\r")).toBe(false);
-    },
-  );
+  it("D3 .md 에 CR 이 나가지 않음(DB 에 CR 이 든 글이 저장된 경우)", async () => {
+    const { buildDeckMarkdown } = await load<{
+      buildDeckMarkdown: (i: Input) => string;
+    }>("md");
+    const md = buildDeckMarkdown(
+      base({
+        title: "제목\r# 가짜",
+        slides: [
+          {
+            id: uuid(1),
+            title: "슬라이드",
+            bullets: "요점\r\n둘째",
+            notes: "메모\r끝",
+            assets: [],
+          },
+        ],
+      }),
+    );
+    expect(md.includes("\r")).toBe(false);
+  });
 
   it("ES2 .md 줄바꿈 주입: 제목에 줄바꿈이 들어와도 새 머리글·목록이 생기지 않음", async () => {
     const { buildDeckMarkdown } = await load<{
@@ -807,17 +804,14 @@ describe.skipIf(!present)("P3-e 내보내기 공격 시험", () => {
   });
 
   // D2(Tester, 낮음): RFC 5987 attr-char 는 ' ( ) * 를 허용하지 않는데 encodeURIComponent 는 이 글자를 그대로 둔다. 제목에 ' ( ) 가 있으면 filename* 값이 규격 밖이 된다(대부분 브라우저는 받아 줌). 고쳐지면 it 으로 바꾼다.
-  it.fails(
-    "D2 filename* 값이 RFC 5987 attr-char·%XX 만으로 이뤄짐(제목에 ' ( ) 가 있을 때)",
-    async () => {
-      const t = await load<Text>("text");
-      const name = t.safeDownloadName("고객's 발표 (최종)", P3E.fallbackName);
-      const v = t
-        .attachmentHeader(`${name}-v1.pptx`, "ppt-deck-v1.pptx")
-        .split("filename*=UTF-8''")[1];
-      expect(v).toMatch(/^(?:%[0-9A-F]{2}|[A-Za-z0-9!#$&+.^_`|~-])+$/);
-    },
-  );
+  it("D2 filename* 값이 RFC 5987 attr-char·%XX 만으로 이뤄짐(제목에 ' ( ) 가 있을 때)", async () => {
+    const t = await load<Text>("text");
+    const name = t.safeDownloadName("고객's 발표 (최종)", P3E.fallbackName);
+    const v = t
+      .attachmentHeader(`${name}-v1.pptx`, "ppt-deck-v1.pptx")
+      .split("filename*=UTF-8''")[1];
+    expect(v).toMatch(/^(?:%[0-9A-F]{2}|[A-Za-z0-9!#$&+.^_`|~-])+$/);
+  });
 
   it("X11 내보내기 모듈: 외부 주소·fetch·파일 읽기·프로세스 실행 0(OOXML 이름공간 주소만)", () => {
     const bad: string[] = [];
