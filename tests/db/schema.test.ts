@@ -16,6 +16,7 @@ import {
   newKey,
   one,
   seedOwner,
+  DENIED,
 } from "./harness";
 
 let db: Db;
@@ -94,26 +95,28 @@ describe("T01 접근 차단 (RLS, DB 수준)", () => {
   it("다른 사람 명의로 업무실을 만들 수 없다", async () => {
     await expectDbError(
       asUser(db, other, (tx) => tx.query("insert into workspaces (owner_user_id, name) values ($1, 'x')", [f.userId])),
-      /row-level security/,
+      DENIED,
     );
   });
 
   it("업무실은 1인당 1개 (P1)", async () => {
     await expectDbError(
       asOwner((tx) => tx.query("insert into workspaces (owner_user_id, name) values ($1, '두 번째')", [f.userId])),
-      /duplicate key/,
+      DENIED,
     );
+    await expectDbError(db.query("insert into workspaces (owner_user_id, name) values ($1, '두 번째')", [f.userId]), /duplicate key/);
   });
 
   it("삭제 정책이 없어 본인도 고객을 지울 수 없다 (보관으로 대신)", async () => {
-    const r = await asOwner((tx) => tx.query("delete from clients where id = $1", [f.clientA]));
-    expect(r.affectedRows).toBe(0);
+    // PERM-CLEANUP-01: 정책 없음(0행)에서 DELETE 권한 회수(권한 거절)로 바뀌었다
+    await expectDbError(asOwner((tx) => tx.query("delete from clients where id = $1", [f.clientA])), DENIED);
+    expect((await one<{ n: number }>(db, "select count(*)::int as n from clients where id = $1", [f.clientA])).n).toBe(1);
   });
 
   it("본인은 템플릿을 고치거나 추가할 수 없다", async () => {
     await expectDbError(
       asOwner((tx) => tx.query("insert into templates (type, version, key) values ('quote', 99, 'x@99')")),
-      /row-level security/,
+      DENIED,
     );
   });
 });
@@ -222,7 +225,7 @@ describe("T02·T03 고객 자료 혼합 방지 (C03)", () => {
 
   it("결과물은 다른 프로젝트의 작업에 붙을 수 없다", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const taskB = await createTask(tx, f, f.projectB);
         await tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')", [
           f.workspaceId,
@@ -242,7 +245,11 @@ describe("T02·T03 고객 자료 혼합 방지 (C03)", () => {
  */
 async function expectImmutable(table: string, sql: string, params: unknown[]): Promise<void> {
   const before = (await db.query(`select * from ${table} order by 1`)).rows;
-  const r = await asOwner((tx) => tx.query(sql, params));
+  // 본인 계정: 쓰기 권한이 없어 거절(PERM-CLEANUP-01) 또는 RLS 로 0행
+  const r = await asOwner((tx) => tx.query(sql, params)).catch((e: Error) => {
+    expect(e.message).toMatch(DENIED);
+    return { affectedRows: 0 };
+  });
   expect(r.affectedRows, `${table}: 본인 계정으로 바뀐 행`).toBe(0);
   await expectDbError(db.query(sql, params), /IMMUTABLE_ROW/);
   expect((await db.query(`select * from ${table} order by 1`)).rows).toEqual(before);
@@ -367,7 +374,7 @@ describe("T14·C02 승인본과 새 초안", () => {
 
   it("포인터는 다른 결과물의 버전을 가리킬 수 없다", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const t1 = await createTask(tx, f, f.projectA);
         const t2 = await createTask(tx, f, f.projectA);
         const a1 = await createArtifactWithVersion(tx, f, f.projectA, t1);
@@ -380,7 +387,7 @@ describe("T14·C02 승인본과 새 초안", () => {
 
   it("같은 결과물에 같은 버전 번호를 두 번 만들 수 없다", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const t = await createTask(tx, f, f.projectA);
         const a = await createArtifactWithVersion(tx, f, f.projectA, t);
         await addVersion(tx, f, a.artifactId, 1);
@@ -429,7 +436,7 @@ describe("T15 중복 실행 방지 (C01)", () => {
 
   it("같은 작업·동작·키의 실행 기록은 하나뿐", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const task = await createTask(tx, f, f.projectA);
         const key = newKey();
         const run = () =>
@@ -448,7 +455,7 @@ describe("T15 중복 실행 방지 (C01)", () => {
 describe("상태 전이 (DB 트리거)", () => {
   it("작업: draft → completed 직행 거부", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const task = await createTask(tx, f, f.projectA);
         await tx.query("update tasks set status = 'completed' where id = $1", [task]);
       }),
@@ -457,7 +464,7 @@ describe("상태 전이 (DB 트리거)", () => {
   });
 
   it("작업: 정상 흐름 허용", async () => {
-    const status = await asOwner(async (tx) => {
+    const status = await asAdmin(async (tx) => {
       const task = await createTask(tx, f, f.projectA);
       for (const s of ["ready", "running", "review", "completed"]) {
         await tx.query("update tasks set status = $1 where id = $2", [s, task]);
@@ -495,7 +502,7 @@ describe("상태 전이 (DB 트리거)", () => {
 
   it("PDF: 파일 키·체크섬 없이 ready 불가", async () => {
     await expectDbError(
-      asOwner(async (tx) => {
+      asAdmin(async (tx) => {
         const t = await createTask(tx, f, f.projectA);
         const { versionId } = await createArtifactWithVersion(tx, f, f.projectA, t);
         const e = await one<{ id: string }>(
@@ -659,7 +666,7 @@ describe("견적 저장 (R04·R06·C08)", () => {
           [f.workspaceId, qv.id],
         ),
       ),
-      /row-level security/,
+      DENIED,
     );
     await expectImmutable("quote_items", "update quote_items set unit_price_won = 1 where quote_version_id = $1", [qv.id]);
     await expectImmutable("quote_versions", "update quote_versions set total_won = 1 where id = $1", [qv.id]);
@@ -698,9 +705,8 @@ describe("견적 저장 (R04·R06·C08)", () => {
     const q = await createQuote();
     await db.query("select assign_quote_number($1, '2026-11-13')", [q.quoteId]);
     await expectDbError(db.query("update quotes set quote_number = 'Q-2026-9999' where id = $1", [q.quoteId]), /FROZEN_COLUMN/);
-    // 로그인 사용자는 견적 행을 고칠 권한 자체가 없다(0행)
-    const r = await asOwner((tx) => tx.query("update quotes set quote_number = 'Q-2026-9999' where id = $1", [q.quoteId]));
-    expect(r.affectedRows).toBe(0);
+    // 로그인 사용자는 견적 행을 고칠 권한 자체가 없다(PERM-CLEANUP-01 부터 권한 거절)
+    await expectDbError(asOwner((tx) => tx.query("update quotes set quote_number = 'Q-2026-9999' where id = $1", [q.quoteId])), DENIED);
   });
 
   it("로그인 사용자는 본인 것이라도 번호 발번 함수를 직접 부를 수 없다 (CR03)", async () => {
