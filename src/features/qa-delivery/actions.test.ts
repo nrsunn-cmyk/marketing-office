@@ -77,7 +77,7 @@ describe("검수 동작", () => {
     m.set.mockResolvedValueOnce(rev(6)).mockResolvedValueOnce({ ok: false, code: "CONFLICT", message: "다른 곳에서 먼저 고쳤습니다." });
     const payload = JSON.stringify({ set: [{ itemId: I1, verdict: "passed", memo: null }, { itemId: I2, verdict: "passed", memo: null }, { itemId: I1, verdict: "pending", memo: null }], add: [] });
     // 앞서 저장된 개수 한 줄(Backend 참고 1)
-    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload }))).toEqual({ message: "다른 곳에서 먼저 고쳤습니다. (앞의 1개 변경은 저장되었습니다.)" });
+    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload }))).toEqual({ message: "다른 곳에서 먼저 고쳤습니다. 앞의 1건은 이미 저장되었습니다. 화면을 새로 고친 뒤 남은 변경 내용만 다시 저장해 주세요." });
     expect(m.set).toHaveBeenCalledTimes(2);
     expect(m.refresh).toHaveBeenCalledTimes(1);
     expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload: JSON.stringify({ set: [], add: [] }) }))).toEqual({ message: "바뀐 판정·메모가 없습니다." });
@@ -140,5 +140,14 @@ describe("R1: 저장의 삭제(remove → set → add 차례)", () => {
     const before = m.remove.mock.calls.length;
     expect((await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload: JSON.stringify({ remove: ["x"], set: [], add: [] }) }))).message).toBe("입력을 읽을 수 없습니다. 화면을 새로 고쳐 주세요.");
     expect(m.remove.mock.calls.length).toBe(before);
+  });
+});
+
+describe("중간 실패 문구는 AGY 확정 QA_COPY.partialSavedNotice 와 같다", () => {
+  it("같은 문장·54자({n} 세 글자 기준)", async () => {
+    const { QA_COPY } = await import("@/app/tasks/[taskId]/qa-checklist-model");
+    const { partialSavedNotice } = await import("./copy");
+    expect(partialSavedNotice(3)).toBe(QA_COPY.partialSavedNotice(3));
+    expect(Array.from(QA_COPY.partialSavedNotice(3)).length).toBe(52); // 표의 {n}(3자) → 숫자 1자
   });
 });

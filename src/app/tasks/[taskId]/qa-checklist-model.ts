@@ -84,6 +84,8 @@ export const QA_COPY = {
   removeItemConfirm: "추가한 검수 항목을 삭제합니다. 기본 필수 항목은 삭제할 수 없습니다.",
   removeItemSubmit: "삭제 확인",
   itemRemovedOk: "추가 검수 항목을 삭제했습니다.",
+  // 저장이 중간에 실패했는데 앞 항목이 저장됐을 때(AGY 확정, P3-COPY-FINAL 갱신 — 54자)
+  partialSavedNotice: (n: number) => `앞의 ${n}건은 이미 저장되었습니다. 화면을 새로 고친 뒤 남은 변경 내용만 다시 저장해 주세요.`,
 } as const;
 
 /** 시안 qa-checklist.html 의 라벨(AGY 문구 — 그대로) */

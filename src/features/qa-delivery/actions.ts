@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import type { FormState } from "@/app/_components/form-state";
 import { QA_TARGET_KIND_KEYS } from "@/domain/qa-delivery";
+import { partialSavedNotice } from "./copy";
 import {
   addDeliveryLog,
   addQaItem,
@@ -60,8 +61,7 @@ export async function openQaReviewAction(_prev: FormState, fd: FormData): Promis
   return { ok: true, message: "검수 체크리스트를 시작했습니다." };
 }
 
-/** 중간 실패 때 앞서 저장된 개수 한 줄(Backend 참고 1 — 문구는 AGY 확인 요청) */
-const partialNote = (done: number) => (done > 0 ? ` (앞의 ${done}개 변경은 저장되었습니다.)` : "");
+const partialNote = (done: number) => (done > 0 ? ` ${partialSavedNotice(done)}` : "");
 
 /**
  * 검수 내용 저장: payload { remove: [itemId], set: [{ itemId, verdict, memo }], add: [{ title, isRequired }] }.

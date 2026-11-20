@@ -190,8 +190,8 @@
   background: var(--info-bg);
 }
 .ppCheck input {
-  width: 20px;
-  height: 20px;
+  width: 24px; /* 조작 요소 24px 이상(Tester QA-P3D-E2E-01 O2), 라벨 전체는 44px */
+  height: 24px;
   flex: none;
   margin: 0;
 }
@@ -278,8 +278,8 @@
   background: var(--info-bg);
 }
 .ppTemplate input {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex: none;
   margin: 2px 0 0;
 }
