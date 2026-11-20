@@ -735,6 +735,58 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"ppt_deck_versions": {
+                  Row: {
+                    "created_at": string,"created_by": string,"deck_id": string,"id": string,"kind": string,"restored_from_version_no": number | null,"slide_count": number,"slides": NonNullable<Json>,"source_brief_revision": number,"status": string,"template_key": string,"title": string,"version_no": number,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by": string,"deck_id": string,"id"?: string,"kind": string,"restored_from_version_no"?: number | null,"slide_count": number,"slides": NonNullable<Json>,"source_brief_revision": number,"status": string,"template_key": string,"title": string,"version_no": number,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"deck_id"?: string,"id"?: string,"kind"?: string,"restored_from_version_no"?: number | null,"slide_count"?: number,"slides"?: NonNullable<Json>,"source_brief_revision"?: number,"status"?: string,"template_key"?: string,"title"?: string,"version_no"?: number,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ppt_deck_versions_workspace_id_deck_id_fkey"
+      columns: ["workspace_id","deck_id"]
+isOneToOne: false
+      referencedRelation: "ppt_decks"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"ppt_decks": {
+                  Row: {
+                    "archived_at": string | null,"created_at": string,"created_by": string,"current_version_no": number,"id": string,"production_brief_id": string,"project_id": string,"revision": number,"source_brief_revision": number,"status": string,"template_key": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"created_at"?: string,"created_by": string,"current_version_no": number,"id"?: string,"production_brief_id": string,"project_id": string,"revision"?: number,"source_brief_revision": number,"status"?: string,"template_key": string,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"created_at"?: string,"created_by"?: string,"current_version_no"?: number,"id"?: string,"production_brief_id"?: string,"project_id"?: string,"revision"?: number,"source_brief_revision"?: number,"status"?: string,"template_key"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ppt_decks_current_version_fkey"
+      columns: ["id","current_version_no"]
+isOneToOne: false
+      referencedRelation: "ppt_deck_versions"
+      referencedColumns: ["deck_id","version_no"]
+    },{
+      foreignKeyName: "ppt_decks_project_id_production_brief_id_fkey"
+      columns: ["project_id","production_brief_id"]
+isOneToOne: false
+      referencedRelation: "production_briefs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "ppt_decks_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"production_briefs": {
                   Row: {
                     "archived_at": string | null,"brand_tone_constraints": string | null,"core_message": string,"created_at": string,"created_by": string,"deliverable_types": (string)[],"id": string,"project_id": string,"reference_notes": string | null,"revision": number,"scope_summary": string,"source_snapshot": NonNullable<Json>,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"target_audience": string,"title": string,"updated_at": string,"workspace_id": string
@@ -1245,16 +1297,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "__plpgsql_show_dependency_tb":
-{ Args: { "anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"funcoid": unknown,"relid"?: unknown }; Returns: {
-              "name": string,"oid": unknown,"params": string,"schema": string,"type": string
-            }[]
-                           } |
-{ Args: { "anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"name": string,"relid"?: unknown }; Returns: {
-              "name": string,"oid": unknown,"params": string,"schema": string,"type": string
-            }[]
-                           },
-"accept_brief_copy":
+            "accept_brief_copy":
 { Args: { "p_expected_revision": number,"p_run_id": string,"p_variant": number }; Returns: number
                            },
 "add_brief_claim":
@@ -1310,6 +1353,9 @@ isOneToOne: false
 "archive_lead_magnet":
 { Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
                            },
+"archive_ppt_deck":
+{ Args: { "p_deck_id": string,"p_expected_revision": number }; Returns: number
+                           },
 "archive_production_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -1347,6 +1393,9 @@ isOneToOne: false
 "create_lead_magnet":
 { Args: { "p_audience"?: string,"p_delivery"?: string,"p_format": string,"p_lead_fields"?: Json,"p_outline"?: Json,"p_promise"?: string,"p_stage_id": string,"p_status"?: string,"p_title": string }; Returns: string
                            },
+"create_ppt_deck":
+{ Args: { "p_production_brief_id": string,"p_slides": Json,"p_template_key": string,"p_title": string }; Returns: string
+                           },
 "create_production_brief":
 { Args: { "p_brand_tone_constraints"?: string,"p_core_message": string,"p_deliverable_types": (string)[],"p_project_id": string,"p_reference_notes"?: string,"p_scope_summary": string,"p_strategy_artifact_id": string,"p_target_audience": string,"p_title": string }; Returns: string
                            },
@@ -1375,83 +1424,6 @@ isOneToOne: false
 "link_claim_source":
 { Args: { "p_claim_id": string,"p_kind": string,"p_note"?: string,"p_profile_field"?: string,"p_target_id": string }; Returns: string
                            },
-"plpgsql_check_function":
-{ Args: { "all_warnings"?: boolean,"anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"compatibility_warnings"?: boolean,"constant_tracing"?: boolean,"extra_warnings"?: boolean,"fatal_errors"?: boolean,"format"?: string,"funcoid": unknown,"incomment_options_usage_warning"?: boolean,"newtable"?: unknown,"oldtable"?: unknown,"other_warnings"?: boolean,"performance_warnings"?: boolean,"relid"?: unknown,"security_warnings"?: boolean,"use_incomment_options"?: boolean,"without_warnings"?: boolean }; Returns: string[]
-                           } |
-{ Args: { "all_warnings"?: boolean,"anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"compatibility_warnings"?: boolean,"constant_tracing"?: boolean,"extra_warnings"?: boolean,"fatal_errors"?: boolean,"format"?: string,"incomment_options_usage_warning"?: boolean,"name": string,"newtable"?: unknown,"oldtable"?: unknown,"other_warnings"?: boolean,"performance_warnings"?: boolean,"relid"?: unknown,"security_warnings"?: boolean,"use_incomment_options"?: boolean,"without_warnings"?: boolean }; Returns: string[]
-                           },
-"plpgsql_check_function_tb":
-{ Args: { "all_warnings"?: boolean,"anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"compatibility_warnings"?: boolean,"constant_tracing"?: boolean,"extra_warnings"?: boolean,"fatal_errors"?: boolean,"funcoid": unknown,"incomment_options_usage_warning"?: boolean,"newtable"?: unknown,"oldtable"?: unknown,"other_warnings"?: boolean,"performance_warnings"?: boolean,"relid"?: unknown,"security_warnings"?: boolean,"use_incomment_options"?: boolean,"without_warnings"?: boolean }; Returns: {
-              "context": string,"detail": string,"functionid": unknown,"hint": string,"level": string,"lineno": number,"message": string,"position": number,"query": string,"sqlstate": string,"statement": string
-            }[]
-                           } |
-{ Args: { "all_warnings"?: boolean,"anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"compatibility_warnings"?: boolean,"constant_tracing"?: boolean,"extra_warnings"?: boolean,"fatal_errors"?: boolean,"incomment_options_usage_warning"?: boolean,"name": string,"newtable"?: unknown,"oldtable"?: unknown,"other_warnings"?: boolean,"performance_warnings"?: boolean,"relid"?: unknown,"security_warnings"?: boolean,"use_incomment_options"?: boolean,"without_warnings"?: boolean }; Returns: {
-              "context": string,"detail": string,"functionid": unknown,"hint": string,"level": string,"lineno": number,"message": string,"position": number,"query": string,"sqlstate": string,"statement": string
-            }[]
-                           },
-"plpgsql_check_pragma":
-{ Args: { "name": (string)[] }; Returns: number
-                           },
-"plpgsql_check_profiler":
-{ Args: { "enable"?: boolean }; Returns: boolean
-                           },
-"plpgsql_check_tracer":
-{ Args: { "enable"?: boolean,"verbosity"?: string }; Returns: boolean
-                           },
-"plpgsql_coverage_branches":
-{ Args: { "funcoid": unknown }; Returns: number
-                           } |
-{ Args: { "name": string }; Returns: number
-                           },
-"plpgsql_coverage_statements":
-{ Args: { "funcoid": unknown }; Returns: number
-                           } |
-{ Args: { "name": string }; Returns: number
-                           },
-"plpgsql_profiler_function_statements_tb":
-{ Args: { "funcoid": unknown }; Returns: {
-              "avg_time": number,"block_num": number,"exec_stmts": number,"exec_stmts_err": number,"lineno": number,"max_time": number,"parent_note": string,"parent_stmtid": number,"processed_rows": number,"queryid": number,"stmtid": number,"stmtname": string,"total_time": number
-            }[]
-                           } |
-{ Args: { "name": string }; Returns: {
-              "avg_time": number,"block_num": number,"exec_stmts": number,"exec_stmts_err": number,"lineno": number,"max_time": number,"parent_note": string,"parent_stmtid": number,"processed_rows": number,"queryid": number,"stmtid": number,"stmtname": string,"total_time": number
-            }[]
-                           },
-"plpgsql_profiler_function_tb":
-{ Args: { "funcoid": unknown }; Returns: {
-              "avg_time": number,"cmds_on_row": number,"exec_stmts": number,"exec_stmts_err": number,"lineno": number,"max_time": (number)[],"processed_rows": (number)[],"queryids": (number)[],"source": string,"stmt_lineno": number,"total_time": number
-            }[]
-                           } |
-{ Args: { "name": string }; Returns: {
-              "avg_time": number,"cmds_on_row": number,"exec_stmts": number,"exec_stmts_err": number,"lineno": number,"max_time": (number)[],"processed_rows": (number)[],"queryids": (number)[],"source": string,"stmt_lineno": number,"total_time": number
-            }[]
-                           },
-"plpgsql_profiler_functions_all":
-{ Args: Record<PropertyKey, never>; Returns: {
-              "avg_time": number,"exec_count": number,"exec_stmts_err": number,"funcoid": unknown,"max_time": number,"min_time": number,"stddev_time": number,"total_time": number
-            }[]
-                           },
-"plpgsql_profiler_install_fake_queryid_hook":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           },
-"plpgsql_profiler_remove_fake_queryid_hook":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           },
-"plpgsql_profiler_reset":
-{ Args: { "funcoid": unknown }; Returns: undefined
-                           },
-"plpgsql_profiler_reset_all":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           },
-"plpgsql_show_dependency_tb":
-{ Args: { "anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"fnname": string,"relid"?: unknown }; Returns: {
-              "name": string,"oid": unknown,"params": string,"schema": string,"type": string
-            }[]
-                           } |
-{ Args: { "anycompatiblerangetype"?: unknown,"anycompatibletype"?: unknown,"anyelememttype"?: unknown,"anyenumtype"?: unknown,"anyrangetype"?: unknown,"funcoid": unknown,"relid"?: unknown }; Returns: {
-              "name": string,"oid": unknown,"params": string,"schema": string,"type": string
-            }[]
-                           },
 "rebase_channel_draft":
 { Args: { "p_draft_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -1466,6 +1438,9 @@ isOneToOne: false
                            },
 "rebase_lead_magnet":
 { Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
+                           },
+"rebase_ppt_deck":
+{ Args: { "p_deck_id": string,"p_expected_revision": number }; Returns: number
                            },
 "rebase_production_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
@@ -1511,6 +1486,9 @@ isOneToOne: false
 "restore_design_asset_version":
 { Args: { "p_asset_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
                            },
+"restore_ppt_deck_version":
+{ Args: { "p_deck_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
+                           },
 "restore_video_file_version":
 { Args: { "p_expected_revision": number,"p_file_version_no": number,"p_plan_id": string }; Returns: number
                            },
@@ -1529,6 +1507,9 @@ isOneToOne: false
 { Args: { "p_artifact_id": string,"p_content": Json,"p_expected_revision": number }; Returns: {
               "version": number,"version_id": string
             }[]
+                           },
+"save_ppt_deck":
+{ Args: { "p_deck_id": string,"p_expected_revision": number,"p_slides": Json,"p_status": string,"p_template_key": string,"p_title": string }; Returns: number
                            },
 "save_strategy_manual_version":
 { Args: { "p_artifact_id": string,"p_content": Json,"p_expected_revision": number }; Returns: {
