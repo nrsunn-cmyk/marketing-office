@@ -27,6 +27,7 @@ import {
   newQaItem,
   titleKey,
   qaGate,
+  qaGateText,
   qaTabText,
   qaTargetState,
   sortedItems,
@@ -40,7 +41,7 @@ import {
   type QaVerdict,
 } from "./qa-checklist-model";
 
-/** 서버 동작 자리(P3-f 서버가 오면 actions.ts 의 동작을 넘긴다. 없으면 단추마다 '아직 서버와 연결되지 않아…' 안내) */
+/** 서버 동작(src/features/qa-delivery/actions.ts). 시험에서 넘기지 않으면 단추마다 '아직 서버와 연결되지 않아…' 안내 */
 export interface QaChecklistActions {
   create?: BriefAction;
   save?: BriefAction;
@@ -51,7 +52,8 @@ export interface QaChecklistActions {
 }
 
 /**
- * 결과물 종류 탭(홈페이지·디자인 자산·영상·PPT, 시안 qa-checklist.html) + 고른 결과물의 검수 판.
+ * 결과물 탭(홈페이지·디자인 자산·영상·PPT, 시안 qa-checklist.html) + 고른 결과물의 검수 판.
+ * 대상은 산출물 하나(디자인 자산은 자산마다 탭 하나, Master ①) — 같은 종류가 여럿이면 탭에 제목을 붙인다.
  * 탭은 단추(aria-pressed) — 고른 탭의 판만 그린다. 탭 글에는 필수 항목 통과 수만(진행률 막대 없음, P3I-HANDOFF 2절).
  */
 export function QaChecklistBoard({ data, readOnly, actions }: { data: QaChecklistData; readOnly: boolean; actions: QaChecklistActions }) {
@@ -63,13 +65,13 @@ export function QaChecklistBoard({ data, readOnly, actions }: { data: QaChecklis
     <>
       <nav className={qa.qaTabs} aria-label="검수할 결과물">
         {data.targets.map((t, i) => (
-          <button key={t.kind} type="button" className={qa.qaTab} aria-pressed={t === target} aria-controls={`${id}-panel`} onClick={() => setCur(i)}>
-            {qaTabText(t)}
+          <button key={t.targetId ?? t.kind} type="button" className={qa.qaTab} aria-pressed={t === target} aria-controls={`${id}-panel`} onClick={() => setCur(i)}>
+            {qaTabText(t, data.targets.filter((x) => x.kind === t.kind).length)}
           </button>
         ))}
       </nav>
       <div id={`${id}-panel`}>
-        <TargetPanel key={target.kind} target={target} canWrite={data.canWrite} readOnly={readOnly} actions={actions} />
+        <TargetPanel key={target.targetId ?? target.kind} target={target} canWrite={data.canWrite} readOnly={readOnly} actions={actions} />
       </div>
     </>
   );
@@ -78,21 +80,13 @@ export function QaChecklistBoard({ data, readOnly, actions }: { data: QaChecklis
 function TargetPanel({ target, canWrite, readOnly, actions }: { target: QaTargetView; canWrite: boolean; readOnly: boolean; actions: QaChecklistActions }) {
   const st = qaTargetState(target, { canWrite, readOnly });
   const round = st.round;
-  const kindName = QA_TARGET_KINDS[target.kind].product;
-  const reviewed = target.versions.filter((v) => v.status === "reviewed").sort((a, b) => b.versionNo - a.versionNo);
-  /** 산출물별 판 고르기(검토 완료 판만, 최신이 기본) */
-  const versionPicker = (
-    <div className={styles.field}>
-      <label htmlFor={`qa-ver-${target.kind}`}>{QA_LABELS.targetVersion}</label>
-      <select id={`qa-ver-${target.kind}`} name="targetVersionId" defaultValue={st.latest?.id}>
-        {reviewed.map((v) => (
-          <option key={v.id} value={v.id}>
-            {versionText(target.kind, v.versionNo)}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
+  const kindName = target.title || QA_TARGET_KINDS[target.kind].product;
+  // 검수 대상 판은 서버가 정한다(지금 판 = 검토 완료 판, Backend openQaReview·rebaseQaReview)
+  const targetNow = target.currentVersionNo ? (
+    <p className={`${f.keep} ${qa.qaTarget}`}>
+      <strong>{QA_LABELS.targetVersion}</strong> {versionText(target.kind, target.currentVersionNo)}
+    </p>
+  ) : null;
   return (
     <section className={qa.qaPanel} aria-label={`${kindName} 검수`}>
       {st.notice && (
@@ -107,8 +101,8 @@ function TargetPanel({ target, canWrite, readOnly, actions }: { target: QaTarget
           {st.canOpen && (
             <>
               <p className={`${styles.muted} ${f.keep}`}>{QA_COPY.emptyDesc}</p>
-              <BriefActionButton action={actions.create} hidden={{ targetKind: target.kind }} submitLabel={QA_COPY.create} pendingLabel={P3_COMMON_COPY.savePending} variant="primary">
-                {versionPicker}
+              <BriefActionButton action={actions.create} hidden={{ targetKind: target.kind, targetId: target.targetId ?? "" }} submitLabel={QA_COPY.create} pendingLabel={P3_COMMON_COPY.savePending} variant="primary">
+                {targetNow}
               </BriefActionButton>
             </>
           )}
@@ -121,9 +115,9 @@ function TargetPanel({ target, canWrite, readOnly, actions }: { target: QaTarget
               <p className={f.keep}>
                 <strong>{QA_LABELS.stalePrefix}</strong> {QA_COPY.staleBanner}
               </p>
-              {st.canOpen && (
-                <BriefActionButton action={actions.rebase} hidden={{ targetKind: target.kind, roundId: round.id, revision: round.revision }} submitLabel={QA_COPY.rebase} pendingLabel={P3_COMMON_COPY.savePending}>
-                  {versionPicker}
+              {st.canRebase && (
+                <BriefActionButton action={actions.rebase} hidden={{ roundId: round.id, revision: round.revision }} submitLabel={QA_COPY.rebase} pendingLabel={P3_COMMON_COPY.savePending}>
+                  {targetNow}
                 </BriefActionButton>
               )}
             </div>
@@ -134,7 +128,7 @@ function TargetPanel({ target, canWrite, readOnly, actions }: { target: QaTarget
             </p>
           )}
           {st.locked || round.status === "reviewed" ? <ReadOnlyItems items={round.items} /> : <ItemsEditor round={round} action={actions.save} />}
-          {!st.locked && round.status !== "reviewed" && <Gate round={round} actions={actions} />}
+          {!st.locked && round.status !== "reviewed" && !st.stale && <Gate round={round} actions={actions} />}
           {!st.locked && (
             <details className={`${f.inlineDetails} ${qa.qaDanger}`}>
               <summary>{QA_COPY.archive}</summary>
@@ -203,7 +197,7 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
     <ActionForm action={action ?? notConnectedAction} submitLabel={QA_COPY.save} pendingLabel={P3_COMMON_COPY.savePending} className={`${f.form} ${qa.qaForm}`}>
       <input type="hidden" name="roundId" value={round.id} />
       <input type="hidden" name="revision" value={round.revision} />
-      <input type="hidden" name="payload" value={JSON.stringify(toQaPayload(drafts))} />
+      <input type="hidden" name="payload" value={JSON.stringify(toQaPayload(drafts, items))} />
       <ol className={qa.qaItems}>
         {drafts.map((d, i) => {
           const it = d.id === null ? null : (items.find((x) => x.id === d.id) ?? null);
@@ -247,6 +241,10 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
                   )}
                 </div>
               )}
+              {d.id === null ? (
+                <p className={`${styles.muted} ${f.keep}`}>{QA_LABELS.newItemPending}</p>
+              ) : (
+                <>
               <fieldset className={qa.qaVerdicts} aria-describedby={`${base}-h`}>
                 <legend>{QA_LABELS.verdict}</legend>
                 <div className={qa.qaVerdictGrid}>
@@ -280,6 +278,8 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
                   </span>
                 )}
               </div>
+                </>
+              )}
             </li>
           );
         })}
@@ -307,24 +307,29 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
   );
 }
 
-/** 승인 게이트(저장된 판정 기준, 최종 판단은 서버): 보완 필요가 있으면 보완 요청, 필수 전부 통과면 승인 */
+/**
+ * 승인 게이트: 서버 gate(필수 항목만, Master ⑦)의 blockedBy 로 문구를 고른다(Backend 6절). 최종 판단은 승인 RPC.
+ * 보완 필요가 있으면 보완 요청, blockedBy 가 null 이면 승인(선택 항목 보완 필요는 경고만)
+ */
 function Gate({ round, actions }: { round: QaRoundView; actions: QaChecklistActions }) {
   const g = qaGate(round.items);
+  const ready = round.gate.blockedBy === null;
   const ids = { roundId: round.id, revision: round.revision };
   return (
-    <div className={`${styles.notice} ${g.ready ? qa.qaGateReady : f.warnBox} ${qa.qaGate}`} role="note">
+    <div className={`${styles.notice} ${ready ? qa.qaGateReady : f.warnBox} ${qa.qaGate}`} role="note">
       <p className={f.keep}>
-        {g.ready ? (
-          QA_COPY.gateReady
+        {ready ? (
+          qaGateText(null)
         ) : (
           <>
-            <strong>{QA_LABELS.gatePrefix}</strong> {QA_COPY.gateBlocked}
+            <strong>{QA_LABELS.gatePrefix}</strong> {qaGateText(round.gate.blockedBy)}
           </>
         )}
       </p>
+      {ready && round.gate.optionalNeedsFix > 0 && <p className={f.keep}>{QA_COPY.optionalNeedsFixWarn(round.gate.optionalNeedsFix)}</p>}
       <div className={qa.qaGateButtons}>
         {g.needsFix > 0 && round.status === "drafting" && <BriefActionButton action={actions.requestFix} hidden={ids} submitLabel={QA_COPY.requestFix} pendingLabel={P3_COMMON_COPY.savePending} />}
-        {g.ready && <BriefActionButton action={actions.approve} hidden={ids} submitLabel={QA_COPY.approve} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />}
+        {ready && <BriefActionButton action={actions.approve} hidden={ids} submitLabel={QA_COPY.approve} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />}
       </div>
     </div>
   );
@@ -359,7 +364,7 @@ function ReadOnlyItems({ items }: { items: QaItemView[] }) {
 /** 보완 요청 · 재검수 흐름 이력(최신 회차가 위). 다음 회차가 있는 보완 요청 회차는 '수정됨' */
 function History({ target, current }: { target: QaTargetView; current: QaRoundView }) {
   const list = [...target.rounds].sort((a, b) => b.roundNo - a.roundNo);
-  const headId = `qa-history-${target.kind}`;
+  const headId = `qa-history-${target.targetId ?? target.kind}`;
   return (
     <section className={qa.qaHistory} aria-labelledby={headId}>
       <h4 id={headId} className={qa.qaSubhead}>

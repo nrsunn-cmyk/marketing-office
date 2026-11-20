@@ -18,12 +18,9 @@ describe("P3 사용 안내", () => {
     expect(HELP_COPY.termRestoreDesc.length).toBe(83);
   });
 
-  it("연결 단계는 상수 한 곳: 이 브랜치는 1~4 사용 가능, 5~7 준비 중", () => {
-    expect(P3_CONNECTED_STEPS).toEqual(["brief", "webCopy", "assets", "video"]);
-    expect(helpSteps().map((s) => s.status)).toEqual([
-      ...Array(4).fill(HELP_COPY.statusAvailable),
-      ...Array(3).fill(HELP_COPY.statusPreparing),
-    ]);
+  it("연결 단계는 상수 한 곳: 이 브랜치(P3FG 연결)는 7단계 모두 사용 가능", () => {
+    expect(P3_CONNECTED_STEPS).toEqual([...P3_STEPS]);
+    expect(helpSteps().every((s) => s.status === HELP_COPY.statusAvailable)).toBe(true);
     // 묶음마다 상수만 바꾸면 배지가 따라간다
     expect(helpSteps(P3_STEPS).every((s) => s.available)).toBe(true);
     expect(helpSteps([]).every((s) => !s.available)).toBe(true);
@@ -35,8 +32,8 @@ describe("P3 사용 안내", () => {
     expect(html).not.toMatch(/<details[^>]* open/);
     expect(html).toContain(HELP_COPY.toggleSummary);
     for (const s of helpSteps()) expect(html).toContain(s.title);
-    expect(html.match(/지금 사용 가능/g)).toHaveLength(4);
-    expect(html.match(/>준비 중</g)).toHaveLength(3);
+    expect(html.match(/지금 사용 가능/g)).toHaveLength(7);
+    expect(html).not.toMatch(/>준비 중</);
     for (const k of ["termStaleTitle", "termRebaseTitle", "termArchiveTitle", "termRestoreTitle"] as const) expect(html).toContain(HELP_COPY[k]);
     expect(html).not.toMatch(/<progress|role="progressbar"|%|\/7단계/);
     expect(html.match(/aria-hidden="true"/g)).toHaveLength(7);

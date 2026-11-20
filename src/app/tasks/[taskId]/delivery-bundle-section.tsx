@@ -1,4 +1,18 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
+import { designDownloadUrlAction } from "@/features/design-assets/actions";
+import { getProductionBriefsFor } from "@/features/production-brief/server";
+import { getProject } from "@/features/projects/server";
+import {
+  addDeliveryLogAction,
+  archiveDeliveryBundleAction,
+  createDeliveryBundleAction,
+  refreshDeliveryAction,
+  restoreDeliveryBundleAction,
+  updateDeliveryBundleAction,
+} from "@/features/qa-delivery/actions";
+import { getDeliveryBundleFor } from "@/features/qa-delivery/server";
+import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeArchived, BadgeBlocked, BadgeDrafting, BadgeReady, BadgeStale, EmptyExecutionArt, P3BundleIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
 import f from "./funnel.module.css";
@@ -6,6 +20,8 @@ import db from "./delivery-bundle.module.css";
 import { BriefActionButton } from "./production-brief-buttons";
 import type { BriefAction } from "./production-brief-edit-form";
 import { DeliveryLogForm } from "./delivery-bundle-log-form";
+import { pptExportHref } from "./ppt-deck-model";
+import { VideoDownloadButton } from "./video-download-button";
 import {
   DB_COPY,
   DB_LABELS,
@@ -20,23 +36,67 @@ import {
   includedDetail,
   includedVersionText,
   logLine,
+  manifestHref,
   type DbBundleView,
+  type DbIncludedItem,
   type DeliveryBundleData,
 } from "./delivery-bundle-model";
 
-/** 서버 동작 자리(P3-g 서버가 오면 actions.ts 의 동작을 넘긴다. 없으면 단추마다 '아직 서버와 연결되지 않아…' 안내) */
+/** 서버 동작(actions.ts). 시험에서 넘기지 않으면 단추마다 '아직 서버와 연결되지 않아…' 안내 */
 export interface DeliveryBundleActions {
   create?: BriefAction;
   rebase?: BriefAction;
-  download?: BriefAction;
   restore?: BriefAction;
   addLog?: BriefAction;
   saveStatus?: BriefAction;
   archive?: BriefAction;
+  /** 디자인 자산 판 내려받기 주소(서명 주소 60초) */
+  assetDownload?: (assetId: string, version: number) => Promise<{ ok: true; data: { url: string } } | { ok: false; message: string }>;
+}
+
+const SERVER_ACTIONS: DeliveryBundleActions = {
+  create: createDeliveryBundleAction,
+  rebase: refreshDeliveryAction,
+  restore: restoreDeliveryBundleAction,
+  addLog: addDeliveryLogAction,
+  saveStatus: updateDeliveryBundleAction,
+  archive: archiveDeliveryBundleAction,
+  assetDownload: designDownloadUrlAction,
+};
+
+/**
+ * P3FG-UI-CONNECT-01 납품 영역(서버 연결). 검수(#qa-checklist) 아래. 납품 묶음은 프로젝트 단위라
+ * 제작 브리프 하나(보관 안 된 것 우선)로 읽는다 — 서버가 프로젝트의 모든 승인본을 모은다.
+ */
+export async function DeliveryBundleArea({ detail }: { detail: TaskDetail }) {
+  let data: DeliveryBundleData | null = null;
+  let projectArchived = false;
+  let noBrief = false;
+  try {
+    const [r, project] = await Promise.all([getProductionBriefsFor(detail.project.id), getProject(detail.project.id)]);
+    projectArchived = project?.status === "archived";
+    if (!r.ok) console.error("[delivery-bundle]", r.code, r.message);
+    else {
+      const brief = r.data.briefs.find((b) => !b.archived) ?? r.data.briefs[0];
+      if (!brief) noBrief = true;
+      else {
+        const d = await getDeliveryBundleFor(brief.id);
+        if (d.ok) data = d.data;
+        else console.error("[delivery-bundle]", d.code, d.message);
+      }
+    }
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[delivery-bundle]", e);
+  }
+  if (noBrief)
+    // 제작 브리프가 없으면 묶을 것도 없다: 빈 상태(만들기 없음)
+    data = { projectId: detail.project.id, included: [], excluded: [], bundles: [], stale: false, baseArchived: projectArchived, canWrite: false, canCreate: false, createBlockedCode: "no_approved" };
+  return <DeliveryBundleSection data={data} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} />;
 }
 
 /**
- * P3G-UI-PREP-01 납품 묶음 영역(서버 연결 전, 가짜 데이터로 그리는 부품). 실제 파일 묶기·외부 발송은 하지 않는다.
+ * 납품 묶음 화면 본문(동기, 시험에서 가짜 데이터로 그린다). 실제 파일 묶기·외부 발송은 하지 않는다.
  * 시안 Design/p3-production/delivery-bundle.html, 인계표 P3G-HANDOFF.md 상태:
  *   작성 중 · 검토 완료 · 이전 기준 · 보관(archived_at 따로) · 읽기 전용 + 빈 상태 · 바탕 보관 · 승인 판 없음 · 권한 없음
  *   · 한도(묶음 50·전달 기록 50) · 불러오기 실패(data = null).
@@ -122,6 +182,7 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
             <strong>{DB_LABELS.stalePrefix}</strong> {DB_COPY.staleBanner}
           </p>
           {!st.baseLocked && <BriefActionButton action={actions.rebase} hidden={{}} submitLabel={DB_COPY.rebase} pendingLabel={P3_COMMON_COPY.savePending} />}
+          {st.canCreate && <BriefActionButton action={actions.create} hidden={{ projectId: data.projectId }} submitLabel={DB_COPY.createNext} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />}
         </div>
       )}
 
@@ -132,7 +193,7 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
           {st.canCreate && (
             <>
               <p className={`${styles.muted} ${f.keep}`}>{DB_COPY.emptyDesc}</p>
-              <BriefActionButton action={actions.create} hidden={{}} submitLabel={DB_COPY.create} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />
+              <BriefActionButton action={actions.create} hidden={{ projectId: data.projectId }} submitLabel={DB_COPY.create} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />
             </>
           )}
         </div>
@@ -148,17 +209,20 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
             {data.included.map((it) => {
               const detail = includedDetail(it);
               return (
-                <li key={`${it.kind}-${it.versionNo}`} className={db.dbItem}>
+                <li key={`${it.kind}-${it.targetId}-${it.versionNo}`} className={db.dbItem}>
                   <div className={db.dbItemText}>
                     <p className={db.dbItemTitle}>
                       {it.title} <span className={db.dbItemVer}>{includedVersionText(it)}</span>
                     </p>
                     {detail && <p className={`${styles.muted} ${f.keep}`}>{detail}</p>}
                   </div>
-                  <span className={`${db.dbBadge} ${db.dbBadge_reviewed}`}>
-                    <BadgeReady />
-                    {DB_LABELS.included}
-                  </span>
+                  <div className={db.dbRowButtons}>
+                    <ItemDownload it={it} actions={actions} />
+                    <span className={`${db.dbBadge} ${db.dbBadge_reviewed}`}>
+                      <BadgeReady />
+                      {DB_LABELS.included}
+                    </span>
+                  </div>
                 </li>
               );
             })}
@@ -174,7 +238,7 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
           </h3>
           <ul className={db.dbList}>
             {data.excluded.map((it, i) => (
-              <li key={`${it.kind}-${i}`} className={`${db.dbItem} ${db.dbItemOut}`}>
+              <li key={`${it.kind}-${it.targetId}-${i}`} className={`${db.dbItem} ${db.dbItemOut}`}>
                 <div className={db.dbItemText}>
                   <p className={db.dbItemTitle}>
                     {excludedTitle(it)} <span className={db.dbItemVer}>{it.stateLabel}</span>
@@ -200,7 +264,7 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
             {DB_LABELS.historyHeading(data.bundles.length)}
           </h3>
           <p className={`${styles.muted} ${f.keep}`}>{DB_LABELS.historyHint}</p>
-          {st.canCreate && <BriefActionButton action={actions.create} hidden={{}} submitLabel={DB_COPY.createNext} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />}
+          {st.canCreate && !st.stale && <BriefActionButton action={actions.create} hidden={{ projectId: data.projectId }} submitLabel={DB_COPY.createNext} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />}
           {st.bundlesFull && !st.baseLocked && (
             <p className={`${styles.muted} ${f.keep}`} role="note">
               {DB_COPY.bundleLimitReached}
@@ -221,7 +285,7 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
             {DB_LABELS.logsHeading}
           </h3>
           <p className={`${styles.muted} ${f.keep}`}>{DB_COPY.deliveryHint}</p>
-          {st.canLog && <DeliveryLogForm bundleId={latest.id} action={actions.addLog} />}
+          {st.canLog && <DeliveryLogForm bundleId={latest.id} revision={latest.revision} action={actions.addLog} />}
           {st.logsFull && !st.locked && (
             <p className={`${styles.muted} ${f.keep}`} role="note">
               {DB_COPY.deliveryLimitReached}
@@ -272,6 +336,26 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
   );
 }
 
+/**
+ * 포함 항목별 내려받기(Master ⑤: 목록 .md + 항목별 기존 링크). PPT 는 그 판의 .pptx·.md 내보내기,
+ * 디자인 자산은 그 판 파일(서명 주소). 홈페이지·영상 구성·브리프는 파일이 아니라 각 단계 화면에서 본다
+ */
+function ItemDownload({ it, actions }: { it: DbIncludedItem; actions: DeliveryBundleActions }) {
+  if (it.kind === "ppt_deck")
+    return (
+      <>
+        <a href={pptExportHref(it.targetId, "pptx", it.versionNo)} className={`${styles.secondaryButton} ${f.touch}`} download aria-label={`${it.title} v${it.versionNo} .pptx 내려받기`}>
+          .pptx
+        </a>
+        <a href={pptExportHref(it.targetId, "md", it.versionNo)} className={`${styles.secondaryButton} ${f.touch}`} download aria-label={`${it.title} v${it.versionNo} .md 내려받기`}>
+          .md
+        </a>
+      </>
+    );
+  if (it.kind === "design_assets") return <VideoDownloadButton planId={it.targetId} version={it.versionNo} action={actions.assetDownload} />;
+  return null;
+}
+
 function BundleRow({ b, isLatest, canRestore, actions }: { b: DbBundleView; isLatest: boolean; canRestore: boolean; actions: DeliveryBundleActions }) {
   return (
     <li className={`${db.dbItem} ${isLatest ? db.dbItemLatest : ""}`}>
@@ -280,7 +364,10 @@ function BundleRow({ b, isLatest, canRestore, actions }: { b: DbBundleView; isLa
         <p className={`${styles.muted} ${f.keep}`}>{bundleLine(b)}</p>
       </div>
       <div className={db.dbRowButtons}>
-        <BriefActionButton action={actions.download} hidden={{ bundleId: b.id }} submitLabel={DB_COPY.downloadBundle} pendingLabel={P3_COMMON_COPY.savePending} />
+        {/* 납품 목록(.md): 항목·판·검수 회차·승인 시각·sha256·전달 기록(경로 처리기, 보관 묶음도 됨) */}
+        <a href={manifestHref(b.id)} className={`${styles.secondaryButton} ${f.touch}`} download aria-label={`${DB_LABELS.bundleName(b.bundleVersion)} ${DB_COPY.downloadManifest}`}>
+          {DB_COPY.downloadManifest}
+        </a>
         {!isLatest && canRestore && <BriefActionButton action={actions.restore} hidden={{ bundleId: b.id }} submitLabel={DB_COPY.restoreBundle} pendingLabel={P3_COMMON_COPY.savePending} />}
       </div>
     </li>

@@ -92,36 +92,6 @@ export function P3VideoIcon({ width = 24, height = 24, ...p }: P) {
   );
 }
 
-/** icons/p3-ppt.svg — PPT 구성·템플릿 아이콘 */
-export function P3PptIcon({ width = 24, height = 24, ...p }: P) {
-  return (
-    <svg {...base24} width={width} height={height} {...p}>
-      <rect x="3" y="4" width="18" height="12" rx="2" />
-      <path d="M12 16v4M8 20h8M7 9h6M7 12h4" />
-    </svg>
-  );
-}
-
-/** icons/p3-qa.svg — 결과물 검수 체크리스트 아이콘 */
-export function P3QaIcon({ width = 24, height = 24, ...p }: P) {
-  return (
-    <svg {...base24} width={width} height={height} {...p}>
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 10l2 2 5-5M8 16h8" />
-    </svg>
-  );
-}
-
-/** icons/p3-bundle.svg — 납품 묶음 아이콘 */
-export function P3BundleIcon({ width = 24, height = 24, ...p }: P) {
-  return (
-    <svg {...base24} width={width} height={height} {...p}>
-      <path d="M4 8l8-4 8 4-8 4-8-4z" />
-      <path d="M4 12l8 4 8-4M4 16l8 4 8-4" />
-    </svg>
-  );
-}
-
 /** empty/empty-execution.svg — 아직 실행(생성)된 것이 없음을 나타내는 그림(P3-g 납품 묶음 빈 상태, ASSETS-HANDOFF 5절) */
 export function EmptyExecutionArt({ width = 96, height = 72, ...p }: P) {
   return (

@@ -12,7 +12,7 @@ import { DB_COPY, DB_LABELS, DB_LIMITS, DB_METHODS, DB_METHOD_KEYS, P3_COMMON_CO
  * 고객 전달 기록 남기기(추가 전용, 실제 발송 없음 — 인계표 3절 3). 전달 방식·일시(한국 시간)·메모 300자.
  * 일시가 비면 손댄 뒤 안내, 메모 넘침은 바로 안내. 값은 자르지 않는다. 보낼 값은 숨은 칸 payload 하나.
  */
-export function DeliveryLogForm({ bundleId, action }: { bundleId: string; action?: BriefAction }) {
+export function DeliveryLogForm({ bundleId, revision, action }: { bundleId: string; revision: number; action?: BriefAction }) {
   const id = useId();
   const [d, setD] = useState<DbLogDraft>({ method: "email", deliveredAtLocal: "", note: "" });
   const [touched, setTouched] = useState(false);
@@ -26,7 +26,9 @@ export function DeliveryLogForm({ bundleId, action }: { bundleId: string; action
   const noteMsg = issues.note;
   return (
     <ActionForm action={action ?? notConnectedAction} submitLabel={DB_COPY.addDelivery} pendingLabel={P3_COMMON_COPY.savePending} className={`${f.form} ${db.dbLogForm}`}>
-      <input type="hidden" name="payload" value={JSON.stringify(toLogPayload(bundleId, d))} />
+      <input type="hidden" name="bundleId" value={bundleId} />
+      <input type="hidden" name="revision" value={revision} />
+      <input type="hidden" name="payload" value={JSON.stringify(toLogPayload(d))} />
       <div className={db.dbGrid2}>
         <div className={styles.field}>
           <label htmlFor={`${id}-method`}>{DB_LABELS.method}</label>

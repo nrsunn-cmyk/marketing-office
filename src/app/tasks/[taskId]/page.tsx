@@ -21,6 +21,8 @@ import { DesignAssetArea } from "./design-assets-section";
 import { VideoPlanArea } from "./video-plan-section";
 import { PptDeckArea } from "./ppt-deck-section";
 import { P3Help } from "./p3-help";
+import { QaChecklistArea } from "./qa-checklist-section";
+import { DeliveryBundleArea } from "./delivery-bundle-section";
 import wcStyles from "./web-copy.module.css";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
@@ -129,6 +131,8 @@ async function TaskView({
             <a href="#design-assets">디자인 자산 관리</a>
             <a href="#video-plan">영상 구성·파일 관리</a>
             <a href="#ppt-deck">PPT 구성·템플릿</a>
+            <a href="#qa-checklist">검수 체크리스트</a>
+            <a href="#delivery-bundle">납품 묶음</a>
           </nav>
           <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
           {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
@@ -192,6 +196,26 @@ async function TaskView({
             }
           >
             <PptDeckArea detail={detail} />
+          </Suspense>
+          {/* P3FG-UI-CONNECT-01: P3 여섯째 단계 검수 체크리스트(PPT 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                검수 체크리스트를 불러오는 중…
+              </p>
+            }
+          >
+            <QaChecklistArea detail={detail} />
+          </Suspense>
+          {/* P3FG-UI-CONNECT-01: P3 일곱째 단계 납품 묶음(검수 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                납품 묶음을 불러오는 중…
+              </p>
+            }
+          >
+            <DeliveryBundleArea detail={detail} />
           </Suspense>
         </>
       ) : (

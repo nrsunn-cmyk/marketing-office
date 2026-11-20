@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { DbBundleView, DeliveryBundleData } from "./delivery-bundle-model";
 
 /**
- * P3G-UI-PREP-01 납품 묶음 상태별 화면(가짜 데이터, 서버 없음).
+ * P3FG-UI-CONNECT-01 납품 묶음 상태별 화면(서버 보기 모양의 가짜 데이터).
  * 상태 6종(작성 중·검토 완료·이전 기준·보관·읽기 전용) + 예외(빈 상태·바탕 보관·승인 판 없음·권한 없음·묶음 한도·전달 한도·불러오기 실패).
  */
 vi.mock("../../_components/action-form", async () => {
@@ -16,6 +16,19 @@ vi.mock("../../_components/action-form", async () => {
       h("form", { className }, children as never, h("button", { type: "submit", className: variant === "secondary" ? "secondaryButton" : "button" }, submitLabel)),
   };
 });
+vi.mock("@/features/qa-delivery/actions", () => ({
+  addDeliveryLogAction: vi.fn(),
+  archiveDeliveryBundleAction: vi.fn(),
+  createDeliveryBundleAction: vi.fn(),
+  refreshDeliveryAction: vi.fn(),
+  restoreDeliveryBundleAction: vi.fn(),
+  updateDeliveryBundleAction: vi.fn(),
+}));
+vi.mock("@/features/design-assets/actions", () => ({ designDownloadUrlAction: vi.fn() }));
+vi.mock("@/features/qa-delivery/server", () => ({}));
+vi.mock("@/features/production-brief/server", () => ({}));
+vi.mock("@/features/projects/server", () => ({}));
+vi.mock("./video-plan.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./funnel.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./delivery-bundle.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
@@ -23,30 +36,33 @@ vi.mock("../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) =>
 const { DeliveryBundleSection } = await import("./delivery-bundle-section");
 
 const INCLUDED: DeliveryBundleData["included"] = [
-  { kind: "production_brief", title: "공통 제작 브리프", versionNo: 2, stateLabel: "확정", qaRoundNo: null, detail: "납품 형식: PDF / Markdown 요약" },
-  { kind: "web_copy", title: "홈페이지 구조·문구", versionNo: 2, stateLabel: "승인됨", qaRoundNo: 1, detail: "현재 편집 중인 v3는 미승인이므로 직전 승인본 v2가 포함됩니다." },
-  { kind: "design_assets", title: "로고 심볼 & 워드마크 패키지", versionNo: 2, stateLabel: "승인됨", qaRoundNo: 1, detail: "파일: nadaum-logo-kit-v2.zip (2.4 MB)" },
-  { kind: "video_plan", title: "영상 구성·파일 (메인 40초)", versionNo: 2, stateLabel: "승인됨", qaRoundNo: 1, detail: "파일: nadaum-intro-v2.mp4 (28.4 MB)" },
+  { kind: "production_brief", targetId: "br-1", title: "공통 제작 브리프", versionNo: 2, stateLabel: "확정", qaRoundNo: null, detail: "납품 형식: PDF / Markdown 요약" },
+  { kind: "web_copy", targetId: "wc-1", title: "홈페이지 구조·문구", versionNo: 2, stateLabel: "승인됨", qaRoundNo: 1, detail: "현재 편집 중인 v3는 미승인이므로 직전 승인본 v2가 포함됩니다." },
+  { kind: "design_assets", targetId: "da-1", title: "로고 심볼 & 워드마크 패키지", versionNo: 2, stateLabel: "승인됨", qaRoundNo: 1, detail: "파일: nadaum-logo-kit-v2.zip (2.4 MB)" },
+  { kind: "video_plan", targetId: "vp-1", title: "영상 구성·파일 (메인 40초)", versionNo: 2, stateLabel: "승인됨", qaRoundNo: 1, detail: "파일: nadaum-intro-v2.mp4 (28.4 MB)" },
 ];
 const EXCLUDED: DeliveryBundleData["excluded"] = [
-  { kind: "web_copy", title: "홈페이지 구조·문구", versionNo: 3, stateLabel: "검수 보완 필요", reason: "검수 체크리스트 3번 항목(‘근거 출처 연결’)이 보완 필요 상태입니다." },
-  { kind: "ppt_deck", title: "PPT 구성안 (제안서 덱 v1)", versionNo: null, stateLabel: "작성 중", reason: "아직 검수 승인이 완료되지 않았습니다." },
+  { kind: "web_copy", targetId: "wc-2", title: "홈페이지 구조·문구", versionNo: 3, stateLabel: "검수 보완 필요", reasonCode: "fix_requested", reason: "검수 체크리스트 3번 항목(‘근거 출처 연결’)이 보완 필요 상태입니다." },
+  { kind: "ppt_deck", targetId: "pp-1", title: "PPT 구성안 (제안서 덱 v1)", versionNo: null, stateLabel: "작성 중", reasonCode: "not_reviewed", reason: "아직 검수 승인이 완료되지 않았습니다." },
 ];
 const bundle = (v: string, x: Partial<DbBundleView> = {}): DbBundleView => ({
   id: `b-${v}`,
+  bundleNo: Number(v.split(".")[1] ?? 0) + 1,
   bundleVersion: v,
   status: "drafting",
   archivedAt: null,
   revision: 3,
   createdAt: "2026-11-19T18:20:00Z",
   restoredFromVersion: null,
+  itemCount: 4,
   itemsSummary: ["브리프 v2", "홈페이지 v2", "로고 v2", "영상 v2"],
   logs: [],
   ...x,
 });
 const V11 = bundle("v1.1", { logs: [{ id: "l1", method: "email", deliveredAt: "2026-11-19T18:25:00Z", note: "1차 검수 완료본 우선 전달", bundleVersion: "v1.1" }] });
 const V10 = bundle("v1.0", { createdAt: "2026-11-18T08:00:00Z", itemsSummary: ["브리프 v1", "로고 v1"] });
-const data = (x: Partial<DeliveryBundleData> = {}): DeliveryBundleData => ({ included: INCLUDED, excluded: EXCLUDED, bundles: [V11, V10], stale: false, baseArchived: false, canWrite: true, ...x });
+const data = (x: Partial<DeliveryBundleData> = {}): DeliveryBundleData => ({ projectId: "pj-1", included: INCLUDED, excluded: EXCLUDED, bundles: [V11, V10], stale: false, baseArchived: false, canWrite: true, canCreate: true, createBlockedCode: null, ...x });
+const PPT_IN = { kind: "ppt_deck", targetId: "pp-9", title: "PPT 구성안 (제안서)", versionNo: 3, stateLabel: "승인됨", qaRoundNo: 2, detail: null };
 
 const STATES: Record<string, { data: DeliveryBundleData | null; readOnly?: boolean }> = {
   작성중: { data: data() },
@@ -55,17 +71,19 @@ const STATES: Record<string, { data: DeliveryBundleData | null; readOnly?: boole
   보관: { data: data({ bundles: [{ ...V11, archivedAt: "2026-11-20T01:00:00Z" }, V10], stale: true }) },
   읽기전용: { data: data(), readOnly: true },
   빈상태: { data: data({ bundles: [], excluded: [] }) },
-  바탕보관: { data: data({ baseArchived: true }) },
-  승인판없음: { data: data({ included: [], bundles: [] }) },
+  바탕보관: { data: data({ baseArchived: true, canWrite: false, canCreate: false, createBlockedCode: "project_archived" }) },
+  승인판없음: { data: data({ included: [], bundles: [], canCreate: false, createBlockedCode: "no_approved" }) },
   권한없음: { data: data({ canWrite: false }) },
-  묶음한도: { data: data({ bundles: Array.from({ length: 50 }, (_, i) => bundle(`v1.${49 - i}`)) }) },
+  묶음한도: { data: data({ canCreate: false, createBlockedCode: "bundle_limit", bundles: Array.from({ length: 50 }, (_, i) => bundle(`v1.${49 - i}`)) }) },
+  PPT포함: { data: data({ included: [...INCLUDED, PPT_IN] }) },
   전달한도: { data: data({ bundles: [bundle("v1.1", { logs: Array.from({ length: 50 }, (_, i) => ({ id: `l${i}`, method: "cloud_link" as const, deliveredAt: "2026-11-19T18:25:00Z", note: "", bundleVersion: "v1.1" })) }), V10] }) },
   불러오기실패: { data: null },
 };
 const render = (k: string) => renderToString(createElement(DeliveryBundleSection, { data: STATES[k].data, readOnly: Boolean(STATES[k].readOnly), taskId: "t-1" }));
 const count = (h: string, re: RegExp) => (h.match(re) ?? []).length;
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ");
-const DOWNLOAD = /class="secondaryButton">묶음 내려받기</g;
+// 묶음 내려받기 = 납품 목록(.md) 링크(경로 처리기, Master ⑤)
+const DOWNLOAD = /<a href="\/delivery-bundles\/b-v1\.\d+\/manifest"[^>]*>납품 목록\(\.md\) 내려받기<\/a>/g;
 
 describe("납품 묶음 상태별 화면", () => {
   it("모든 상태: 제목·아이콘·안내, 진행률 막대·% 없음", () => {
@@ -99,6 +117,10 @@ describe("납품 묶음 상태별 화면", () => {
     expect(count(h, DOWNLOAD)).toBe(2);
     expect(count(h, />이 판 기준으로 복구</g)).toBe(1); // 최신 묶음에는 복구 없음
     expect(h).toContain('name="bundleId" value="b-v1.0"');
+    expect(h).toContain('name="projectId" value="pj-1"'); // 새 묶음: projectId 만(서버가 승인본을 모음)
+    expect(h).toContain('name="revision" value="3"'); // 전달 기록·상태·보관은 묶음 revision
+    // 포함 항목별 내려받기: 디자인 자산은 그 판 파일(서명 주소 단추), 브리프·홈페이지·영상은 없음
+    expect(count(h, /aria-label="v2 내려받기"/g)).toBe(1);
     expect(t).toContain("4. 고객 전달 기록 (수동 기록 · 자동 발송 없음)");
     expect(t).toContain("이 화면에서 이메일이나 메신저로 직접 발송하지 않습니다.");
     expect(count(h, /<option /g)).toBe(4 + 2); // 전달 방식 4 + 묶음 상태 2
@@ -147,7 +169,7 @@ describe("납품 묶음 상태별 화면", () => {
     ] as const) {
       const h = render(k);
       expect(text(h), k).toContain(msg);
-      expect(count(h, /<form/g), k).toBe(2); // 내려받기 2개
+      expect(count(h, /<form/g), k).toBe(0); // 내려받기는 링크라 폼 없음
       expect(count(h, DOWNLOAD), k).toBe(2);
     }
   });
@@ -155,7 +177,8 @@ describe("납품 묶음 상태별 화면", () => {
   it("빈 상태: 그림·첫 묶음 단추 / 승인 판 없음: 안내만", () => {
     const h = render("빈상태");
     expect(text(h)).toContain("아직 생성된 납품 묶음이 없습니다.");
-    expect(text(h)).toContain("검수 체크리스트를 통과한 승인본이 1건 이상 있으면 첫 납품 묶음 스냅샷을 만들 수 있습니다.");
+    expect(text(h)).toContain("검수 체크리스트를 통과한 승인본이 1건 이상 있으면 첫 납품 묶음을 만들 수 있습니다.");
+    expect(h).toContain('name="projectId" value="pj-1"');
     expect(h).toContain('class="button">+ 첫 납품 묶음 만들기</button>');
     expect(text(h)).not.toContain("고객 전달 기록");
     const n = render("승인판없음");
@@ -166,13 +189,20 @@ describe("납품 묶음 상태별 화면", () => {
 
   it("한도: 묶음 50개(새 묶음·복구 없음), 전달 기록 50건(폼 없음)", () => {
     const b = text(render("묶음한도"));
-    expect(b).toContain("납품 묶음 스냅샷은 50개까지 만들 수 있습니다.");
+    expect(b).toContain("납품 묶음은 50개까지 만들 수 있습니다.");
     expect(b).toContain("(50 / 50개)");
     expect(b).not.toContain("새 납품 묶음 만들기");
     expect(b).not.toContain("이 판 기준으로 복구");
     const l = render("전달한도");
     expect(text(l)).toContain("고객 전달 기록은 묶음당 50건까지 남길 수 있습니다.");
     expect(text(l)).not.toContain("+ 전달 기록 남기기");
+  });
+
+  it("PPT 승인본: 그 판의 .pptx·.md 내보내기 링크(PPT 경로 처리기, version 고정)", () => {
+    const h = render("PPT포함");
+    expect(h).toContain('href="/ppt-decks/pp-9/export?format=pptx&amp;version=3"');
+    expect(h).toContain('href="/ppt-decks/pp-9/export?format=md&amp;version=3"');
+    expect(h).toContain('aria-label="PPT 구성안 (제안서) v3 .pptx 내려받기"');
   });
 
   it("불러오기 실패: 알림과 다시 불러오기", () => {

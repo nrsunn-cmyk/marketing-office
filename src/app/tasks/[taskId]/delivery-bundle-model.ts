@@ -1,10 +1,12 @@
 /**
- * P3G-UI-PREP-01 납품 묶음 — 화면 쪽 모델(서버 없이 먼저 만든 자리).
+ * P3-g 납품 묶음 — 화면 쪽 모델.
+ * P3FG-UI-CONNECT-01: 보기 타입은 서버(src/features/qa-delivery/server.ts) 것. 포함·제외는 서버가 모은다(만들기는 projectId 만 보냄).
  * 근거: AGY Design/p3-production/P3G-HANDOFF.md(스냅샷·포함 항목·전달 기록 한도, 승인본만 포함, 비파괴 복구, 외부 발송 없음, archived_at 분리),
  * delivery-bundle.html(배치·라벨), P3-COPY-FINAL.md 5절 DB_COPY·0절 P3_COMMON_COPY(그대로 — 새 문구를 만들지 않는다).
  * 포함·제외 목록은 서버가 계산해 내려준다(인계표 3절 1). 화면은 받은 대로 보여 주기만 한다.
  */
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
+import type { DbBundleView, DbCreateBlockedCode, DbExcludeCode, DbExcludedItem, DbIncludedItem, DbLogView, DeliveryBundleData } from "@/features/qa-delivery/server";
 
 export { P3_COMMON_COPY } from "./design-assets-model";
 
@@ -31,70 +33,17 @@ export const DB_METHODS = {
 export type DbMethod = keyof typeof DB_METHODS;
 export const DB_METHOD_KEYS = Object.keys(DB_METHODS) as DbMethod[];
 
-// ── 자리용 보기 타입(서버 보기 타입이 오면 바꾼다) ──
-/** 승인본(포함) — 서버가 검수 통과·승인된 판만 모은다 */
-export interface DbIncludedItem {
-  kind: string;
-  /** 결과물 이름(예: 홈페이지 구조·문구) */
-  title: string;
-  versionNo: number;
-  /** 상태 글(예: 승인됨, 확정) — 서버가 준 글 */
-  stateLabel: string;
-  /** 검수 회차(공통 제작 브리프처럼 검수 대상이 아니면 null) */
-  qaRoundNo: number | null;
-  /** 덧붙이는 설명(파일·형식 등, 서버가 준 글) */
-  detail: string | null;
-}
-/** 자동 제외(서버가 사유와 함께 계산) */
-export interface DbExcludedItem {
-  kind: string;
-  title: string;
-  versionNo: number | null;
-  stateLabel: string;
-  reason: string;
-}
-export interface DbLogView {
-  id: string;
-  method: DbMethod;
-  deliveredAt: string;
-  note: string;
-  bundleVersion: string;
-}
-export interface DbBundleView {
-  id: string;
-  /** 서버 채번(v1.0, v1.1 …) */
-  bundleVersion: string;
-  status: DbStatus;
-  archivedAt: string | null;
-  revision: number;
-  createdAt: string;
-  /** 복구로 만든 묶음이면 원본 묶음 버전 */
-  restoredFromVersion: string | null;
-  /** 포함 요약(예: 브리프 v2, 홈페이지 v2) — 서버가 준 글 */
-  itemsSummary: string[];
-  logs: DbLogView[];
-}
-export interface DeliveryBundleData {
-  included: DbIncludedItem[];
-  excluded: DbExcludedItem[];
-  /** 최신이 위 */
-  bundles: DbBundleView[];
-  /** 마지막 묶음 이후 새 승인본이 있음 */
-  stale: boolean;
-  /** 바탕 프로젝트 보관됨 */
-  baseArchived: boolean;
-  canWrite: boolean;
-}
+export type { DbBundleView, DbCreateBlockedCode, DbExcludeCode, DbExcludedItem, DbIncludedItem, DbLogView, DeliveryBundleData };
 
 /** 화면 문구 최종본(P3-COPY-FINAL.md 5절 DB_COPY — 그대로) */
 export const DB_COPY = {
   heading: "납품 묶음",
   intro: "검수 체크리스트를 모두 통과해 승인된 결과물만 납품 묶음에 담습니다. 고객 전달은 직접 진행한 뒤 기록만 남깁니다.",
   emptyTitle: "아직 생성된 납품 묶음이 없습니다.",
-  emptyDesc: "검수 체크리스트를 통과한 승인본이 1건 이상 있으면 첫 납품 묶음 스냅샷을 만들 수 있습니다.",
+  emptyDesc: "검수 체크리스트를 통과한 승인본이 1건 이상 있으면 첫 납품 묶음을 만들 수 있습니다.",
   create: "+ 첫 납품 묶음 만들기",
   createNext: "+ 새 납품 묶음 만들기",
-  bundleLimitReached: "납품 묶음 스냅샷은 50개까지 만들 수 있습니다.",
+  bundleLimitReached: "납품 묶음은 50개까지 만들 수 있습니다.",
   deliveryLimitReached: "고객 전달 기록은 묶음당 50건까지 남길 수 있습니다.",
   staleBanner: "마지막 납품 묶음 이후 새로 승인된 결과물이 있습니다. 최신 승인본을 반영해 새 납품 묶음을 만들 수 있습니다.",
   rebase: "최신 승인본 목록 다시 불러오기",
@@ -105,11 +54,12 @@ export const DB_COPY = {
   loadError: "납품 묶음을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
   deliveryHint: "이 화면에서 이메일이나 메신저로 직접 발송하지 않습니다. 직접 전달한 뒤 방식·일시·메모만 남깁니다.",
   downloadBundle: "묶음 내려받기",
+  downloadManifest: "납품 목록(.md) 내려받기",
   restoreBundle: "이 판 기준으로 복구",
   addDelivery: "+ 전달 기록 남기기",
   archive: "이 납품 묶음 보관",
   createdOk: "승인본으로 새 납품 묶음을 만들었습니다.",
-  restoredOk: "선택한 스냅샷 기준으로 새 납품 묶음을 복구했습니다.",
+  restoredOk: "선택한 납품 묶음 기준으로 새 납품 묶음을 복구했습니다.",
   deliveryAddedOk: "고객 전달 기록을 남겼습니다.",
   archivedOk: "납품 묶음을 보관했습니다.",
   baseNotApprovedNotice: "P3-f 검수를 통과해 승인된 결과물 판이 1건 이상 있어야 납품 묶음을 만들 수 있습니다.",
@@ -163,7 +113,7 @@ export const bundleLine = (b: DbBundleView) => `${formatKstMinute(b.createdAt)}$
 export const logLine = (l: DbLogView) => `${formatKstMinute(l.deliveredAt)}${l.note.trim() ? ` · 메모: ${l.note.trim()}` : ""}`;
 
 /**
- * 원인별 안내(인계표 3절 4). 우선순위: 권한 없음 → 바탕 보관 → 최신 묶음 보관 → 승인 판 없음.
+ * 원인별 안내(인계표 3절 4). 우선순위: 바탕 보관 → 권한 없음 → 최신 묶음 보관 → 승인 판 없음.
  * baseLocked(읽기 전용·권한 없음·바탕 보관)면 아무것도 못 한다. 최신 묶음만 보관이면 그 묶음의 전달 기록·상태·보관은 막고,
  * 새 묶음 만들기·복구는 된다(Master 결정, AGY archivedCanCreateNotice). 조회·내려받기는 늘 된다.
  */
@@ -171,17 +121,18 @@ export function deliveryState(d: DeliveryBundleData, opts: { readOnly: boolean }
   const latest = d.bundles[0] ?? null;
   const archived = latest?.archivedAt != null;
   const baseLocked = opts.readOnly || !d.canWrite || d.baseArchived;
-  const bundlesFull = d.bundles.length >= DB_LIMITS.bundlesMax;
-  const canCreate = !baseLocked && d.included.length > 0 && !bundlesFull;
+  const bundlesFull = d.createBlockedCode === "bundle_limit" || d.bundles.length >= DB_LIMITS.bundlesMax;
+  // 만들 수 있는지는 서버 canCreate(승인 산출물 1건 이상·묶음 50 미만·프로젝트 보관 안 됨)
+  const canCreate = !baseLocked && d.canCreate;
   const notice: string | null = opts.readOnly
     ? null // 프로젝트 읽기 전용 안내는 영역 위에 한 번
-    : !d.canWrite
-      ? DB_COPY.noPermission
-      : d.baseArchived
-        ? DB_COPY.baseArchivedNotice
+    : d.baseArchived // 서버는 프로젝트 보관이면 canWrite 도 false — 원인 문구가 먼저
+      ? DB_COPY.baseArchivedNotice
+      : !d.canWrite
+        ? DB_COPY.noPermission
         : archived
           ? DB_COPY.archivedNote
-          : d.included.length === 0
+          : d.createBlockedCode === "no_approved"
             ? DB_COPY.baseNotApprovedNotice
             : null;
   /** 최신 묶음 보관 뒤 새로 만들 수 있으면 한 줄 더(archivedCanCreateNotice) */
@@ -212,7 +163,17 @@ export function checkLog(d: DbLogDraft): Record<"deliveredAt" | "note", string |
 }
 /** 한국 시간 입력 → 서버로 보낼 ISO(+09:00). 형식이 틀리면 null */
 export const kstLocalToIso = (v: string) => (LOCAL_RE.test(v) ? `${v}:00+09:00` : null);
-/** 서버로 보낼 값(자리용 이름 — 서버 계약이 오면 맞춘다). 값은 자르지 않는다 */
-export function toLogPayload(bundleId: string, d: DbLogDraft) {
-  return { bundleId, method: d.method, deliveredAt: kstLocalToIso(d.deliveredAtLocal), note: d.note };
+/** 서버로 보낼 값(Backend 6절 addDeliveryLog: { method, deliveredAt(ISO), note }). 메모 빈칸은 null. 값은 자르지 않는다 */
+export function toLogPayload(d: DbLogDraft) {
+  return { method: d.method, deliveredAt: kstLocalToIso(d.deliveredAtLocal), note: d.note.trim() ? d.note : null };
 }
+/** 납품 목록(.md) 주소(경로 처리기 GET /delivery-bundles/[id]/manifest — 보관 묶음도 됨) */
+export const manifestHref = (bundleId: string) => `/delivery-bundles/${encodeURIComponent(bundleId)}/manifest`;
+/** 포함 항목 이름에 종류를 붙이지 않은 것은 서버 제목 그대로(브리프는 서버가 "공통 제작 브리프 · 제목") */
+export const DB_KIND_LABEL: Record<string, string> = {
+  production_brief: "공통 제작 브리프",
+  web_copy: "홈페이지 구조·문구",
+  design_assets: "디자인 자산",
+  video_plan: "영상 구성",
+  ppt_deck: "PPT 구성",
+};

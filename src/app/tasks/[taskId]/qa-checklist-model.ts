@@ -1,10 +1,14 @@
 /**
- * P3F-UI-PREP-01 결과물 검수 체크리스트 — 화면 쪽 모델(서버 없이 먼저 만든 자리).
+ * P3-f 결과물 검수 체크리스트 — 화면 쪽 모델.
+ * P3FG-UI-CONNECT-01: 보기 타입은 서버(src/features/qa-delivery/server.ts, Backend P3FG-BACKEND-IMPL-01) 것.
+ * 대상은 산출물 하나(디자인 자산은 자산마다, Master ①), 승인 게이트는 서버 gate.blockedBy 로 고른다.
+ * 'use client' 편집기가 가져오므로 zod 를 쓰는 도메인 값은 가져오지 않는다(한도·종류는 시험으로 서버와 대조).
  * 근거: AGY Design/p3-production/P3F-HANDOFF.md(회차·항목 한도·필드·판정·승인 게이트·보관 archived_at 분리),
  * qa-checklist.html(배치·라벨), P3-COPY-FINAL.md 4절 QA_COPY·0절 P3_COMMON_COPY(그대로 — 새 문구를 만들지 않는다).
  * 승인 게이트의 최종 판단은 서버 RPC 가 한다(인계표 3절 1). 화면은 저장된 판정으로 미리 알리기만 한다.
  */
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
+import type { QaChecklistData, QaGateBlock, QaItemView, QaRoundView, QaTargetView } from "@/features/qa-delivery/server";
 import { maxLengthMessage, requiredMessage } from "../../_components/josa";
 
 export { P3_COMMON_COPY } from "./design-assets-model";
@@ -37,54 +41,7 @@ export const QA_VERDICTS = { pending: "미확인", passed: "통과", needs_fix: 
 export type QaVerdict = keyof typeof QA_VERDICTS;
 export const QA_VERDICT_KEYS = Object.keys(QA_VERDICTS) as QaVerdict[];
 
-// ── 자리용 보기 타입(서버 보기 타입이 오면 바꾼다) ──
-export interface QaItemView {
-  id: string;
-  itemTitle: string;
-  isRequired: boolean;
-  verdict: QaVerdict;
-  memo: string;
-  /** 서버가 기록한 검수자 표시 이름(판정 전이면 null) */
-  checkedByName: string | null;
-  checkedAt: string | null;
-  sortOrder: number;
-}
-export interface QaRoundView {
-  id: string;
-  roundNo: number;
-  status: QaStatus;
-  archivedAt: string | null;
-  revision: number;
-  targetVersionId: string;
-  /** 검수한 대상 판 번호(v3 등) */
-  targetVersionNo: number;
-  /** 계산: 검수 시작 뒤 대상 결과물에 새 판이 생김 */
-  stale: boolean;
-  items: QaItemView[];
-  createdAt: string;
-  updatedAt: string;
-}
-/** 검수에 고를 수 있는 대상 판(검토 완료 판만 고를 수 있음) */
-export interface QaTargetVersion {
-  id: string;
-  versionNo: number;
-  status: "drafting" | "reviewed";
-}
-export interface QaTargetView {
-  kind: QaTargetKind;
-  /** 대상 결과물이 아직 없으면 false(탭은 보이고 안내만) */
-  exists: boolean;
-  /** 바탕 결과물·작업이 보관됨 → 조회만(baseArchivedNotice) */
-  baseArchived: boolean;
-  versions: QaTargetVersion[];
-  /** 회차 목록(보관 포함). 화면은 최신 회차를 지금 회차로 본다 */
-  rounds: QaRoundView[];
-}
-export interface QaChecklistData {
-  targets: QaTargetView[];
-  /** 판정·승인 권한 */
-  canWrite: boolean;
-}
+export type { QaChecklistData, QaGateBlock, QaItemView, QaRoundView, QaTargetView };
 
 /** 화면 문구 최종본(P3-COPY-FINAL.md 4절 QA_COPY — 그대로) */
 export const QA_COPY = {
@@ -96,8 +53,8 @@ export const QA_COPY = {
   emptyDesc: "검토 완료 상태의 결과물이 준비되면 기본 검수 체크리스트를 시작할 수 있습니다.",
   create: "+ 검수 체크리스트 시작하기",
   roundLimitReached: "검수 회차는 30회까지 기록할 수 있습니다.",
-  staleBanner: "검수 대상 결과물이 새 버전으로 수정되었습니다. 새 버전에 맞춰 재검수가 필요합니다.",
-  rebase: "새 버전 기준으로 재검수 시작",
+  staleBanner: "검수 대상 결과물이 새 판으로 수정되었습니다. 새 판에 맞춰 재검수가 필요합니다.",
+  rebase: "새 판 기준으로 재검수 시작",
   archivedNote: "보관한 검수 기록입니다. 조회만 할 수 있고 판정·보완 요청·승인은 할 수 없습니다.",
   noPermission: "검수 판정을 내리거나 승인할 권한이 없습니다.",
   loadError: "검수 체크리스트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
@@ -119,6 +76,9 @@ export const QA_COPY = {
   addItem: "+ 검수 항목 추가",
   itemTitlePlaceholder: "추가로 확인할 검수 항목 제목을 입력해 주세요.",
   itemLimitReached: "검수 항목은 30개까지 둘 수 있습니다. 불필요한 항목을 정리한 뒤 추가해 주세요.",
+  // 선택 항목이 보완 필요여도 승인은 된다(Master ⑦) — 그때 경고
+  optionalNeedsFixWarn: (n: number) => `보완 필요 선택 항목 ${n}개가 남아 있습니다.`,
+  fixRequestedOnTarget: "검수에서 보완 요청됨",
 } as const;
 
 /** 시안 qa-checklist.html 의 라벨(AGY 문구 — 그대로) */
@@ -139,14 +99,13 @@ export const QA_LABELS = {
   archivedBadge: "보관",
   passed: "통과",
   approvable: "승인 가능",
+  newItemPending: "새 항목은 저장한 뒤 판정할 수 있습니다(처음에는 미확인).",
 } as const;
 
 // ── 계산 ──
 export const sortedItems = (items: readonly QaItemView[]) => [...items].sort((a, b) => a.sortOrder - b.sortOrder);
 /** 지금 회차 = 회차 번호가 가장 큰 것(보관 포함) */
 export const currentRound = (t: Pick<QaTargetView, "rounds">): QaRoundView | null => t.rounds.reduce<QaRoundView | null>((a, r) => (!a || r.roundNo > a.roundNo ? r : a), null);
-export const latestReviewedVersion = (t: Pick<QaTargetView, "versions">): QaTargetVersion | null =>
-  t.versions.filter((v) => v.status === "reviewed").reduce<QaTargetVersion | null>((a, v) => (!a || v.versionNo > a.versionNo ? v : a), null);
 
 /** 승인 게이트(인계표 3절 1): 필수 항목이 모두 통과여야 승인 가능. 근거 없는 %가 아니라 실제 개수만 */
 export function qaGate(items: readonly Pick<QaItemView, "isRequired" | "verdict">[]) {
@@ -156,10 +115,12 @@ export function qaGate(items: readonly Pick<QaItemView, "isRequired" | "verdict"
   const pending = required.filter((i) => i.verdict === "pending").length;
   return { required: required.length, passed, needsFix, pending, ready: required.length > 0 && passed === required.length };
 }
+/** 탭 이름: 종류(같은 종류가 여럿이면 산출물 제목을 붙임 — 디자인 자산은 자산마다) */
+export const qaTabName = (t: Pick<QaTargetView, "kind" | "title">, sameKind: number) => (sameKind > 1 && t.title ? `${QA_TARGET_KINDS[t.kind].tab} · ${t.title}` : QA_TARGET_KINDS[t.kind].tab);
 /** 탭 글 "홈페이지 (2/3 통과)" · 승인 전 전체 통과면 " · 승인 가능"(시안) */
-export function qaTabText(t: QaTargetView): string {
+export function qaTabText(t: QaTargetView, sameKind = 1): string {
   const r = currentRound(t);
-  const name = QA_TARGET_KINDS[t.kind].tab;
+  const name = qaTabName(t, sameKind);
   if (!r) return name;
   const g = qaGate(r.items);
   const ok = g.ready && r.status !== "reviewed" && !r.archivedAt ? ` · ${QA_LABELS.approvable}` : "";
@@ -177,7 +138,6 @@ export const versionText = (kind: QaTargetKind, versionNo: number) => `${QA_TARG
  */
 export function qaTargetState(t: QaTargetView, opts: { canWrite: boolean; readOnly: boolean }) {
   const round = currentRound(t);
-  const latest = latestReviewedVersion(t);
   const archived = round?.archivedAt != null;
   const notice: string | null = opts.readOnly
     ? null // 프로젝트 읽기 전용 안내는 영역 위에 한 번
@@ -187,14 +147,16 @@ export function qaTargetState(t: QaTargetView, opts: { canWrite: boolean; readOn
         ? QA_COPY.baseArchivedNotice
         : archived
           ? QA_COPY.archivedNote
-          : !latest
+          : t.baseNotReady
             ? QA_COPY.baseNotReadyNotice
             : null;
   const locked = opts.readOnly || !opts.canWrite || t.baseArchived || archived;
   const roundsFull = t.rounds.length >= QA_LIMITS.roundsPerTarget;
-  /** 새 회차를 열 수 있는지(처음 시작·새 판 재검수) */
-  const canOpen = !locked && latest !== null && !roundsFull;
-  return { round, latest, archived, notice, locked, roundsFull, canOpen, stale: Boolean(round?.stale) && !archived };
+  /** 새 회차를 열 수 있는지 — 서버 canOpen(열린 회차 없음·검토 완료·보관 안 됨·30회차 미만) */
+  const canOpen = !locked && t.exists && t.canOpen && !roundsFull;
+  /** 재검수(새 판 기준 새 회차)는 지금 회차가 이전 기준이고 바탕이 검토 완료일 때 */
+  const canRebase = !locked && !t.baseNotReady && !roundsFull;
+  return { round, archived, notice, locked, roundsFull, canOpen, canRebase, stale: Boolean(round?.stale) && !archived };
 }
 
 // ── 입력 점검(미리 알림만, 값은 자르지 않음) ──
@@ -235,13 +197,37 @@ export function checkItemTitle(title: string): string | null {
   return null;
 }
 
-/** 서버로 보낼 값(자리용 이름 — 서버 계약이 오면 맞춘다). 기존 항목은 id·판정·메모, 새 항목은 id null + 제목·필수. 값은 자르지 않는다 */
-export function toQaPayload(items: readonly QaItemDraft[]) {
-  return {
-    items: items.map((it) =>
-      it.id === null ? { id: null, itemTitle: it.itemTitle, isRequired: true, verdict: it.verdict, memo: it.memo } : { id: it.id, verdict: it.verdict, memo: it.memo },
-    ),
-  };
+/**
+ * 서버로 보낼 값(Backend 6절: 항목마다 setQaItem·addQaItem). 바뀐 기존 항목만 { itemId, verdict, memo },
+ * 새 항목은 { title, isRequired: true }(판정은 저장 뒤 — 서버가 미확인으로 만든다). 메모는 빈칸이면 null. 값은 자르지 않는다
+ */
+export function toQaPayload(items: readonly QaItemDraft[], saved: readonly Pick<QaItemView, "id" | "verdict" | "memo">[] = []) {
+  const before = new Map(saved.map((s) => [s.id, s]));
+  const set = items
+    .filter((it): it is QaItemDraft & { id: string } => it.id !== null)
+    .filter((it) => {
+      const b = before.get(it.id);
+      return !b || b.verdict !== it.verdict || b.memo !== it.memo;
+    })
+    .map((it) => ({ itemId: it.id, verdict: it.verdict, memo: it.memo.trim() ? it.memo : null }));
+  const add = items.filter((it) => it.id === null).map((it) => ({ title: it.itemTitle, isRequired: true }));
+  return { set, add };
+}
+
+/** 승인 게이트 안내: 서버 gate.blockedBy → QA_COPY(Backend 6절). null 이면 승인 가능 */
+export function qaGateText(block: QaGateBlock): string {
+  switch (block) {
+    case null:
+      return QA_COPY.gateReady;
+    case "stale":
+      return QA_COPY.staleBanner;
+    case "archived":
+      return QA_COPY.baseArchivedNotice;
+    case "not_reviewed":
+      return QA_COPY.baseNotReadyNotice;
+    default:
+      return QA_COPY.gateBlocked;
+  }
 }
 
 /** "2026-11-20 03:10 KST" */

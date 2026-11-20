@@ -44,10 +44,9 @@ export type P3Step = (typeof P3_STEPS)[number];
 
 /**
  * ★ 이 브랜치에서 작업 상세에 실제로 서버 연결된 단계 — 배포 묶음마다 여기 한 곳만 맞춘다.
- * 지금(claude/p3-help-ui ← claude/p3d-video-connect): 1 브리프(P3-a)·2 홈페이지(P3-b)·3 디자인 자산(P3-c)·4 영상(P3-d).
- * P3-e PPT·P3-f 검수·P3-g 납품은 화면 준비만 되었고 작업 상세에 붙지 않았다.
+ * 지금(claude/p3fg-connect, P3FG-UI-CONNECT-01): 7단계 모두 작업 상세에 서버 연결(P3-a~g).
  */
-export const P3_CONNECTED_STEPS: readonly P3Step[] = ["brief", "webCopy", "assets", "video"];
+export const P3_CONNECTED_STEPS: readonly P3Step[] = ["brief", "webCopy", "assets", "video", "ppt", "qa", "bundle"];
 
 const KEY = {
   brief: "Brief",
