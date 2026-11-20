@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { fail, ok, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -19,8 +20,12 @@ function rpcFail<T>(where: string, error: { code?: string; message: string }): R
   return fail("ERROR", "관리자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
 }
 
-/** 지금 로그인한 사람이 관리자인지. 로그인 안 했거나 오류면 false(열람 기록 없음) */
-export async function isAdmin(): Promise<boolean> {
+/**
+ * 지금 로그인한 사람이 관리자인지. 로그인 안 했거나 오류면 false(열람 기록 없음).
+ * 한 요청(서버 렌더링) 안에서는 한 번만 묻는다 — 관리자 화면은 제목(adminMetadata)과 본문(requireAdminOr404)에서 둘 다 부른다
+ * (Tester QA-ADMIN-404-01 O1: Proxy 1 + 페이지 2 = 3번 → Proxy 1 + 페이지 1 = 2번)
+ */
+export const isAdmin = cache(async function isAdmin(): Promise<boolean> {
   const sb = await createSupabaseServerClient();
   const { data: auth } = await sb.auth.getUser();
   if (!auth.user) return false;
@@ -30,7 +35,7 @@ export async function isAdmin(): Promise<boolean> {
     return false;
   }
   return data === true;
-}
+});
 
 export interface AdminAccount {
   userId: string;
