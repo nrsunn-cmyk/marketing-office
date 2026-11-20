@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ActionForm } from "../../_components/action-form";
+import { focusSideAfterMove } from "./move-focus";
 import styles from "../../ui.module.css";
 import f from "./funnel.module.css";
 import vp from "./video-plan.module.css";
@@ -48,6 +49,14 @@ export function VideoPlanEditor({ plan, assets, action, hidden }: { plan: VideoP
   const [scenes, setScenes] = useState<VideoSceneView[]>(() => [...plan.scenes].sort((a, b) => a.sortOrder - b.sortOrder));
   const [touched, setTouched] = useState(false);
   const [note, setNote] = useState("");
+  // 순서를 옮긴 뒤 초점을 옮긴 항목의 같은 단추로(Tester QA-P3D-E2E-01 O1). 그린 뒤에 맞춘다
+  const focusAfter = useRef<string | null>(null);
+  useEffect(() => {
+    const target = focusAfter.current;
+    if (!target) return;
+    focusAfter.current = null;
+    document.getElementById(target)?.focus();
+  });
   const assetIds = assets.map((a) => a.id);
   const issues = checkVideoPlan(title, scenes, assetIds);
   const L = VIDEO_PLAN_LIMITS;
@@ -123,7 +132,11 @@ export function VideoPlanEditor({ plan, assets, action, hidden }: { plan: VideoP
             issues={issues}
             touched={touched}
             onField={(k, v) => setField(i, k, v)}
-            onMove={(dir) => change(moveScene(scenes, i, dir), `장면 순서를 ${dir < 0 ? "위로" : "아래로"} 옮겼습니다.`)}
+            onMove={(dir) => {
+              const to = focusSideAfterMove(i, dir, scenes.length);
+              focusAfter.current = `${id}-s${to.index}-${to.side}`;
+              change(moveScene(scenes, i, dir), `장면 순서를 ${dir < 0 ? "위로" : "아래로"} 옮겼습니다.`);
+            }}
             onRemove={() => change(removeScene(scenes, i), "")}
             onAsset={(aid, on) => setField(i, "assetIds", toggleAsset(s.assetIds, aid, on, assetIds))}
           />
@@ -238,10 +251,10 @@ function SceneCard({
           {name}
         </h5>
         <div className={vp.vpTools} role="group" aria-label={`${name} 순서·제외`}>
-          <button type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={i === 0} onClick={() => onMove(-1)} aria-label={`${name} ${VP_LABELS.up}`}>
+          <button id={`${idBase}-up`} type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={i === 0} onClick={() => onMove(-1)} aria-label={`${name} ${VP_LABELS.up}`}>
             {VP_LABELS.up}
           </button>
-          <button type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={i === count - 1} onClick={() => onMove(1)} aria-label={`${name} ${VP_LABELS.down}`}>
+          <button id={`${idBase}-down`} type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={i === count - 1} onClick={() => onMove(1)} aria-label={`${name} ${VP_LABELS.down}`}>
             {VP_LABELS.down}
           </button>
           <button type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={count <= 1} onClick={onRemove} aria-label={`${name} ${VP_LABELS.exclude}`}>
