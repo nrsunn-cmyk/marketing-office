@@ -181,3 +181,49 @@ export async function listAdminAudit(f: AdminAuditFilter = {}): Promise<Result<{
   }));
   return ok({ rows, nextBeforeSeq: rows.length === limit ? (rows.at(-1)?.seq ?? null) : null });
 }
+
+export interface AdminP4ExecutionRow {
+  workspaceId: string;
+  projectId: string;
+  /** 실행 건 상태 7종 개수 */
+  jobs: { pendingApproval: number; blockedMismatch: number; queued: number; running: number; succeeded: number; failed: number; held: number };
+  /** 차단(blocked_mismatch) 건의 막힘 원인 3종 개수 */
+  blocked: { contentChanged: number; sourceArchived: number; notReviewed: number };
+  /** 재시도 3회를 다 쓴 실행 건 수 */
+  retryExhausted: number;
+  /** 티스토리 수동 게시 기록이 연결된 실행 건 수 */
+  tistoryPublished: number;
+  /** 취소되지 않은 성과 입력 수 */
+  resultsActive: number;
+  lastActivityAt: string | null;
+}
+
+/**
+ * ⑤ P4 실행 현황(ADMIN-P4-01): 실행 건이나 성과 입력이 있는 업무실·프로젝트별 개수·상태·시각.
+ * 초안 사본·게시 주소·성과 출처·업무실 이름·주인 이메일은 오지 않는다(AGY 인계 1절 — 업무실·프로젝트는 id 만).
+ */
+export async function getAdminP4Execution(limit = 200): Promise<Result<AdminP4ExecutionRow[]>> {
+  const sb = await createSupabaseServerClient();
+  const { data, error } = await sb.rpc("admin_p4_execution", { p_limit: Math.min(500, Math.max(1, Math.trunc(limit))) });
+  if (error) return rpcFail("getAdminP4Execution", error);
+  return ok(
+    (data ?? []).map((r) => ({
+      workspaceId: r.workspace_id,
+      projectId: r.project_id,
+      jobs: {
+        pendingApproval: r.jobs_pending_approval,
+        blockedMismatch: r.jobs_blocked_mismatch,
+        queued: r.jobs_queued,
+        running: r.jobs_running,
+        succeeded: r.jobs_succeeded,
+        failed: r.jobs_failed,
+        held: r.jobs_held,
+      },
+      blocked: { contentChanged: r.blocked_content_changed, sourceArchived: r.blocked_source_archived, notReviewed: r.blocked_not_reviewed },
+      retryExhausted: r.retry_exhausted,
+      tistoryPublished: r.tistory_published,
+      resultsActive: r.results_active,
+      lastActivityAt: r.last_activity_at,
+    })),
+  );
+}

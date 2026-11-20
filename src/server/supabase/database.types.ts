@@ -1229,6 +1229,11 @@ isOneToOne: false
               "added_at": string,"email": string,"note": string
             }[]
                            },
+"admin_p4_execution":
+{ Args: { "p_limit"?: number }; Returns: {
+              "blocked_content_changed": number,"blocked_not_reviewed": number,"blocked_source_archived": number,"jobs_blocked_mismatch": number,"jobs_failed": number,"jobs_held": number,"jobs_pending_approval": number,"jobs_queued": number,"jobs_running": number,"jobs_succeeded": number,"last_activity_at": string,"project_id": string,"results_active": number,"retry_exhausted": number,"tistory_published": number,"workspace_id": string
+            }[]
+                           },
 "admin_usage_summary":
 { Args: { "p_from": string,"p_to": string }; Returns: {
               "ai_cost_usd_micro": number,"ai_runs": number,"artifact_versions_created": number,"asset_bytes": number,"assets_added": number,"briefs_created": number,"last_activity_at": string,"owner_email": string,"tasks_created": number,"workspace_id": string,"workspace_name": string
