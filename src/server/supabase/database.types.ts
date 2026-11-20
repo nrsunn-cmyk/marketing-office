@@ -957,6 +957,38 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"source_asset_uploads": {
+                  Row: {
+                    "bytes": number,"client_id": string | null,"created_at": string,"created_by": string,"decided_at": string | null,"expires_at": string,"file_name": string,"id": string,"mime": string,"object_key": string,"project_id": string | null,"reject_reason": string | null,"status": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bytes": number,"client_id"?: string | null,"created_at"?: string,"created_by": string,"decided_at"?: string | null,"expires_at": string,"file_name": string,"id"?: string,"mime": string,"object_key": string,"project_id"?: string | null,"reject_reason"?: string | null,"status"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "bytes"?: number,"client_id"?: string | null,"created_at"?: string,"created_by"?: string,"decided_at"?: string | null,"expires_at"?: string,"file_name"?: string,"id"?: string,"mime"?: string,"object_key"?: string,"project_id"?: string | null,"reject_reason"?: string | null,"status"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "source_asset_uploads_workspace_id_client_id_fkey"
+      columns: ["workspace_id","client_id"]
+isOneToOne: false
+      referencedRelation: "clients"
+      referencedColumns: ["workspace_id","id"]
+    },{
+      foreignKeyName: "source_asset_uploads_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "source_asset_uploads_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"source_assets": {
                   Row: {
                     "bytes": number | null,"checksum_sha256": string | null,"client_id": string | null,"created_at": string,"display_name": string | null,"extraction_status": string,"file_name": string | null,"id": string,"kind": string,"mime": string | null,"object_key": string | null,"project_id": string | null,"review_status": string,"revision": number,"text_content": string | null,"updated_at": string,"upload_status": string,"url": string | null,"workspace_id": string
@@ -1217,6 +1249,9 @@ isOneToOne: false
 "assign_quote_number":
 { Args: { "p_issue_date"?: string,"p_quote_id": string }; Returns: string
                            },
+"confirm_source_upload":
+{ Args: { "p_sha256": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: string
+                           },
 "create_channel_draft":
 { Args: { "p_brief_id": string }; Returns: string
                            },
@@ -1296,6 +1331,9 @@ isOneToOne: false
 "reject_design_asset_upload":
 { Args: { "p_reason": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: undefined
                            },
+"reject_source_upload":
+{ Args: { "p_reason": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: undefined
+                           },
 "replace_design_asset_file":
 { Args: { "p_asset_id": string,"p_change_note": string,"p_expected_revision": number,"p_sha256": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: number
                            },
@@ -1307,6 +1345,11 @@ isOneToOne: false
 "reserve_design_asset_upload":
 { Args: { "p_asset_id": string,"p_file_name": string,"p_kind": string,"p_mime": string,"p_production_brief_id": string,"p_signature": string,"p_signed_at": number,"p_size": number }; Returns: {
               "expires_at": string,"storage_key": string,"upload_id": string
+            }[]
+                           },
+"reserve_source_upload":
+{ Args: { "p_client_id": string,"p_file_name": string,"p_mime": string,"p_project_id": string,"p_signature": string,"p_signed_at": number,"p_size": number }; Returns: {
+              "expires_at": string,"object_key": string,"upload_id": string
             }[]
                            },
 "restore_design_asset_version":

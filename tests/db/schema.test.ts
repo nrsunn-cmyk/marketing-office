@@ -514,6 +514,16 @@ describe("상태 전이 (DB 트리거)", () => {
 describe("M4 자료 파일 저장소 정책", () => {
   const put = (uid: string | null, name: string) =>
     asUser(db, uid, (tx) => tx.query("insert into storage.objects (bucket_id, name) values ('source-assets', $1)", [name]));
+  // SOURCE-UPLOAD-FIX-01: 올리기는 진행 중인 내 예약 경로만 된다. 시험에서는 예약 행을 바로 넣는다(예약 RPC 는 source-upload-direct.test.ts)
+  const MIME: Record<string, string> = { pdf: "application/pdf", png: "image/png", txt: "text/plain" };
+  const reserved = async (name: string) => {
+    const ext = name.split(".").pop() as string;
+    await db.query(
+      "insert into source_asset_uploads (workspace_id, project_id, object_key, file_name, mime, bytes, expires_at, created_by) values ($1, $2, $3, $4, $5, 1, now() + interval '1 hour', $6)",
+      [f.workspaceId, f.projectA, name, `x.${ext}`, MIME[ext], f.userId],
+    );
+    return name;
+  };
 
   it("비공개 버킷, 10MB, 허용 형식 4가지 (D05)", async () => {
     const b = await one<{ public: boolean; file_size_limit: string; allowed_mime_types: string[] }>(
@@ -525,8 +535,9 @@ describe("M4 자료 파일 저장소 정책", () => {
     expect(b.allowed_mime_types.sort()).toEqual(["application/pdf", "image/jpeg", "image/png", "text/plain"]);
   });
 
-  it("본인 업무실 폴더에는 올리고 읽을 수 있다", async () => {
-    const name = `${f.workspaceId}/${crypto.randomUUID()}/original.pdf`;
+  it("본인 업무실 폴더의 예약된 경로에는 올리고 읽을 수 있다(예약 안 된 경로는 거절)", async () => {
+    await expectDbError(put(f.userId, `${f.workspaceId}/${crypto.randomUUID()}/original.pdf`), /row-level security/);
+    const name = await reserved(`${f.workspaceId}/${crypto.randomUUID()}/original.pdf`);
     await put(f.userId, name);
     const r = await asOwner((tx) => tx.query("select name from storage.objects where name = $1", [name]));
     expect(r.rows).toHaveLength(1);
@@ -534,9 +545,11 @@ describe("M4 자료 파일 저장소 정책", () => {
 
   it("다른 계정은 본인 폴더에 올릴 수도, 본인 파일을 볼 수도 없다 (T01)", async () => {
     const stranger = await createUser(db, "storage-stranger@example.test");
-    const name = `${f.workspaceId}/${crypto.randomUUID()}/original.png`;
+    const name = await reserved(`${f.workspaceId}/${crypto.randomUUID()}/original.png`);
     await put(f.userId, name);
     await expectDbError(put(stranger, `${f.workspaceId}/${crypto.randomUUID()}/x.png`), /row-level security/);
+    const other = await reserved(`${f.workspaceId}/${crypto.randomUUID()}/original.png`);
+    await expectDbError(put(stranger, other), /row-level security/);
     const r = await asUser(db, stranger, (tx) => tx.query("select name from storage.objects where name = $1", [name]));
     expect(r.rows).toEqual([]);
   });
@@ -555,7 +568,7 @@ describe("M4 자료 파일 저장소 정책", () => {
   });
 
   it("본인도 파일을 수정·삭제할 수 없다 (정책 없음)", async () => {
-    const name = `${f.workspaceId}/${crypto.randomUUID()}/original.txt`;
+    const name = await reserved(`${f.workspaceId}/${crypto.randomUUID()}/original.txt`);
     await put(f.userId, name);
     const del = await asOwner((tx) => tx.query("delete from storage.objects where name = $1", [name]));
     expect(del.affectedRows).toBe(0);

@@ -120,7 +120,7 @@ test("T04·T05 파일 올리기: 정상 PDF는 보관, 내용은 '읽기 전'으
   await loginWithWorkspace(page);
   await page.goto(projectAUrl);
   await upload(page, "회사소개서.pdf", "application/pdf", PDF);
-  await expect(page.getByRole("status").filter({ hasText: "파일을 보관했습니다" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "자료 파일을 올리고 저장을 확인했습니다" })).toBeVisible();
   const item = page.getByRole("listitem").filter({ hasText: "회사소개서.pdf" });
   await expect(item.getByText("보관됨").filter({ visible: true })).toBeVisible();
   await expect(item.getByText("내용 읽기 전 (보관만 됨)").filter({ visible: true })).toBeVisible();
@@ -134,24 +134,69 @@ test("T04·T05 파일 올리기: 정상 PDF는 보관, 내용은 '읽기 전'으
 test("T04 위장 파일·10MB 초과·빈 파일은 거절하고 성공처럼 보이지 않는다", async ({ page }) => {
   await loginWithWorkspace(page);
   await page.goto(projectAUrl);
+  // 자료 목록(또는 빈 안내)이 그려진 뒤에 센다(스트리밍 전에 세면 0 이 되어 뒤에서 틀림)
+  await expect(page.getByRole("list", { name: "자료 목록" }).or(page.getByText("등록된 자료가 없습니다.").filter({ visible: true }))).toBeVisible();
   const before = await page.getByRole("listitem").filter({ hasText: "보관됨" }).count();
 
   await upload(page, "견적서.pdf", "application/pdf", EXE);
-  await expect(page.getByRole("alert").filter({ hasText: "내용이 다른 형식입니다" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "파일 실제 내용이 확장자·크기와 달라" })).toBeVisible();
 
   const big = Buffer.alloc(10 * 1024 * 1024 + 1);
   PDF.copy(big);
   await page.getByLabel("파일", { exact: true }).setInputFiles({ name: "큰파일.pdf", mimeType: "application/pdf", buffer: big });
   await page.getByRole("button", { name: "파일 올리기" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "10MB까지" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "한도(10MB)" })).toBeVisible();
 
   await page.getByLabel("파일", { exact: true }).setInputFiles({ name: "setup.exe", mimeType: "application/octet-stream", buffer: EXE });
   await page.getByRole("button", { name: "파일 올리기" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "PDF, PNG, JPEG, TXT 파일만" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "PDF·PNG·JPEG·TXT 파일만" })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("listitem").filter({ hasText: "보관됨" })).toHaveCount(before);
   await expect(page.getByText("견적서.pdf").filter({ visible: true })).toHaveCount(0);
+});
+
+// SOURCE-UPLOAD-UI-01: 운영 함수 본문 4.5MB 한도를 넘는 파일도 브라우저가 저장소에 직접 올린다(예약 → 서명 주소 PUT → 확정)
+test("4.5MB 넘는 8MB·10MB PDF 도 올라가고 내려받으면 같은 파일", async ({ page }) => {
+  test.setTimeout(120_000);
+  await loginWithWorkspace(page);
+  await page.goto(projectAUrl);
+  const { readFileSync } = await import("node:fs");
+  // 운영 Vercel 함수 본문 한도(4.5MB) 근거: 앱 서버로 가는 요청 본문은 작고, 파일은 저장소 서명 주소로 PUT 된다
+  const appOrigin = new URL(page.url()).origin;
+  const appBodies: number[] = [];
+  const storagePuts: number[] = [];
+  // 실제 보낸 본문 크기(파일 본문은 postDataBuffer 로 잡히지 않아 sizes() 로 잰다)
+  const sized: Promise<void>[] = [];
+  page.on("requestfinished", (req) => {
+    sized.push(
+      req.sizes().then(({ requestBodySize }) => {
+        if (req.url().startsWith(appOrigin) && req.method() === "POST") appBodies.push(requestBodySize);
+        if (req.method() === "PUT" && req.url().includes("/storage/v1/object/upload/sign/source-assets/")) storagePuts.push(requestBodySize);
+      }),
+    );
+  });
+  for (const [name, size] of [
+    ["큰자료-8MB.pdf", 8 * 1024 * 1024],
+    ["큰자료-10MB.pdf", 10 * 1024 * 1024],
+  ] as const) {
+    const buf = Buffer.alloc(size, 0x20);
+    PDF.copy(buf);
+    if (!(await page.getByLabel("파일", { exact: true }).isVisible())) await page.getByText("파일 올리기 (PDF·PNG·JPEG·TXT, 10MB까지)").click();
+    await page.getByLabel("파일", { exact: true }).setInputFiles({ name, mimeType: "application/pdf", buffer: buf });
+    await page.getByRole("button", { name: "파일 올리기" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "자료 파일을 올리고 저장을 확인했습니다" })).toBeVisible({ timeout: 60_000 });
+    const item = page.getByRole("listitem").filter({ hasText: name });
+    await expect(item.getByText("보관됨").filter({ visible: true })).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent("download"), item.getByRole("link", { name: "내려받기" }).click()]);
+    expect(readFileSync(await download.path()).equals(buf)).toBe(true);
+  }
+  await Promise.all(sized);
+  // 파일 본문 PUT 은 Playwright 가 크기를 재지 못해(Blob 본문) 횟수만 보고, 크기는 저장된 행으로 확인한다
+  expect(storagePuts).toHaveLength(2);
+  expect(Math.max(0, ...appBodies)).toBeLessThan(64 * 1024);
+  const { data: rows } = await adminClient().from("source_assets").select("file_name, bytes, upload_status").in("file_name", ["큰자료-8MB.pdf", "큰자료-10MB.pdf"]);
+  expect(Object.fromEntries((rows ?? []).map((r) => [r.file_name, [r.bytes, r.upload_status]]))).toEqual({ "큰자료-8MB.pdf": [8 * 1024 * 1024, "stored"], "큰자료-10MB.pdf": [10 * 1024 * 1024, "stored"] });
 });
 
 test("메모·링크 자료 (링크는 주소만 기록)", async ({ page }) => {
