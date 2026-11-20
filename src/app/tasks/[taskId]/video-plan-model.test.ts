@@ -132,5 +132,9 @@ describe("P3-d 영상 구성 화면 모델(P3D-HANDOFF·P3-COPY-FINAL)", () => {
     expect(videoUploadErrSizeText(100 * MB)).toBe("파일 크기가 한도(100.0 MB)를 넘어 올릴 수 없습니다.");
     expect(guessVideoMime("x.webm", "")).toBe("video/webm");
     expect(VP_LABELS.representative(2)).toBe("대표 구성안 · 활성 2 / 5개");
+    // AGY DESIGN-COPY-AUDIT-01: VP_COPY 추가 11키가 모두 VP_COPY 의 같은 키 이름으로 있다
+    for (const k of ["staleReasonBrief", "staleReasonAsset", "archivedAssetsWarn", "rebaseBlockedBriefArchived", "rebaseBlockedBriefDraft", "rebaseBlockedVersionLimit", "planLimitReached", "planRestoredOk", "fileRestoredOk", "uploadErrSize", "uploadErrType"])
+      expect(k in VP_COPY, k).toBe(true);
+    expect(VP_COPY.uploadErrSize(50 * MB)).toBe("파일 크기가 한도(50.0 MB)를 넘어 올릴 수 없습니다.");
   });
 });

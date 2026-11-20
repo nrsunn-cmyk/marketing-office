@@ -78,11 +78,15 @@ export const VP_COPY = {
   planRestoredOk: "선택한 판의 영상 구성안을 새 버전으로 복원했습니다.",
   fileRestoredOk: "선택한 영상 파일 버전을 새 버전으로 복원했습니다.",
   uploadErrType: "허용되지 않는 파일 형식입니다. MP4·MOV·WEBM 파일만 올려 주세요.",
+  // {n}·{limit} 이 있는 키는 같은 키 이름의 함수로(AGY DESIGN-COPY-AUDIT-01 대조용, 키 이름 그대로)
+  staleReasonAsset: (n: number) => `연결된 디자인 자산 ${n}개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요.`,
+  archivedAssetsWarn: (n: number) => `연결된 디자인 자산 ${n}개가 보관되었습니다. 필요하면 다른 자산으로 바꿔 주세요.`,
+  /** uploadErrSize "파일 크기가 한도({limit})를 넘어 올릴 수 없습니다."(서버 설정값) */
+  uploadErrSize: (limitBytes: number) => `파일 크기가 한도(${formatBytes(limitBytes)})를 넘어 올릴 수 없습니다.`,
 } as const;
-export const staleReasonAssetText = (n: number) => `연결된 디자인 자산 ${n}개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요.`;
-export const archivedAssetsWarnText = (n: number) => `연결된 디자인 자산 ${n}개가 보관되었습니다. 필요하면 다른 자산으로 바꿔 주세요.`;
-/** uploadErrSize "파일 크기가 한도({limit})를 넘어 올릴 수 없습니다."(서버 설정값) */
-export const videoUploadErrSizeText = (limitBytes: number) => `파일 크기가 한도(${formatBytes(limitBytes)})를 넘어 올릴 수 없습니다.`;
+export const staleReasonAssetText = VP_COPY.staleReasonAsset;
+export const archivedAssetsWarnText = VP_COPY.archivedAssetsWarn;
+export const videoUploadErrSizeText = VP_COPY.uploadErrSize;
 
 /** 시안 video-plan.html 의 라벨(AGY 문구 — 그대로) */
 export const VP_LABELS = {
