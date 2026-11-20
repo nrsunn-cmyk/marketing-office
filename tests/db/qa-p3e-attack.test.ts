@@ -368,7 +368,7 @@ describe.skipIf(!present)(`P3-e PPT 구성안 공격 시험(${T.decks})`, () => 
     expect((await cur(ok)).slides[0].title).toBe("😀".repeat(L.slideTitle));
   });
 
-  it("제어 문자 저장 거절(제목·요점·메모·구성안 제목), 줄바꿈·CR·탭은 허용", async () => {
+  it("제어 문자·CR 저장 거절(제목·요점·메모·구성안 제목), 줄바꿈·탭은 허용", async () => {
     const c = await ctx(a);
     const passed: string[] = [];
     for (const ch of P3E.controlChars) {
@@ -616,26 +616,23 @@ describe.skipIf(!present)(`P3-e PPT 구성안 공격 시험(${T.decks})`, () => 
 
   // D1(Tester 판단 요청): 판 번호 유지를 '같은 슬라이드의 직전 판'에서만 찾는다. 이미 연결된 자산을 다른 슬라이드로 옮기면(또는 빼고 새 슬라이드에 넣으면)
   //   맞추기 없이 현재 판으로 바뀌어 이전 기준이 몰래 풀린다. P3-d 장면도 같은 방식. 고쳐지면 it.fails → it 으로 바꾼다.
-  it.fails(
-    "D1 자산을 다른 슬라이드로 옮겨도 판 번호 유지(이전 기준이 저장으로 풀리면 안 됨)",
-    async () => {
-      const c = await ctx(a);
-      const asset = await designAsset(a, c);
-      const id = await create(a, c, [
-        slide({ title: "표지", asset_ids: [asset] }),
-        slide({ title: "본문" }),
-      ]);
-      await designAsset(a, c, asset); // v2
-      const [s1, s2] = await asInput(id);
-      await save(a, id, [
-        { ...s1, asset_ids: [] },
-        { ...s2, asset_ids: [asset] },
-      ]);
-      expect((await cur(id)).slides[1].assets).toEqual([
-        { asset_id: asset, version_no: 1 },
-      ]);
-    },
-  );
+  it("D1 자산을 다른 슬라이드로 옮겨도 판 번호 유지(이전 기준이 저장으로 풀리면 안 됨)", async () => {
+    const c = await ctx(a);
+    const asset = await designAsset(a, c);
+    const id = await create(a, c, [
+      slide({ title: "표지", asset_ids: [asset] }),
+      slide({ title: "본문" }),
+    ]);
+    await designAsset(a, c, asset); // v2
+    const [s1, s2] = await asInput(id);
+    await save(a, id, [
+      { ...s1, asset_ids: [] },
+      { ...s2, asset_ids: [asset] },
+    ]);
+    expect((await cur(id)).slides[1].assets).toEqual([
+      { asset_id: asset, version_no: 1 },
+    ]);
+  });
 
   it("보관: 저장·되돌리기·맞추기·다시 보관 INVALID_TRANSITION, 판 표 수정·삭제 거절, 보관 구성안은 슈퍼유저도 못 바꿈", async () => {
     const c = await ctx(a);
