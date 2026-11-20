@@ -18,7 +18,6 @@ import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeStale, EmptyAssetsArt, P3AssetsIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
 import { fixRequestedIdsFor } from "./qa-fix-flags";
-import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
 import da from "./design-assets.module.css";
 import { DesignAssetList, type DesignAssetActions, type DesignPreviews } from "./design-assets-list";
