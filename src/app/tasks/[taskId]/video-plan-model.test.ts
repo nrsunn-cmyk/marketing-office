@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  VIDEO_MIME_EXT,
   VIDEO_PLAN_LIMITS,
   VP_COPY,
   addScene,
@@ -14,12 +15,26 @@ import {
   toVideoPlanPayload,
   toggleAsset,
   totalSeconds,
+  VP_LABELS,
+  archivedAssetsWarnText,
+  guessVideoMime,
+  precheckVideoFile,
+  staleReasonAssetText,
+  videoRebaseBlockedText,
+  videoStaleNotices,
+  videoUploadErrSizeText,
   type VideoSceneView,
 } from "./video-plan-model";
 
 const sc = (name: string, sortOrder: number, extra: Partial<VideoSceneView> = {}): VideoSceneView => ({ ...emptyScene(sortOrder), id: `s-${name}`, sceneTitle: name, durationSec: 15, ...extra });
 
 describe("P3-d 영상 구성 화면 모델(P3D-HANDOFF·P3-COPY-FINAL)", () => {
+  it("화면 한도·형식은 서버 도메인 상수(DB 와 같은 값)와 똑같다(화면은 zod 를 피하려고 값을 따로 둠)", async () => {
+    const d = await import("@/domain/video-plans");
+    expect(VIDEO_PLAN_LIMITS).toEqual(d.VIDEO_PLAN_LIMITS);
+    expect(VIDEO_MIME_EXT).toEqual(d.VIDEO_MIME_EXT);
+  });
+
   it("한도는 인계표와 같다", () => {
     expect(VIDEO_PLAN_LIMITS).toMatchObject({ scenesMax: 30, fileVersionsMax: 20, assetsPerScene: 10, title: 120, sceneTitle: 80, durationMin: 1, durationMax: 600, narration: 1000, subtitle: 300 });
   });
@@ -80,10 +95,42 @@ describe("P3-d 영상 구성 화면 모델(P3D-HANDOFF·P3-COPY-FINAL)", () => {
     expect(checkVideoPlan("t", [], []).scenes).toBe("장면이 1개 이상 있어야 합니다.");
   });
 
-  it("보낼 값: 정렬·번호 다시 매김, 값은 자르지 않음", () => {
-    const p = toVideoPlanPayload({ title: "t", aspectRatio: "9:16", status: "reviewed", scenes: [sc("B", 2), sc("A", 1, { narration: "가".repeat(1100) })] });
-    expect(p.scenes.map((s) => `${s.sortOrder}${s.sceneTitle}`)).toEqual(["1A", "2B"]);
+  it("보낼 값(Backend 4절): 배열 순서가 곧 순서(sortOrder 안 보냄), 장면 id 그대로(새 장면만 null), 값은 자르지 않음", () => {
+    const p = toVideoPlanPayload({ title: "t", aspectRatio: "9:16", status: "reviewed", scenes: [sc("B", 2), sc("A", 1, { narration: "가".repeat(1100) }), { ...emptyScene(3), sceneTitle: "새" }] });
+    expect(p.scenes.map((s) => `${s.id}:${s.sceneTitle}`)).toEqual(["s-A:A", "s-B:B", "null:새"]);
+    expect(p.scenes.every((s) => !("sortOrder" in s))).toBe(true);
     expect(p.scenes[0].narration).toHaveLength(1100);
     expect(p).toMatchObject({ aspectRatio: "9:16", status: "reviewed" });
+  });
+
+  it("이전 기준 원인별(staleReasons): 브리프·자산(수가 오면 staleReasonAsset, 아니면 공통 안내), 보관이면 없음", () => {
+    const base = { stale: true, archivedAt: null, staleReasons: ["brief"] as ("brief" | "asset")[] };
+    expect(videoStaleNotices(base)).toEqual([VP_COPY.staleReasonBrief]);
+    expect(videoStaleNotices({ ...base, staleReasons: ["asset"] })).toEqual([VP_COPY.staleBanner]);
+    expect(videoStaleNotices({ ...base, staleReasons: ["asset"], staleAssetCount: 3 })).toEqual(["연결된 디자인 자산 3개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요."]);
+    expect(videoStaleNotices({ ...base, archivedAt: "x" })).toEqual([]);
+    expect(videoStaleNotices({ ...base, stale: false })).toEqual([]);
+    expect(staleReasonAssetText(1)).toBe("연결된 디자인 자산 1개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요.");
+    expect(archivedAssetsWarnText(2)).toBe("연결된 디자인 자산 2개가 보관되었습니다. 필요하면 다른 자산으로 바꿔 주세요.");
+  });
+
+  it("맞추기 막힘(서버 글 → AGY 원인 문구), 모르는 글은 그대로", () => {
+    expect(videoRebaseBlockedText("보관한 제작 브리프라 맞출 수 없습니다. 이 구성안은 지난 브리프 기준 그대로 고칠 수 있습니다.")).toBe("바탕 제작 브리프가 보관되어 최신 기준으로 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText("제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요.")).toBe("바탕 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText("구성안 판이 100개라 맞출 수 없습니다. 구성안을 보관하고 새로 만들어 주세요.")).toBe("구성안 판 이력이 100개에 도달해 최신 기준으로 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText("보관한 영상 구성안은 맞출 수 없습니다.")).toBe("보관한 영상 구성안은 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText(null)).toBeNull();
+  });
+
+  it("영상 파일 미리 거르기: 형식(MP4·MOV·WEBM)·확장자만 이름·크기(서버 한도 {limit})", () => {
+    const MB = 1024 * 1024;
+    expect(precheckVideoFile({ name: "a.mp4", size: 10 * MB, type: "video/mp4" })).toBeNull();
+    expect(precheckVideoFile({ name: "a.MOV", size: 10, type: "" })).toBeNull();
+    expect(precheckVideoFile({ name: "a.avi", size: 10, type: "video/x-msvideo" })).toBe("허용되지 않는 파일 형식입니다. MP4·MOV·WEBM 파일만 올려 주세요.");
+    expect(precheckVideoFile({ name: ".mp4", size: 10, type: "video/mp4" })).toBe("확장자만 있는 파일 이름은 사용할 수 없습니다. 파일 이름을 붙인 뒤 다시 올려 주세요.");
+    expect(precheckVideoFile({ name: "a.webm", size: 50 * MB + 1, type: "video/webm" })).toBe("파일 크기가 한도(50.0 MB)를 넘어 올릴 수 없습니다.");
+    expect(videoUploadErrSizeText(100 * MB)).toBe("파일 크기가 한도(100.0 MB)를 넘어 올릴 수 없습니다.");
+    expect(guessVideoMime("x.webm", "")).toBe("video/webm");
+    expect(VP_LABELS.representative(2)).toBe("대표 구성안 · 활성 2 / 5개");
   });
 });

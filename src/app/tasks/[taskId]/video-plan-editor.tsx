@@ -39,7 +39,8 @@ import {
  * 영상 제목·화면 비율 → 장면 목록(위로·아래로·제외, 장면 이름·길이·대사·자막·자산 연결) → 진행 상태 → 저장.
  * 저장은 구성안 전체를 숨은 칸 payload(JSON) 하나로 보낸다. 서버가 없으면 자리용 동작이 안내만 한다. 값은 자르지 않는다.
  */
-export function VideoPlanEditor({ plan, assets, action }: { plan: VideoPlanView; assets: VideoAssetOption[]; action?: BriefAction }) {
+/** hidden: 숨은 칸(기본 planId·revision). 만들기(첫 저장)는 productionBriefId 를 넘긴다 */
+export function VideoPlanEditor({ plan, assets, action, hidden }: { plan: VideoPlanView; assets: VideoAssetOption[]; action?: BriefAction; hidden?: Record<string, string | number> }) {
   const id = useId();
   const [title, setTitle] = useState(plan.title);
   const [aspect, setAspect] = useState<VideoAspect>(plan.aspectRatio);
@@ -61,8 +62,9 @@ export function VideoPlanEditor({ plan, assets, action }: { plan: VideoPlanView;
 
   return (
     <ActionForm action={action ?? notConnectedAction} submitLabel={VP_COPY.save} pendingLabel={P3_COMMON_COPY.savePending} className={`${f.form} ${vp.vpForm}`}>
-      <input type="hidden" name="planId" value={plan.id} />
-      <input type="hidden" name="revision" value={plan.revision} />
+      {Object.entries(hidden ?? { planId: plan.id, revision: plan.revision }).map(([k, v]) => (
+        <input key={k} type="hidden" name={k} value={String(v)} />
+      ))}
       <input type="hidden" name="payload" value={JSON.stringify(toVideoPlanPayload({ title, aspectRatio: aspect, status, scenes }))} />
 
       <div className={vp.vpGrid2}>
@@ -105,7 +107,7 @@ export function VideoPlanEditor({ plan, assets, action }: { plan: VideoPlanView;
       </div>
 
       <div className={vp.vpScenesHead}>
-        <h3 className={vp.vpSubhead} id={`${id}-scenes-h`}>{`${VP_LABELS.scenesHeading} (${scenes.length} / ${L.scenesMax}장면)`}</h3>
+        <h4 className={vp.vpSubhead} id={`${id}-scenes-h`}>{`${VP_LABELS.scenesHeading} (${scenes.length} / ${L.scenesMax}장면)`}</h4>
         <span className={f.tag}>{durationSummary(scenes)}</span>
       </div>
       {issues.scenes && <p className={styles.error}>{issues.scenes}</p>}
@@ -232,9 +234,9 @@ function SceneCard({
   return (
     <li className={vp.vpScene} aria-labelledby={hId}>
       <div className={vp.vpSceneHead}>
-        <h4 id={hId} className={vp.vpSceneTitle}>
+        <h5 id={hId} className={vp.vpSceneTitle}>
           {name}
-        </h4>
+        </h5>
         <div className={vp.vpTools} role="group" aria-label={`${name} 순서·제외`}>
           <button type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={i === 0} onClick={() => onMove(-1)} aria-label={`${name} ${VP_LABELS.up}`}>
             {VP_LABELS.up}

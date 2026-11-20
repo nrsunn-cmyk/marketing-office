@@ -18,6 +18,7 @@ import { FunnelSection } from "./funnel-section";
 import { ProductionBriefArea } from "./production-brief-section";
 import { WebCopyArea } from "./web-copy-section";
 import { DesignAssetArea } from "./design-assets-section";
+import { VideoPlanArea } from "./video-plan-section";
 import wcStyles from "./web-copy.module.css";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
@@ -124,6 +125,7 @@ async function TaskView({
             <a href="#production-brief">공통 제작 브리프</a>
             <a href="#web-copy">홈페이지 구조·문구</a>
             <a href="#design-assets">디자인 자산 관리</a>
+            <a href="#video-plan">영상 구성·파일 관리</a>
           </nav>
           <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
           {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
@@ -165,6 +167,16 @@ async function TaskView({
             }
           >
             <DesignAssetArea detail={detail} />
+          </Suspense>
+          {/* P3D-UI-CONNECT-01: P3 넷째 단계 영상 구성·파일(디자인 자산 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                영상 구성안을 불러오는 중…
+              </p>
+            }
+          >
+            <VideoPlanArea detail={detail} />
           </Suspense>
         </>
       ) : (

@@ -4,16 +4,25 @@
  * P3-COPY-FINAL.md 의 VP_COPY·P3_COMMON_COPY(그대로 — 새 문구를 만들지 않는다).
  * 영상 생성·편집·자막 합성은 하지 않는다(기획과 완성 파일 버전 관리만, 인계표 3절 1).
  */
+import type { VideoFileVersionView, VideoPlanData, VideoPlanVersionView, VideoPlanView, VideoSceneView, VideoStaleReason } from "@/features/video-plans/server";
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
 import { maxLengthMessage, requiredMessage } from "../../_components/josa";
 
 export { P3_COMMON_COPY } from "./design-assets-model";
 
 /** 한도(P3D-HANDOFF 1·2절, 글자 수는 코드 포인트) */
+/**
+ * 한도·형식은 서버 도메인 상수(@/domain/video-plans, DB 와 같은 값)와 같다. 도메인 index 가 zod 를 가져와
+ * 'use client' 화면에서는 값을 직접 가져올 수 없으므로 같은 값을 두고, 시험(video-plan-model.test)이 서버 상수와 대조한다
+ */
 export const VIDEO_PLAN_LIMITS = {
   scenesMax: 30,
   fileVersionsMax: 20,
+  planVersionsMax: 100,
   assetsPerScene: 10,
+  activePlansPerBrief: 5,
+  plansPerBrief: 10,
+  pendingUploadsPerWorkspace: 5,
   title: 120,
   sceneTitle: 80,
   durationMin: 1,
@@ -21,9 +30,12 @@ export const VIDEO_PLAN_LIMITS = {
   narration: 1000,
   subtitle: 300,
   changeNote: 300,
+  fileName: 200,
+  maxFileBytes: 50 * 1024 * 1024,
+  workspaceQuotaBytes: 1024 * 1024 * 1024,
 } as const;
-
-/** 화면 비율·용도(시안 라벨 그대로) */
+export const VIDEO_MIME_EXT = { "video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm" } as const;
+export type VideoMime = keyof typeof VIDEO_MIME_EXT;
 export const VIDEO_ASPECTS = { "16:9": "16:9 (홈페이지·소개)", "9:16": "9:16 (숏폼·릴스)", "1:1": "1:1 (피드용)" } as const;
 export type VideoAspect = keyof typeof VIDEO_ASPECTS;
 export const VIDEO_ASPECT_KEYS = Object.keys(VIDEO_ASPECTS) as VideoAspect[];
@@ -32,49 +44,8 @@ export const VIDEO_PLAN_STATUSES = { drafting: "작성 중", reviewed: "검토 �
 export type VideoPlanStatus = keyof typeof VIDEO_PLAN_STATUSES;
 export const VIDEO_PLAN_STATUS_KEYS = Object.keys(VIDEO_PLAN_STATUSES) as VideoPlanStatus[];
 
-// ── 자리용 보기 타입(서버 보기 타입이 오면 바꾼다) ──
-export interface VideoSceneView {
-  id: string | null; // 새로 추가해 저장 안 한 장면은 null
-  sceneTitle: string;
-  durationSec: number;
-  narration: string;
-  subtitle: string;
-  assetIds: string[];
-  sortOrder: number;
-}
-export interface VideoFileVersionView {
-  version: number;
-  fileName: string;
-  fileSizeBytes: number;
-  savedAt: string; // ISO
-  note: string | null;
-  current: boolean;
-}
-export interface VideoPlanView {
-  id: string;
-  title: string;
-  aspectRatio: VideoAspect;
-  status: VideoPlanStatus;
-  archivedAt: string | null;
-  revision: number;
-  /** 계산: 기준(공통 제작 브리프·연결 자산)이 새 버전으로 바뀜 */
-  stale: boolean;
-  scenes: VideoSceneView[];
-  files: VideoFileVersionView[];
-}
-/** 장면에 연결할 디자인 자산 고르기 목록(P3-c 자산) */
-export interface VideoAssetOption {
-  id: string;
-  label: string;
-}
-export interface VideoPlanData {
-  plan: VideoPlanView | null;
-  canWrite: boolean;
-  /** 만들 수 있는지(확정된 공통 제작 브리프 필요 등, 서버가 정한다) */
-  canCreate: boolean;
-  createBlockedReason: string | null;
-  assets: VideoAssetOption[];
-}
+export type { VideoSceneView, VideoFileVersionView, VideoPlanVersionView, VideoPlanView, VideoPlanData, VideoStaleReason };
+export type VideoAssetOption = VideoPlanData["assets"][number];
 
 /** 화면 문구 최종본(P3-COPY-FINAL.md 2절 VP_COPY — 그대로) */
 export const VP_COPY = {
@@ -98,7 +69,20 @@ export const VP_COPY = {
   savedOk: "영상 구성안을 저장했습니다.",
   attachedOk: "새 영상 파일 버전을 첨부했습니다.",
   archivedOk: "영상 구성안을 보관했습니다.",
+  // 원인별 안내·막힘·한도·복원(P3-COPY-FINAL 2절 추가 키)
+  staleReasonBrief: "공통 제작 브리프가 새 버전으로 바뀌었습니다. 대사와 장면 구성을 확인해 주세요.",
+  rebaseBlockedBriefArchived: "바탕 제작 브리프가 보관되어 최신 기준으로 맞출 수 없습니다.",
+  rebaseBlockedBriefDraft: "바탕 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다.",
+  rebaseBlockedVersionLimit: "구성안 판 이력이 100개에 도달해 최신 기준으로 맞출 수 없습니다.",
+  planLimitReached: "영상 구성안은 브리프당 활성 5개(전체 10개)까지 둘 수 있습니다.",
+  planRestoredOk: "선택한 판의 영상 구성안을 새 버전으로 복원했습니다.",
+  fileRestoredOk: "선택한 영상 파일 버전을 새 버전으로 복원했습니다.",
+  uploadErrType: "허용되지 않는 파일 형식입니다. MP4·MOV·WEBM 파일만 올려 주세요.",
 } as const;
+export const staleReasonAssetText = (n: number) => `연결된 디자인 자산 ${n}개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요.`;
+export const archivedAssetsWarnText = (n: number) => `연결된 디자인 자산 ${n}개가 보관되었습니다. 필요하면 다른 자산으로 바꿔 주세요.`;
+/** uploadErrSize "파일 크기가 한도({limit})를 넘어 올릴 수 없습니다."(서버 설정값) */
+export const videoUploadErrSizeText = (limitBytes: number) => `파일 크기가 한도(${formatBytes(limitBytes)})를 넘어 올릴 수 없습니다.`;
 
 /** 시안 video-plan.html 의 라벨(AGY 문구 — 그대로) */
 export const VP_LABELS = {
@@ -117,7 +101,13 @@ export const VP_LABELS = {
   subtitle: "화면 자막",
   assets: "사용 디자인 자산 연결 (P3-c 자산 · 0~10개)",
   filesHeading: "2. 첨부 영상 파일 및 버전",
-  allowedFormats: "허용 형식: MP4, MOV, WEBM (파일 크기·저장소 한도는 서버 정책 따름)",
+  /** 시안 "허용 형식: MP4, MOV, WEBM (최대 크기 한도는 서버 버킷 설정값 {limit} 따름)" — {limit} 은 서버 값 */
+  allowedFormats: (limitBytes: number) => `허용 형식: MP4, MOV, WEBM (최대 크기 한도는 서버 버킷 설정값 ${formatBytes(limitBytes)} 따름)`,
+  representative: (active: number) => `대표 구성안 · 활성 ${active} / ${VIDEO_PLAN_LIMITS.activePlansPerBrief}개`,
+  planVersionsHeading: "구성안 판 이력 · 되돌리기 (최대 100판 · 빼기 장면 복구)",
+  planVersionsHint: "되돌리기를 누르면 과거 기록을 지우지 않고, 선택한 판의 내용(장면 id 포함)을 새 버전으로 복원합니다.",
+  currentPlanVersion: "현재 판",
+  restorePlanVersion: "이 판으로 되돌리기",
   currentMark: "(현재)",
   currentVersion: "현재 버전",
   status: "진행 상태",
@@ -218,12 +208,56 @@ export function checkVideoPlan(title: string, scenes: readonly VideoSceneView[],
   return out;
 }
 
-/** 서버로 보낼 값(자리용 이름 — 서버 계약이 오면 맞춘다). 값은 자르지 않는다 */
+/**
+ * 서버로 보낼 값(Backend P3D 4절 계약). 장면 id 는 받은 그대로(새 장면만 null), sortOrder 는 보내지 않는다(배열 순서).
+ * 만들기는 status 를 빼고 productionBriefId 를 더해 보낸다(동작에서). 값은 자르지 않는다
+ */
 export function toVideoPlanPayload(v: { title: string; aspectRatio: VideoAspect; status: VideoPlanStatus; scenes: readonly VideoSceneView[] }) {
   return {
     title: v.title,
     aspectRatio: v.aspectRatio,
     status: v.status,
-    scenes: sortedScenes(v.scenes).map((s, i) => ({ id: s.id, sceneTitle: s.sceneTitle, durationSec: s.durationSec, narration: s.narration, subtitle: s.subtitle, assetIds: [...s.assetIds], sortOrder: i + 1 })),
+    scenes: sortedScenes(v.scenes).map((s) => ({ id: s.id, sceneTitle: s.sceneTitle, durationSec: s.durationSec, narration: s.narration, subtitle: s.subtitle, assetIds: [...s.assetIds] })),
   };
+}
+
+// ── 서버 연결(P3D-UI-CONNECT-01) ──
+/** 판 종류 이름(웹 문서와 같은 말) */
+export const VIDEO_PLAN_VERSION_KINDS = { create: "처음 만듦", save: "저장", restore: "되돌림", rebase: "최신 기준 맞춤" } as const;
+
+/**
+ * 이전 기준 원인별 안내(AGY staleReasons). 브리프 → staleReasonBrief, 자산 → 바뀐 자산 수를 서버가 주면 staleReasonAsset(n),
+ * 아직 주지 않으면 공통 staleBanner(Backend 에 개수 요청). 보관 구성안이면 없음
+ */
+export function videoStaleNotices(plan: Pick<VideoPlanView, "stale" | "staleReasons" | "archivedAt"> & { staleAssetCount?: number }): string[] {
+  if (!plan.stale || plan.archivedAt) return [];
+  const out: string[] = [];
+  if (plan.staleReasons.includes("brief")) out.push(VP_COPY.staleReasonBrief);
+  if (plan.staleReasons.includes("asset")) out.push(typeof plan.staleAssetCount === "number" && plan.staleAssetCount > 0 ? staleReasonAssetText(plan.staleAssetCount) : VP_COPY.staleBanner);
+  return out;
+}
+/** 맞추기 막힘 사유 → AGY 확정 문구(서버 글로 원인을 가른다 — Backend 에 원인 코드 요청). 모르는 글은 그대로 */
+export function videoRebaseBlockedText(reason: string | null): string | null {
+  if (!reason) return null;
+  if (/보관한 제작 브리프/.test(reason)) return VP_COPY.rebaseBlockedBriefArchived;
+  if (/작성 중/.test(reason)) return VP_COPY.rebaseBlockedBriefDraft;
+  if (/판이 \d+개/.test(reason)) return VP_COPY.rebaseBlockedVersionLimit;
+  return reason;
+}
+/** 고르기 단계 미리 막기(형식·확장자만 이름·크기). 통과면 null. 최종 판단은 서버 */
+export function precheckVideoFile(file: { name: string; size: number; type: string }, limitBytes = VIDEO_PLAN_LIMITS.maxFileBytes): string | null {
+  const name = file.name.trim();
+  if (/^\.[A-Za-z0-9]+$/.test(name)) return "확장자만 있는 파일 이름은 사용할 수 없습니다. 파일 이름을 붙인 뒤 다시 올려 주세요.";
+  if (!guessVideoMime(name, file.type)) return VP_COPY.uploadErrType;
+  if (file.size > limitBytes) return videoUploadErrSizeText(limitBytes);
+  if (file.size < 1) return VP_COPY.uploadErrType;
+  return null;
+}
+/** 브라우저 형식이 비거나 다르면 확장자로(mp4·mov·webm) */
+export function guessVideoMime(name: string, type: string): VideoMime | null {
+  const t = type.toLowerCase();
+  if (t in VIDEO_MIME_EXT) return t as VideoMime;
+  const ext = /\.([A-Za-z0-9]+)$/.exec(name)?.[1]?.toLowerCase() ?? "";
+  const hit = (Object.entries(VIDEO_MIME_EXT) as [VideoMime, string][]).find(([, e]) => e === ext);
+  return hit ? hit[0] : null;
 }
