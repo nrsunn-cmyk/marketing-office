@@ -19,6 +19,7 @@ import { ProductionBriefArea } from "./production-brief-section";
 import { WebCopyArea } from "./web-copy-section";
 import { DesignAssetArea } from "./design-assets-section";
 import { VideoPlanArea } from "./video-plan-section";
+import { PptDeckArea } from "./ppt-deck-section";
 import wcStyles from "./web-copy.module.css";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
@@ -126,6 +127,7 @@ async function TaskView({
             <a href="#web-copy">홈페이지 구조·문구</a>
             <a href="#design-assets">디자인 자산 관리</a>
             <a href="#video-plan">영상 구성·파일 관리</a>
+            <a href="#ppt-deck">PPT 구성·템플릿</a>
           </nav>
           <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
           {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
@@ -177,6 +179,16 @@ async function TaskView({
             }
           >
             <VideoPlanArea detail={detail} />
+          </Suspense>
+          {/* P3E-UI-CONNECT-01: P3 다섯째 단계 PPT 구성·템플릿·내보내기(영상 구성 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                PPT 구성안을 불러오는 중…
+              </p>
+            }
+          >
+            <PptDeckArea detail={detail} />
           </Suspense>
         </>
       ) : (

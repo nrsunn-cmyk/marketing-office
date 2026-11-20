@@ -320,3 +320,63 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* P3E-UI-CONNECT-01: 브리프마다 블록·만들기·판 이력·판별 내보내기(영상 구성과 같은 꼴, 기존 토큰만) */
+.ppBrief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.ppBriefTitle {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+.ppCreate {
+  min-width: 0;
+}
+.ppVersions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.ppVersions > p {
+  margin: 0;
+}
+.ppVersionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ppVersion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.ppVersion p {
+  margin: 0;
+}
+.ppVersionCurrent {
+  border: 2px solid var(--info-border);
+}
+.ppVersionName {
+  font-weight: var(--font-weight-semibold);
+}
+.ppVersionTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

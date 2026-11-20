@@ -38,7 +38,18 @@ import {
  * 발표 자료 제목·템플릿(라디오 카드) → 슬라이드 목록(위로·아래로·제외, 제목·핵심 요점·발표자 메모·자산 연결) → 진행 상태 → 저장.
  * 저장은 구성안 전체를 숨은 칸 payload(JSON) 하나로 보낸다. 서버가 없으면 자리용 동작이 안내만 한다. 값은 자르지 않는다.
  */
-export function PptDeckEditor({ deck, assets, action }: { deck: PptDeckView; assets: PptAssetOption[]; action?: BriefAction }) {
+export function PptDeckEditor({
+  deck,
+  assets,
+  action,
+  hidden,
+}: {
+  deck: PptDeckView;
+  assets: PptAssetOption[];
+  action?: BriefAction;
+  /** 만들기(첫 저장)일 때 deckId·revision 대신 보낼 숨은 칸(productionBriefId) */
+  hidden?: Record<string, string>;
+}) {
   const id = useId();
   const [title, setTitle] = useState(deck.title);
   const [template, setTemplate] = useState<PptTemplate>(deck.templateKey);
@@ -60,8 +71,14 @@ export function PptDeckEditor({ deck, assets, action }: { deck: PptDeckView; ass
 
   return (
     <ActionForm action={action ?? notConnectedAction} submitLabel={PPT_COPY.save} pendingLabel={P3_COMMON_COPY.savePending} className={`${f.form} ${pp.ppForm}`}>
-      <input type="hidden" name="deckId" value={deck.id} />
-      <input type="hidden" name="revision" value={deck.revision} />
+      {hidden ? (
+        Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)
+      ) : (
+        <>
+          <input type="hidden" name="deckId" value={deck.id} />
+          <input type="hidden" name="revision" value={deck.revision} />
+        </>
+      )}
       <input type="hidden" name="payload" value={JSON.stringify(toPptDeckPayload({ title, templateKey: template, status, slides }))} />
 
       <div className={styles.field}>
@@ -106,7 +123,7 @@ export function PptDeckEditor({ deck, assets, action }: { deck: PptDeckView; ass
         </div>
       </fieldset>
 
-      <h3 className={pp.ppSubhead} id={`${id}-slides-h`}>{`${PPT_LABELS.slidesHeading} (${slides.length} / ${L.slidesMax}장)`}</h3>
+      <h4 className={pp.ppSubhead} id={`${id}-slides-h`}>{`${PPT_LABELS.slidesHeading} (${slides.length} / ${L.slidesMax}장)`}</h4>
       {issues.slides && <p className={styles.error}>{issues.slides}</p>}
       <ol className={pp.ppSlides} aria-labelledby={`${id}-slides-h`}>
         {slides.map((s, i) => (
@@ -139,16 +156,19 @@ export function PptDeckEditor({ deck, assets, action }: { deck: PptDeckView; ass
         {note}
       </p>
 
-      <div className={styles.field}>
-        <label htmlFor={`${id}-status`}>{PPT_LABELS.status}</label>
-        <select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value as PptDeckStatus)}>
-          {PPT_DECK_STATUS_KEYS.map((k) => (
-            <option key={k} value={k}>
-              {PPT_DECK_STATUSES[k]}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* 만들기(hidden 있음)는 서버가 작성 중으로 시작하므로 진행 상태를 고르지 않는다 */}
+      {!hidden && (
+        <div className={styles.field}>
+          <label htmlFor={`${id}-status`}>{PPT_LABELS.status}</label>
+          <select id={`${id}-status`} value={status} onChange={(e) => setStatus(e.target.value as PptDeckStatus)}>
+            {PPT_DECK_STATUS_KEYS.map((k) => (
+              <option key={k} value={k}>
+                {PPT_DECK_STATUSES[k]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </ActionForm>
   );
 }
@@ -229,9 +249,9 @@ function SlideCard({
   return (
     <li className={pp.ppSlide} aria-labelledby={hId}>
       <div className={pp.ppSlideHead}>
-        <h4 id={hId} className={pp.ppSlideTitle}>
+        <h5 id={hId} className={pp.ppSlideTitle}>
           {name}
-        </h4>
+        </h5>
         <div className={pp.ppTools} role="group" aria-label={`${name} 순서·제외`}>
           <button type="button" className={`${styles.secondaryButton} ${f.touch}`} disabled={i === 0} onClick={() => onMove(-1)} aria-label={`${name} ${PPT_LABELS.up}`}>
             {PPT_LABELS.up}
