@@ -20,6 +20,7 @@ import { WebCopyArea } from "./web-copy-section";
 import { DesignAssetArea } from "./design-assets-section";
 import { VideoPlanArea } from "./video-plan-section";
 import { PptDeckArea } from "./ppt-deck-section";
+import { P3Help } from "./p3-help";
 import wcStyles from "./web-copy.module.css";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
@@ -140,6 +141,8 @@ async function TaskView({
           >
             <FunnelSection detail={detail} briefId={briefId} />
           </Suspense>
+          {/* P3-HELP-UI-01: P3 영역 위 접힌 사용 안내(AGY P3-HELP-HANDOFF.md). 단계 배지는 p3-help-model.ts P3_CONNECTED_STEPS 한 곳 */}
+          <P3Help />
           {/* P3A-UI-CONNECT-01: P3 공통 제작 브리프(FunnelSection 아래·DeliveryPanel 위, AGY P3I-HANDOFF.md 1절) */}
           <Suspense
             fallback={
