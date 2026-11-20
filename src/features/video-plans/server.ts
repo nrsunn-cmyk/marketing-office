@@ -93,6 +93,10 @@ export interface VideoPlanVersionView {
   current: boolean;
 }
 export type VideoStaleReason = "brief" | "asset";
+/** 맞추기 막힘 원인 코드(화면이 AGY 문구를 고른다, Front P3D-UI-CONNECT-01 요청) */
+export type VideoRebaseBlockedCode = "plan_archived" | "brief_archived" | "brief_drafting" | "version_limit";
+/** 만들기 막힘 원인 코드 */
+export type VideoCreateBlockedCode = "project_archived" | "task_cancelled" | "brief_archived" | "brief_drafting" | "no_video_deliverable" | "plan_limit_total" | "plan_limit_active";
 export interface VideoPlanView {
   id: string;
   title: string;
@@ -103,8 +107,11 @@ export interface VideoPlanView {
   /** 계산: 기준(공통 제작 브리프·연결 자산)이 새 버전으로 바뀜 */
   stale: boolean;
   staleReasons: VideoStaleReason[];
+  /** 판이 바뀐 연결 자산 수(서로 다른 자산 기준) — AGY staleReasonAsset 의 {n} */
+  staleAssetCount: number;
   /** 맞추기를 할 수 없는 이유(원인별). null 이면 맞추기 가능(stale 일 때) */
   rebaseBlockedReason: string | null;
+  rebaseBlockedCode: VideoRebaseBlockedCode | null;
   /** 연결돼 있는데 그 뒤 보관된 디자인 자산 수(경고만) */
   archivedAssetCount: number;
   /** 서버가 계산한 총 길이(초). 화면 합계와 같아야 한다(D5) */
@@ -121,6 +128,7 @@ export interface VideoPlanData {
   readOnlyReason: string | null;
   canCreate: boolean;
   createBlockedReason: string | null;
+  createBlockedCode: VideoCreateBlockedCode | null;
   /** 파일 첨부를 할 수 있는지(서명 키·판 20·보관) */
   canAttach: boolean;
   attachBlockedReason: string | null;
@@ -129,6 +137,22 @@ export interface VideoPlanData {
   /** 이 브리프의 작업 중(보관 안 된) 구성안 수. 화면은 대표 1개만 그린다(대표 = 최근에 고친 것) */
   activePlanCount: number;
 }
+
+const REBASE_BLOCKED: Record<VideoRebaseBlockedCode, string> = {
+  plan_archived: "보관한 영상 구성안은 맞출 수 없습니다.",
+  brief_archived: "보관한 제작 브리프라 맞출 수 없습니다. 이 구성안은 지난 브리프 기준 그대로 고칠 수 있습니다.",
+  brief_drafting: "제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요.",
+  version_limit: `구성안 판이 ${VIDEO_PLAN_LIMITS.planVersionsMax}개라 맞출 수 없습니다. 구성안을 보관하고 새로 만들어 주세요.`,
+};
+const CREATE_BLOCKED: Record<VideoCreateBlockedCode, string> = {
+  project_archived: "보관한 프로젝트라 영상 구성안을 고칠 수 없습니다.",
+  task_cancelled: "바탕 전략 작업이 취소되어 영상 구성안을 고칠 수 없습니다.",
+  brief_archived: "보관한 제작 브리프로는 영상 구성안을 만들 수 없습니다.",
+  brief_drafting: "확정된 공통 제작 브리프가 있어야 영상 구성안을 만들 수 있습니다.",
+  no_video_deliverable: "이 제작 브리프의 포함 산출물에 영상 구성이 없습니다.",
+  plan_limit_total: `영상 구성안은 제작 브리프당 ${VIDEO_PLAN_LIMITS.plansPerBrief}개까지입니다(보관 포함).`,
+  plan_limit_active: `작업 중인 영상 구성안은 ${VIDEO_PLAN_LIMITS.activePlansPerBrief}개까지입니다. 쓰지 않는 구성안을 보관한 뒤 만들어 주세요.`,
+};
 
 export async function getVideoPlanFor(productionBriefId: string): Promise<Result<VideoPlanData>> {
   const { workspace } = await requireWorkspace();
@@ -174,19 +198,21 @@ export async function getVideoPlanFor(productionBriefId: string): Promise<Result
     const scenes = ((cur?.scenes ?? []) as StoredScene[]);
     const byId = new Map(assetRows.map((x) => [x.id, x]));
     const linked = scenes.flatMap((s) => s.assets);
-    const assetStale = linked.some((x) => (byId.get(x.asset_id)?.current_version_no ?? x.version_no) > x.version_no);
+    const staleAssetIds = new Set(linked.filter((x) => (byId.get(x.asset_id)?.current_version_no ?? x.version_no) > x.version_no).map((x) => x.asset_id));
+    const assetStale = staleAssetIds.size > 0;
     const briefStale = rep.source_brief_revision !== b.revision;
     const staleReasons: VideoStaleReason[] = [...(briefStale ? (["brief"] as const) : []), ...(assetStale ? (["asset"] as const) : [])];
-    const rebaseBlockedReason =
+    const rebaseBlockedCode: VideoRebaseBlockedCode | null =
       rep.archived_at !== null
-        ? "보관한 영상 구성안은 맞출 수 없습니다."
+        ? "plan_archived"
         : b.archived_at !== null
-          ? "보관한 제작 브리프라 맞출 수 없습니다. 이 구성안은 지난 브리프 기준 그대로 고칠 수 있습니다."
+          ? "brief_archived"
           : b.status !== "ready"
-            ? "제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요."
+            ? "brief_drafting"
             : rep.current_version_no >= VIDEO_PLAN_LIMITS.planVersionsMax
-              ? `구성안 판이 ${VIDEO_PLAN_LIMITS.planVersionsMax}개라 맞출 수 없습니다. 구성안을 보관하고 새로 만들어 주세요.`
+              ? "version_limit"
               : null;
+    const rebaseBlockedReason = rebaseBlockedCode === null ? null : REBASE_BLOCKED[rebaseBlockedCode];
     plan = {
       id: rep.id,
       title: rep.title,
@@ -196,7 +222,9 @@ export async function getVideoPlanFor(productionBriefId: string): Promise<Result
       revision: rep.revision,
       stale: rep.archived_at === null && staleReasons.length > 0,
       staleReasons,
+      staleAssetCount: staleAssetIds.size,
       rebaseBlockedReason,
+      rebaseBlockedCode,
       archivedAssetCount: new Set(linked.filter((x) => byId.get(x.asset_id)?.archived_at != null).map((x) => x.asset_id)).size,
       totalSec: cur?.total_duration_sec ?? 0,
       scenes: scenes.map((s, i) => ({
@@ -234,19 +262,23 @@ export async function getVideoPlanFor(productionBriefId: string): Promise<Result
   const projectReason =
     pr.data?.status === "archived" ? "보관한 프로젝트라 영상 구성안을 고칠 수 없습니다." : taskCancelled ? "바탕 전략 작업이 취소되어 영상 구성안을 고칠 수 없습니다." : null;
   const readOnlyReason = projectReason ?? (plan?.archivedAt ? "보관한 영상 구성안입니다. 조회와 파일 내려받기만 할 수 있고 고치기·첨부는 할 수 없습니다." : null);
-  const createBlockedReason =
-    projectReason ??
-    (b.archived_at !== null
-      ? "보관한 제작 브리프로는 영상 구성안을 만들 수 없습니다."
-      : b.status !== "ready"
-        ? "확정된 공통 제작 브리프가 있어야 영상 구성안을 만들 수 있습니다."
-        : !(b.deliverable_types ?? []).includes("video_plan")
-          ? "이 제작 브리프의 포함 산출물에 영상 구성이 없습니다."
-          : all.length >= VIDEO_PLAN_LIMITS.plansPerBrief
-            ? `영상 구성안은 제작 브리프당 ${VIDEO_PLAN_LIMITS.plansPerBrief}개까지입니다(보관 포함).`
-            : active.length >= VIDEO_PLAN_LIMITS.activePlansPerBrief
-              ? `작업 중인 영상 구성안은 ${VIDEO_PLAN_LIMITS.activePlansPerBrief}개까지입니다. 쓰지 않는 구성안을 보관한 뒤 만들어 주세요.`
-              : null);
+  const createBlockedCode: VideoCreateBlockedCode | null =
+    pr.data?.status === "archived"
+      ? "project_archived"
+      : taskCancelled
+        ? "task_cancelled"
+        : b.archived_at !== null
+          ? "brief_archived"
+          : b.status !== "ready"
+            ? "brief_drafting"
+            : !(b.deliverable_types ?? []).includes("video_plan")
+              ? "no_video_deliverable"
+              : all.length >= VIDEO_PLAN_LIMITS.plansPerBrief
+                ? "plan_limit_total"
+                : active.length >= VIDEO_PLAN_LIMITS.activePlansPerBrief
+                  ? "plan_limit_active"
+                  : null;
+  const createBlockedReason = createBlockedCode === null ? null : CREATE_BLOCKED[createBlockedCode];
   const fileCount = plan?.files.length ?? 0;
   const attachBlockedReason =
     readOnlyReason ??
@@ -261,8 +293,9 @@ export async function getVideoPlanFor(productionBriefId: string): Promise<Result
     plan,
     canWrite: plan !== null && readOnlyReason === null,
     readOnlyReason,
-    canCreate: createBlockedReason === null,
+    canCreate: createBlockedCode === null,
     createBlockedReason,
+    createBlockedCode,
     canAttach: attachBlockedReason === null,
     attachBlockedReason,
     assets: assetRows.filter((x) => x.archived_at === null).map((x) => ({ id: x.id, label: x.title })),

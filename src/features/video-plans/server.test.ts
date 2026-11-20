@@ -161,7 +161,8 @@ describe("읽기", () => {
     if (!r.ok) throw new Error(r.message);
     for (const q of S.queries) expect(q.ops, q.table).toContain("eq(workspace_id,w1)");
     expect(r.data).toMatchObject({ canWrite: true, canCreate: true, canAttach: true, activePlanCount: 2, assets: [{ id: "a1", label: "로고" }] });
-    expect(r.data.plan).toMatchObject({ id: "vp2", stale: true, staleReasons: ["asset"], rebaseBlockedReason: null, archivedAssetCount: 1, totalSec: 38 });
+    expect(r.data.plan).toMatchObject({ id: "vp2", stale: true, staleReasons: ["asset"], staleAssetCount: 1, rebaseBlockedReason: null, rebaseBlockedCode: null, archivedAssetCount: 1, totalSec: 38 });
+    expect(r.data.createBlockedCode).toBeNull();
     expect(r.data.plan!.scenes).toEqual([
       { id: "s1", sceneTitle: "하나", durationSec: 10, narration: "", subtitle: "자막", assetIds: ["a1", "a2"], sortOrder: 1 },
       { id: "s2", sceneTitle: "둘", durationSec: 28, narration: "대사", subtitle: "", assetIds: [], sortOrder: 2 },
@@ -172,7 +173,7 @@ describe("읽기", () => {
   it("구성안 없음·브리프 작성 중이면 만들기 막힘, 보관 구성안은 읽기 전용", async () => {
     S.rows = { ...base(), production_briefs: [{ ...base().production_briefs[0], status: "drafting", revision: 6 }] };
     const r = await getVideoPlanFor("b1");
-    expect(r).toMatchObject({ ok: true, data: { plan: null, canWrite: false, canCreate: false, createBlockedReason: "확정된 공통 제작 브리프가 있어야 영상 구성안을 만들 수 있습니다." } });
+    expect(r).toMatchObject({ ok: true, data: { plan: null, canWrite: false, canCreate: false, createBlockedCode: "brief_drafting", createBlockedReason: "확정된 공통 제작 브리프가 있어야 영상 구성안을 만들 수 있습니다." } });
     S.rows = {
       ...base(),
       video_plans: [{ id: "vp1", title: "보관", aspect_ratio: "16:9", status: "reviewed", archived_at: "t", revision: 3, current_version_no: 1, current_file_version_no: null, source_brief_revision: 4, updated_at: "1" }],
@@ -182,7 +183,7 @@ describe("읽기", () => {
     if (!a.ok) throw new Error(a.message);
     expect(a.data).toMatchObject({ canWrite: false, canAttach: false, activePlanCount: 0, canCreate: true });
     expect(a.data.readOnlyReason).toMatch(/보관한 영상 구성안/);
-    expect(a.data.plan).toMatchObject({ stale: false, staleReasons: ["brief"], rebaseBlockedReason: "보관한 영상 구성안은 맞출 수 없습니다." });
+    expect(a.data.plan).toMatchObject({ stale: false, staleReasons: ["brief"], staleAssetCount: 0, rebaseBlockedCode: "plan_archived", rebaseBlockedReason: "보관한 영상 구성안은 맞출 수 없습니다." });
   });
   it("내려받기: 본인 업무실 판만, 60초 attachment", async () => {
     S.rows = { video_file_versions: [{ plan_id: "vp1", version_no: 2, storage_key: "w1/video-files/u.mp4", file_name: "최종 편집.mp4" }] };
