@@ -1,5 +1,5 @@
 /**
- * PERM-CLEANUP-01: 로그인 역할(authenticated)의 public 표 쓰기 권한 고정 시험(20261121006000_perm_cleanup).
+ * PERM-CLEANUP-01: 로그인 역할(authenticated)의 public 표 쓰기 권한 고정 시험(20261121014000_perm_cleanup, 처음 이름 006000).
  * 앱이 직접 쓰는 8개 표의 해당 명령만 남고, 나머지 쓰기는 정의자 RPC 로만 한다(RPC 동작은 다른 DB 시험 전체가 확인).
  * 새 표를 만들 때 이 목록에 넣지 않으면 시험이 실패한다(직접 쓰기 권한이 실수로 남는 것을 막는다).
  */
