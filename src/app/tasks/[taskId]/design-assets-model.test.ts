@@ -28,6 +28,7 @@ const asset = (over: Partial<DesignAssetView>): DesignAssetView => ({
   archivedAt: null,
   revision: 1,
   version: 1,
+  stale: false,
   usages: [],
   versions: [],
   ...over,

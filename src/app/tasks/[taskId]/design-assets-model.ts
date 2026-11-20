@@ -1,25 +1,17 @@
 /**
- * P3C-UI-PREP-01 디자인 자산 관리 — 화면 쪽 모델(서버 없이 먼저 만든 자리).
- * 근거: AGY Design/p3-production/P3C-HANDOFF.md(한도·필드·상태·보관 archived_at 분리), assets.html(배치·라벨),
- * P3-COPY-FINAL.md 의 DA_COPY·P3_COMMON_COPY(화면 문구 최종본 — 그대로 쓴다, 새 문구를 만들지 않는다).
- *
- * 서버(Backend P3C)가 오면: 한도·허용값은 서버 도메인 상수로, 보기 타입은 서버 보기 타입으로 바꾼다.
- * 글자 수 정리는 P3-a 와 같은 briefTrim(서버 funnel_trim 과 같은 규칙)을 쓴다.
+ * P3-c 디자인 자산 관리 — 화면 쪽 모델(P3C-UI-PREP-01 → P3C-UI-CONNECT-01 서버 연결).
+ * 근거: AGY Design/p3-production/P3C-HANDOFF.md, assets.html(배치·라벨·업로드 상태),
+ * P3-COPY-FINAL.md 의 DA_COPY(업로드 12키·unsafeSvg·svgPreviewNotice 포함)·P3_COMMON_COPY(그대로 — 새 문구를 만들지 않는다).
+ * 한도·형식 규칙은 서버 도메인 상수(@/domain/design-assets/constants·file-check, 서버 전용 코드 없음)를, 보기 타입은 서버 것을 쓴다.
  */
+import { DESIGN_ASSET_LIMITS, DESIGN_KIND_MIMES, DESIGN_MIME_EXTENSIONS, DESIGN_MIME_TYPES, DESIGN_UPLOAD_ERROR_COPY_KEY, type DesignMime, type DesignUploadErrorCode } from "@/domain/design-assets/constants";
+import { checkDesignDeclared, extensionOf } from "@/domain/design-assets/file-check";
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
+import type { DesignAssetView, DesignAssetsData, DesignAssetVersionView } from "@/features/design-assets/server";
 import { maxLengthMessage, requiredMessage } from "../../_components/josa";
 
-/** 한도(P3C-HANDOFF 1·2절, 글자 수는 코드 포인트) */
-export const DESIGN_ASSET_LIMITS = {
-  perProject: 50, // 보관 포함
-  versionsPerAsset: 30,
-  usagesPerAsset: 20,
-  title: 100,
-  fileName: 200,
-  licenseNote: 500,
-  changeNote: 300,
-  maxFileBytes: 10 * 1024 * 1024,
-} as const;
+export { DESIGN_ASSET_LIMITS };
+export type { DesignAssetView, DesignAssetsData, DesignAssetVersionView };
 
 /** 자산 분류(화면 순서 = 시안 필터 순서) */
 export const DESIGN_ASSET_KINDS = { logo: "로고", image: "이미지", color: "색상", font: "글꼴" } as const;
@@ -34,39 +26,6 @@ export type DesignAssetOrigin = keyof typeof DESIGN_ASSET_ORIGINS;
 export const DESIGN_ASSET_STATUSES = { drafting: "작성 중", reviewed: "검토 완료" } as const;
 export type DesignAssetStatus = keyof typeof DESIGN_ASSET_STATUSES;
 export const DESIGN_ASSET_STATUS_KEYS = Object.keys(DESIGN_ASSET_STATUSES) as DesignAssetStatus[];
-
-// ── 자리용 보기 타입(서버 보기 타입이 오면 바꾼다) ──
-export interface DesignAssetVersionView {
-  version: number;
-  savedAt: string; // ISO
-  note: string | null;
-  current: boolean;
-}
-export interface DesignAssetView {
-  id: string;
-  title: string;
-  kind: DesignAssetKind;
-  origin: DesignAssetOrigin;
-  fileName: string;
-  fileSizeBytes: number;
-  mimeType: string;
-  licenseNote: string | null;
-  status: DesignAssetStatus;
-  archivedAt: string | null;
-  revision: number;
-  /** 지금 버전 번호 */
-  version: number;
-  usages: Array<{ id: string; label: string }>;
-  versions: DesignAssetVersionView[];
-}
-export interface DesignAssetsData {
-  assets: DesignAssetView[];
-  /** 기준(공통 제작 브리프·홈페이지 구조)이 새 버전으로 바뀌었는지(계산) */
-  stale: boolean;
-  /** 이 프로젝트 자산을 올리거나 고칠 권한 */
-  canWrite: boolean;
-  limit: number;
-}
 
 /** 화면 문구 최종본(P3-COPY-FINAL.md 1절 DA_COPY — 그대로) */
 export const DA_COPY = {
@@ -91,7 +50,46 @@ export const DA_COPY = {
   replacedOk: "새 파일 버전으로 교체했습니다.",
   archivedOk: "디자인 자산을 보관했습니다.",
   restoredOk: "선택한 파일 버전을 새 버전으로 복원했습니다.",
+  // 업로드·확정(실제 바이트 진행만, 임의 % 금지)
+  uploadDropTitle: "여기에 파일을 끌어 놓거나 파일 고르기 단추를 눌러 주세요.",
+  uploadPickFile: "파일 고르기",
+  uploadCancel: "올리기 취소",
+  uploadRetry: "다시 시도",
+  uploadConfirming: "서버에서 파일 형식과 크기를 확인해 확정하는 중…",
+  uploadErrSize: "파일 크기가 한도(10MB)를 넘어 올릴 수 없습니다.",
+  uploadErrType: "허용되지 않는 파일 형식입니다. 안내된 형식만 올려 주세요.",
+  uploadErrMismatch: "파일 실제 내용이 확장자와 달라 올릴 수 없습니다.",
+  uploadErrNetwork: "네트워크 연결이 끊겨 올리기를 마칠 수 없습니다. 잠시 후 다시 시도해 주세요.",
+  uploadErrExpired: "올리기 링크 유효 시간이 지났습니다. 다시 시도를 누르면 새 링크로 올립니다.",
+  unsafeSvg: "보안상 위험한 요소(스크립트·외부 연결 등)가 들어 있는 SVG 파일은 올릴 수 없습니다. 위험 요소를 빼고 다시 저장하거나 PNG 파일로 올려 주세요.",
+  svgPreviewNotice: "보안상 SVG 파일은 실행을 막기 위해 읽기 전용 이미지로만 미리 보며, 내려받을 때만 원본 파일로 받습니다.",
+  // DESIGN-P3C-COPY-03: 확장자만 있는 이름·저장 용량(막대 없이 실제 숫자 글)
+  uploadErrNameOnlyExt: "확장자만 있는 파일 이름은 사용할 수 없습니다. 파일 이름을 붙인 뒤 다시 올려 주세요.",
 } as const;
+/** storageUsed "사용 중 {used} / {limit}"(실측값, 막대 없음) */
+export const storageUsedText = (used: number, limit: number) => `사용 중 ${formatBytes(used)} / ${formatBytes(limit)}`;
+export const storageNearLimitText = (limit: number) => `업무실 디자인 자산 저장 용량(${formatBytes(limit)})이 거의 찼습니다. 쓰지 않는 자산을 정리해 주세요.`;
+export const storageLimitReachedText = (limit: number) => `업무실 디자인 자산 저장 용량(${formatBytes(limit)})이 가득 차 더 올릴 수 없습니다. 쓰지 않는 자산을 정리한 뒤 다시 올려 주세요.`;
+
+/**
+ * 업무실 저장 용량(Backend 378aa6c 가 storage 로 준다). usedBytes = 모든 판의 서로 다른 파일 크기 합(진행 중 예약은 빠짐 — DB 상한 검사는 예약 포함),
+ * limitBytes = app.design_asset_quota_bytes(). 서버가 아직 주지 않으면 null → 화면에 아무것도 안 보임.
+ */
+export type DesignStorage = { usedBytes: number; limitBytes: number };
+export function storageOf(d: object): DesignStorage | null {
+  const s = (d as { storage?: unknown }).storage as Partial<DesignStorage> | null | undefined;
+  return s && Number.isFinite(s.usedBytes) && Number.isFinite(s.limitBytes) && (s.limitBytes as number) > 0 ? { usedBytes: s.usedBytes as number, limitBytes: s.limitBytes as number } : null;
+}
+/** 90% 이상이면 near, 한도 이상이면 full */
+export function storageLevel(s: DesignStorage | null): "ok" | "near" | "full" | null {
+  if (!s) return null;
+  if (s.usedBytes >= s.limitBytes) return "full";
+  return s.usedBytes >= s.limitBytes * 0.9 ? "near" : "ok";
+}
+/** uploadProgressBytes "{loaded} / {total} 올리는 중…"(실측 바이트) */
+export const uploadProgressText = (loaded: number, total: number) => `${formatBytes(loaded)} / ${formatBytes(total)} 올리는 중…`;
+/** 시안 업로드 안내 줄 "로고(SVG·PNG), … · 최대 10MB" */
+export const UPLOAD_RULE_LINE = "로고(SVG·PNG), 이미지(PNG·JPEG·WEBP), 글꼴(WOFF2·TTF·OTF), 색상(JSON·CSS) · 최대 10MB";
 
 /** P3-c~g 공통 문구 최종본(P3-COPY-FINAL.md 0절 P3_COMMON_COPY — 그대로) */
 export const P3_COMMON_COPY = {
@@ -199,3 +197,36 @@ export function checkAssetForm(v: DesignAssetFormValue): Partial<Record<"title" 
   return out;
 }
 export const toAssetPayload = (v: DesignAssetFormValue) => ({ title: v.title, licenseNote: v.licenseNote, status: v.status });
+
+// ── 올리기(P3C-UI-CONNECT-01) ──
+
+/** 업로드 실패 → 확정 문구. 위험 SVG 는 서버 copyKey(uploadErrType) 대신 AGY unsafeSvg 를 쓴다. 모르는 키면 서버 문구 */
+export function uploadErrorText(r: { message: string; uploadCode?: DesignUploadErrorCode | string; copyKey?: string }): string {
+  if (r.uploadCode === "UNSAFE_SVG") return DA_COPY.unsafeSvg;
+  const key = r.copyKey ?? (r.uploadCode && r.uploadCode in DESIGN_UPLOAD_ERROR_COPY_KEY ? DESIGN_UPLOAD_ERROR_COPY_KEY[r.uploadCode as DesignUploadErrorCode] : undefined);
+  if (key && key in DA_COPY) return DA_COPY[key as keyof typeof DA_COPY];
+  return r.message;
+}
+
+/** 브라우저 파일 형식(비어 있거나 다르면 확장자로). 서버가 확정 때 바이트로 다시 본다 */
+export function guessMime(name: string, type: string): DesignMime | null {
+  const t = type.toLowerCase();
+  if ((DESIGN_MIME_TYPES as readonly string[]).includes(t)) return t as DesignMime;
+  const ext = extensionOf(name);
+  const hit = (Object.entries(DESIGN_MIME_EXTENSIONS) as [DesignMime, readonly string[]][]).find(([, exts]) => exts.includes(ext));
+  return hit ? hit[0] : null;
+}
+/** 그 형식으로 고를 수 있는 분류(로고는 SVG·PNG, 이미지는 PNG·JPEG·WEBP …). 첫째가 기본 */
+export const kindsForMime = (m: DesignMime | null): DesignAssetKind[] => (m ? DESIGN_ASSET_KIND_KEYS.filter((k) => DESIGN_KIND_MIMES[k].includes(m)) : []);
+
+/** 올리기 전 미리 거르기(크기·형식·이름). 통과면 null, 아니면 확정 문구 */
+export function precheckFile(kind: DesignAssetKind, file: { name: string; size: number; type: string }): string | null {
+  // 확장자만 있는 이름(".png")은 서버도 거절한다(Backend 1bafec5, 서버는 형식 불일치 코드) — 화면은 전용 확정 문구로 먼저 알린다
+  if (/^\.[A-Za-z0-9]+$/.test(file.name.trim())) return DA_COPY.uploadErrNameOnlyExt;
+  const mime = guessMime(file.name, file.type);
+  if (!mime) return DA_COPY.uploadErrType;
+  const c = checkDesignDeclared(kind, file.name, file.size, mime);
+  return c.ok ? null : uploadErrorText({ message: DA_COPY.uploadErrType, uploadCode: c.code });
+}
+/** 파일 이름에서 자산 이름 기본값(확장자 뺌, 100자까지 — 넘치면 칸 안내) */
+export const titleFromFileName = (name: string) => name.replace(/\.[A-Za-z0-9]{1,8}$/, "");
