@@ -1,5 +1,5 @@
 /**
- * P4A-BACKEND-IMPL-01: 실행 승인 대기열·성과(P4 첫 단계) 순수 모듈. 값 규칙의 최종 판정은 DB(20261121007000_p4a_execution)가 한다.
+ * P4A-BACKEND-IMPL-01: 실행 승인 대기열·성과(P4 첫 단계) 순수 모듈. 값 규칙의 최종 판정은 DB(20261121012000_p4a_execution, 처음 이름 007000)가 한다.
  * 게시 주소·시각은 P2-g 채널 초안 규칙(normalizePublicationUrl·parsePublishedAt)을 그대로 쓴다.
  */
 import { z } from "zod";

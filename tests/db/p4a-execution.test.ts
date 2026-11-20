@@ -1,5 +1,5 @@
 /**
- * P4A-BACKEND-IMPL-01: 실행 승인 대기열·티스토리 수동 게시 실행 기록·성과 수동 입력(20261121007000_p4a_execution) 시험.
+ * P4A-BACKEND-IMPL-01: 실행 승인 대기열·티스토리 수동 게시 실행 기록·성과 수동 입력(20261121012000_p4a_execution, 처음 이름 007000) 시험.
  * 설계: Plan/Claude-Backend-20261120/P4A-BACKEND-01-DESIGN.md. 원본은 P2-g 채널 초안(실제 경로: 전략 → 퍼널 → 브리프 → 초안). 모든 값은 합성이다.
  * 공격 위주 시험은 Tester tests/db/qa-p4a-attack.test.ts(claude/qa-p4a-prep)가 맡는다. 여기서는 정상 흐름·막힘 저장·맞추기·권한을 본다.
  */

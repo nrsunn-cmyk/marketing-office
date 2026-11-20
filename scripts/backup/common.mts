@@ -141,7 +141,7 @@ export const LATER_TABLES = [
   "delivery_bundles",
   "delivery_bundle_items",
   "delivery_logs",
-  // 20261121007000_p4a_execution(실행 건 → 성과. 게시 기록은 P2-g channel_publications 그대로)
+  // 20261121012000_p4a_execution(묶음 M 에서 007000 → 012000 이름만 바꿈, 실행 건 → 성과. 게시 기록은 P2-g channel_publications 그대로)
   "execution_jobs",
   "execution_results",
 ] as const;
