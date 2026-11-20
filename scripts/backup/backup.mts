@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { admin, BUCKET, checkTableCoverage, listDbTables, resolveBackupTarget, runDump, TABLE_LIST_VERSION, tableCounts, type Manifest, type StoredFile } from "./common.mts";
+import { admin, BUCKET, checkTableCoverage, DESIGN_BUCKET, storedFilePath, listDbTables, resolveBackupTarget, runDump, TABLE_LIST_VERSION, tableCounts, type Manifest, type StoredFile } from "./common.mts";
 
 const out = process.argv[2];
 if (!out) {
@@ -60,6 +60,27 @@ for (const a of assets ?? []) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, buf);
   files.push({ key: a.object_key as string, mime: a.mime as string, bytes: buf.length, sha256: sha });
+}
+
+// 2-2) 디자인 자산 파일(P3-c): 판이 가리키는 서로 다른 파일. 판에 적힌 크기·sha256 과 맞는지 확인하며 받는다
+if (tables.includes("design_asset_versions")) {
+  const { data: dv, error: dvError } = await sb.from("design_asset_versions").select("storage_key, mime_type, file_size_bytes, sha256");
+  if (dvError) throw new Error(`디자인 자산 판 조회 실패: ${dvError.message}`);
+  const seen = new Set<string>();
+  for (const v of dv ?? []) {
+    if (seen.has(v.storage_key)) continue;
+    seen.add(v.storage_key);
+    const { data, error: dlError } = await sb.storage.from(DESIGN_BUCKET).download(v.storage_key);
+    if (dlError || !data) throw new Error(`디자인 자산 파일 받기 실패: ${v.storage_key}: ${dlError?.message}`);
+    const buf = Buffer.from(await data.arrayBuffer());
+    const sha = createHash("sha256").update(buf).digest("hex");
+    if (sha !== v.sha256 || buf.length !== Number(v.file_size_bytes)) throw new Error(`디자인 자산 파일 크기·체크섬 불일치: ${v.storage_key}`);
+    const f: StoredFile = { bucket: DESIGN_BUCKET, key: v.storage_key, mime: v.mime_type, bytes: buf.length, sha256: sha };
+    const path = join(out, "files", storedFilePath(f));
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, buf);
+    files.push(f);
+  }
 }
 
 // 3) 목록

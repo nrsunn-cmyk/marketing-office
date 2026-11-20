@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const BUCKET = "source-assets";
+/** P3-c 디자인 자산 파일(20261121004000). 판이 가리키는 서로 다른 파일만 백업한다(Q17) */
+export const DESIGN_BUCKET = "design-assets";
 
 /** 현재 폴더 supabase/config.toml 의 project_id (없으면 null). supabase db reset·dump 는 이 프로젝트를 대상으로 한다 */
 export function localProjectId(cwd: string = process.cwd()): string | null {
@@ -92,7 +94,7 @@ export function dbContainer(kind: BackupTarget["kind"], env: EnvMap = process.en
  * 백업 대상 public 표 전체 (행 수 비교용). BACKUP-P2-TABLES-01: migration 이 만드는 표를 빠짐없이 둔다.
  * - DB 내보내기(supabase db dump --data-only)는 원래 public 표 전체를 담는다. 이 목록은 행 수 검증 범위다.
  * - 백업·검증 때 DB 의 실제 public 표를 읽어, 이 목록에 없는 표가 있으면 멈춘다(새 migration 이 표를 더했는데 목록을 안 고친 경우).
- * - LATER_TABLES 는 뒤 migration(21 퍼널·22 브리프·24 AI 문구 생성 기록·25 관리자 열람 기록·26 리드마그넷·27 채널 초안·28 제작 브리프·29 홈페이지 문서)이 만드는 표다. 아직 그 migration 이 없는 DB 에서는 없어도 된다.
+ * - LATER_TABLES 는 뒤 migration(21 퍼널·22 브리프·24 AI 문구 생성 기록·25 관리자 열람 기록·26 리드마그넷·27 채널 초안·28 제작 브리프·29 홈페이지 문서·31 디자인 자산)이 만드는 표다. 아직 그 migration 이 없는 DB 에서는 없어도 된다.
  */
 export const LATER_TABLES = [
   // 20261118001000_p2d_funnel_board
@@ -117,6 +119,11 @@ export const LATER_TABLES = [
   // 20261121002000_p3b_web_copy(판이 문서의 현재 판을 가리키므로 문서·판 순서로 둔다)
   "web_copy_docs",
   "web_copy_versions",
+  // 20261121004000_p3c_design_assets(자산 → 판 → 예약·사용처. 파일은 design-assets 버킷에서 따로 받는다)
+  "design_assets",
+  "design_asset_versions",
+  "design_asset_uploads",
+  "design_asset_usages",
 ] as const;
 
 export const TABLES = [
@@ -359,6 +366,8 @@ export async function tableCounts(sb: SupabaseClient, tables: readonly string[] 
 }
 
 export interface StoredFile {
+  /** 저장소 버킷. 없으면 source-assets(예전 백업) */
+  bucket?: string;
   key: string;
   mime: string;
   bytes: number;
@@ -433,3 +442,6 @@ begin
 end $$;
 select 'orphan-check-ok';
 `;
+
+/** 백업 폴더 안 파일 위치: source-assets 는 예전과 같이 files/<key>, 다른 버킷은 files/<버킷>/<key> */
+export const storedFilePath = (f: Pick<StoredFile, "bucket" | "key">) => (!f.bucket || f.bucket === BUCKET ? f.key : `${f.bucket}/${f.key}`);

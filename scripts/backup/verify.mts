@@ -6,7 +6,7 @@
  * - 확정 견적의 항목 합계를 다시 계산해 고정 금액과 같음
  */
 import { createHash } from "node:crypto";
-import { admin, BUCKET, checkTableCoverage, compareCounts, listDbTables, ORPHAN_CHECK_SQL, psql, tableCounts, type Manifest } from "./common.mts";
+import { admin, BUCKET, checkTableCoverage, DESIGN_BUCKET, compareCounts, listDbTables, ORPHAN_CHECK_SQL, psql, tableCounts, type Manifest } from "./common.mts";
 
 export async function verify(manifest: Manifest): Promise<void> {
   const sb = admin();
@@ -32,14 +32,23 @@ export async function verify(manifest: Manifest): Promise<void> {
 
   const { data: assets } = await sb.from("source_assets").select("object_key, checksum_sha256").eq("kind", "file").eq("upload_status", "stored");
   const dbSum = new Map((assets ?? []).map((a) => [a.object_key as string, a.checksum_sha256 as string]));
+  // 디자인 자산(P3-c): 판 ↔ 백업 파일 1:1(판이 가리키는 파일이 모두 백업에 있고, sha256 이 판에 적힌 값과 같다)
+  const designSum = new Map<string, string>();
+  if (tables.includes("design_asset_versions")) {
+    const { data: dv } = await sb.from("design_asset_versions").select("storage_key, sha256");
+    for (const v of dv ?? []) designSum.set(v.storage_key as string, v.sha256 as string);
+    const backedUp = new Set(manifest.files.filter((f) => f.bucket === DESIGN_BUCKET).map((f) => f.key));
+    for (const k of designSum.keys()) if (!backedUp.has(k)) problems.push(`디자인 자산 파일이 백업에 없음: ${k}`);
+  }
   for (const f of manifest.files) {
-    const { data, error } = await sb.storage.from(BUCKET).download(f.key);
+    const design = f.bucket === DESIGN_BUCKET;
+    const { data, error } = await sb.storage.from(design ? DESIGN_BUCKET : BUCKET).download(f.key);
     if (error || !data) {
       problems.push(`파일 열기 실패: ${f.key}`);
       continue;
     }
     const sha = createHash("sha256").update(Buffer.from(await data.arrayBuffer())).digest("hex");
-    if (sha !== f.sha256 || sha !== dbSum.get(f.key)) problems.push(`파일 체크섬 불일치: ${f.key}`);
+    if (sha !== f.sha256 || sha !== (design ? designSum.get(f.key) : dbSum.get(f.key))) problems.push(`파일 체크섬 불일치: ${f.key}`);
   }
 
   // 확정 견적 금액을 항목에서 다시 계산 (앱 코드와 독립적으로 DB 안에서 같은 규칙으로)

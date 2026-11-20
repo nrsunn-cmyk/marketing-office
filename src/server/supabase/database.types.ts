@@ -451,6 +451,122 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"design_asset_uploads": {
+                  Row: {
+                    "asset_id": string | null,"asset_kind": string,"created_at": string,"created_by": string,"decided_at": string | null,"expires_at": string,"file_name": string,"file_size_bytes": number,"id": string,"mime_type": string,"production_brief_id": string,"project_id": string,"reject_reason": string | null,"status": string,"storage_key": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asset_id"?: string | null,"asset_kind": string,"created_at"?: string,"created_by": string,"decided_at"?: string | null,"expires_at": string,"file_name": string,"file_size_bytes": number,"id"?: string,"mime_type": string,"production_brief_id": string,"project_id": string,"reject_reason"?: string | null,"status"?: string,"storage_key": string,"workspace_id": string
+                  }
+                  Update: {
+                    "asset_id"?: string | null,"asset_kind"?: string,"created_at"?: string,"created_by"?: string,"decided_at"?: string | null,"expires_at"?: string,"file_name"?: string,"file_size_bytes"?: number,"id"?: string,"mime_type"?: string,"production_brief_id"?: string,"project_id"?: string,"reject_reason"?: string | null,"status"?: string,"storage_key"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_asset_uploads_project_id_asset_id_fkey"
+      columns: ["project_id","asset_id"]
+isOneToOne: false
+      referencedRelation: "design_assets"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "design_asset_uploads_project_id_production_brief_id_fkey"
+      columns: ["project_id","production_brief_id"]
+isOneToOne: false
+      referencedRelation: "production_briefs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "design_asset_uploads_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"design_asset_usages": {
+                  Row: {
+                    "asset_id": string,"created_at": string,"created_by": string,"id": string,"project_id": string,"section_id": string,"web_copy_doc_id": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asset_id": string,"created_at"?: string,"created_by": string,"id"?: string,"project_id": string,"section_id": string,"web_copy_doc_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "asset_id"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"project_id"?: string,"section_id"?: string,"web_copy_doc_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_asset_usages_project_id_asset_id_fkey"
+      columns: ["project_id","asset_id"]
+isOneToOne: false
+      referencedRelation: "design_assets"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "design_asset_usages_project_id_web_copy_doc_id_fkey"
+      columns: ["project_id","web_copy_doc_id"]
+isOneToOne: false
+      referencedRelation: "web_copy_docs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "design_asset_usages_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"design_asset_versions": {
+                  Row: {
+                    "asset_id": string,"change_note": string | null,"created_at": string,"created_by": string,"file_name": string,"file_size_bytes": number,"id": string,"kind": string,"mime_type": string,"restored_from_version_no": number | null,"sha256": string,"source_brief_revision": number,"storage_key": string,"version_no": number,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asset_id": string,"change_note"?: string | null,"created_at"?: string,"created_by": string,"file_name": string,"file_size_bytes": number,"id"?: string,"kind": string,"mime_type": string,"restored_from_version_no"?: number | null,"sha256": string,"source_brief_revision": number,"storage_key": string,"version_no": number,"workspace_id": string
+                  }
+                  Update: {
+                    "asset_id"?: string,"change_note"?: string | null,"created_at"?: string,"created_by"?: string,"file_name"?: string,"file_size_bytes"?: number,"id"?: string,"kind"?: string,"mime_type"?: string,"restored_from_version_no"?: number | null,"sha256"?: string,"source_brief_revision"?: number,"storage_key"?: string,"version_no"?: number,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_asset_versions_workspace_id_asset_id_fkey"
+      columns: ["workspace_id","asset_id"]
+isOneToOne: false
+      referencedRelation: "design_assets"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"design_assets": {
+                  Row: {
+                    "archived_at": string | null,"asset_kind": string,"created_at": string,"created_by": string,"current_version_no": number,"id": string,"license_note": string | null,"origin_type": string,"production_brief_id": string,"project_id": string,"revision": number,"source_brief_revision": number,"status": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"asset_kind": string,"created_at"?: string,"created_by": string,"current_version_no": number,"id"?: string,"license_note"?: string | null,"origin_type": string,"production_brief_id": string,"project_id": string,"revision"?: number,"source_brief_revision": number,"status"?: string,"title": string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"asset_kind"?: string,"created_at"?: string,"created_by"?: string,"current_version_no"?: number,"id"?: string,"license_note"?: string | null,"origin_type"?: string,"production_brief_id"?: string,"project_id"?: string,"revision"?: number,"source_brief_revision"?: number,"status"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_assets_current_version_fkey"
+      columns: ["id","current_version_no"]
+isOneToOne: false
+      referencedRelation: "design_asset_versions"
+      referencedColumns: ["asset_id","version_no"]
+    },{
+      foreignKeyName: "design_assets_project_id_production_brief_id_fkey"
+      columns: ["project_id","production_brief_id"]
+isOneToOne: false
+      referencedRelation: "production_briefs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "design_assets_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"exports": {
                   Row: {
                     "artifact_version_id": string,"checksum_sha256": string | null,"created_at": string,"error_code": string | null,"format": string,"id": string,"idempotency_key": string,"mime": string | null,"object_key": string | null,"revision": number,"status": string,"updated_at": string,"workspace_id": string
@@ -583,14 +699,14 @@ isOneToOne: false
                   ]
                 },"lead_magnets": {
                   Row: {
-                    "archived_at": string | null,"audience": string | null,"created_at": string,"created_by": string,"delivery": string | null,"format": string,"funnel_id": string,"id": string,"lead_fields": Json,"outline": Json,"project_id": string,"promise": string | null,"revision": number,"stage_id": string,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at": string,"workspace_id": string
+                    "archived_at": string | null,"audience": string | null,"created_at": string,"created_by": string,"delivery": string | null,"format": string,"funnel_id": string,"id": string,"lead_fields": NonNullable<Json>,"outline": NonNullable<Json>,"project_id": string,"promise": string | null,"revision": number,"stage_id": string,"status": string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at": string,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"audience"?: string | null,"created_at"?: string,"created_by": string,"delivery"?: string | null,"format": string,"funnel_id": string,"id"?: string,"lead_fields"?: Json,"outline"?: Json,"project_id": string,"promise"?: string | null,"revision"?: number,"stage_id": string,"status"?: string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at"?: string,"workspace_id": string
+                    "archived_at"?: string | null,"audience"?: string | null,"created_at"?: string,"created_by": string,"delivery"?: string | null,"format": string,"funnel_id": string,"id"?: string,"lead_fields"?: NonNullable<Json>,"outline"?: NonNullable<Json>,"project_id": string,"promise"?: string | null,"revision"?: number,"stage_id": string,"status"?: string,"strategy_artifact_id": string,"strategy_version_id": string,"title": string,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "archived_at"?: string | null,"audience"?: string | null,"created_at"?: string,"created_by"?: string,"delivery"?: string | null,"format"?: string,"funnel_id"?: string,"id"?: string,"lead_fields"?: Json,"outline"?: Json,"project_id"?: string,"promise"?: string | null,"revision"?: number,"stage_id"?: string,"status"?: string,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                    "archived_at"?: string | null,"audience"?: string | null,"created_at"?: string,"created_by"?: string,"delivery"?: string | null,"format"?: string,"funnel_id"?: string,"id"?: string,"lead_fields"?: NonNullable<Json>,"outline"?: NonNullable<Json>,"project_id"?: string,"promise"?: string | null,"revision"?: number,"stage_id"?: string,"status"?: string,"strategy_artifact_id"?: string,"strategy_version_id"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -1083,6 +1199,9 @@ isOneToOne: false
 "archive_content_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
+"archive_design_asset":
+{ Args: { "p_asset_id": string,"p_expected_revision": number }; Returns: number
+                           },
 "archive_funnel_item":
 { Args: { "p_expected_revision": number,"p_item_id": string }; Returns: number
                            },
@@ -1106,11 +1225,8 @@ isOneToOne: false
               "brief_id": string,"reused": boolean
             }[]
                            },
-"create_production_brief":
-{ Args: { "p_brand_tone_constraints"?: string,"p_core_message": string,"p_deliverable_types": string[],"p_project_id": string,"p_reference_notes"?: string,"p_scope_summary": string,"p_strategy_artifact_id": string,"p_target_audience": string,"p_title": string }; Returns: string
-                           },
-"create_web_copy_doc":
-{ Args: { "p_copy_from_doc_id"?: string,"p_production_brief_id": string }; Returns: string
+"create_design_asset":
+{ Args: { "p_license_note": string,"p_origin_type": string,"p_sha256": string,"p_signature": string,"p_signed_at": number,"p_title": string,"p_upload_id": string }; Returns: string
                            },
 "create_funnel":
 { Args: { "p_strategy_artifact_id": string }; Returns: {
@@ -1119,6 +1235,12 @@ isOneToOne: false
                            },
 "create_lead_magnet":
 { Args: { "p_audience"?: string,"p_delivery"?: string,"p_format": string,"p_lead_fields"?: Json,"p_outline"?: Json,"p_promise"?: string,"p_stage_id": string,"p_status"?: string,"p_title": string }; Returns: string
+                           },
+"create_production_brief":
+{ Args: { "p_brand_tone_constraints"?: string,"p_core_message": string,"p_deliverable_types": (string)[],"p_project_id": string,"p_reference_notes"?: string,"p_scope_summary": string,"p_strategy_artifact_id": string,"p_target_audience": string,"p_title": string }; Returns: string
+                           },
+"create_web_copy_doc":
+{ Args: { "p_copy_from_doc_id"?: string,"p_production_brief_id": string }; Returns: string
                            },
 "decide_version":
 { Args: { "p_artifact_id": string,"p_comment"?: string,"p_decision": string,"p_version_id": string }; Returns: undefined
@@ -1145,23 +1267,20 @@ isOneToOne: false
 "rebase_content_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
-"rebase_production_brief":
-{ Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
-                           },
-"save_web_copy":
-{ Args: { "p_doc_id": string,"p_expected_revision": number,"p_pages": Json,"p_status": string }; Returns: number
-                           },
-"restore_web_copy_version":
-{ Args: { "p_doc_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
-                           },
-"rebase_web_copy":
-{ Args: { "p_doc_id": string,"p_expected_revision": number }; Returns: number
+"rebase_design_asset":
+{ Args: { "p_asset_id": string,"p_expected_revision": number }; Returns: number
                            },
 "rebase_funnel":
 { Args: { "p_expected_revision": number,"p_funnel_id": string }; Returns: number
                            },
 "rebase_lead_magnet":
 { Args: { "p_expected_revision": number,"p_lead_magnet_id": string }; Returns: number
+                           },
+"rebase_production_brief":
+{ Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"rebase_web_copy":
+{ Args: { "p_doc_id": string,"p_expected_revision": number }; Returns: number
                            },
 "record_channel_publication":
 { Args: { "p_draft_id": string,"p_note"?: string,"p_published_at": string,"p_url": string }; Returns: string
@@ -1174,10 +1293,27 @@ isOneToOne: false
               "artifact_id": string,"reused": boolean,"version": number,"version_id": string
             }[]
                            },
+"reject_design_asset_upload":
+{ Args: { "p_reason": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: undefined
+                           },
+"replace_design_asset_file":
+{ Args: { "p_asset_id": string,"p_change_note": string,"p_expected_revision": number,"p_sha256": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: number
+                           },
 "reserve_brief_copy_run":
 { Args: { "p_brief_id": string,"p_claim_ids": (string)[],"p_expected_revision": number,"p_input_hash": string,"p_model": string,"p_provider": string,"p_signature": string,"p_signed_at": number }; Returns: {
               "reused": boolean,"run_id": string
             }[]
+                           },
+"reserve_design_asset_upload":
+{ Args: { "p_asset_id": string,"p_file_name": string,"p_kind": string,"p_mime": string,"p_production_brief_id": string,"p_signature": string,"p_signed_at": number,"p_size": number }; Returns: {
+              "expires_at": string,"storage_key": string,"upload_id": string
+            }[]
+                           },
+"restore_design_asset_version":
+{ Args: { "p_asset_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
+                           },
+"restore_web_copy_version":
+{ Args: { "p_doc_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
                            },
 "save_draft_version":
 { Args: { "p_content": Json,"p_expected_revision": number,"p_input_hash": string,"p_snapshot": Json,"p_task_id": string }; Returns: {
@@ -1193,6 +1329,12 @@ isOneToOne: false
 { Args: { "p_artifact_id": string,"p_content": Json,"p_expected_revision": number }; Returns: {
               "version": number,"version_id": string
             }[]
+                           },
+"save_web_copy":
+{ Args: { "p_doc_id": string,"p_expected_revision": number,"p_pages": Json,"p_status": string }; Returns: number
+                           },
+"set_design_asset_usages":
+{ Args: { "p_asset_id": string,"p_expected_revision": number,"p_usages": Json }; Returns: number
                            },
 "set_funnel_item_lead_magnet":
 { Args: { "p_expected_revision": number,"p_item_id": string,"p_lead_magnet_id": string | null }; Returns: number
@@ -1215,8 +1357,8 @@ isOneToOne: false
 "update_content_brief":
 { Args: { "p_audience": string,"p_brief_id": string,"p_channel_spec": Json,"p_copy_draft": string,"p_copy_origin": string,"p_core_message": string,"p_cta": string,"p_expected_revision": number,"p_hook": string,"p_image_guide": string,"p_status": string,"p_title": string }; Returns: number
                            },
-"update_production_brief":
-{ Args: { "p_brand_tone_constraints": string,"p_brief_id": string,"p_core_message": string,"p_deliverable_types": string[],"p_expected_revision": number,"p_reference_notes": string,"p_scope_summary": string,"p_status": string,"p_target_audience": string,"p_title": string }; Returns: number
+"update_design_asset":
+{ Args: { "p_asset_id": string,"p_expected_revision": number,"p_license_note": string,"p_status": string,"p_title": string }; Returns: number
                            },
 "update_funnel_item":
 { Args: { "p_channel": string,"p_description": string,"p_details": Json,"p_expected_revision": number,"p_item_id": string,"p_kind": string,"p_stage_id": string,"p_status": string,"p_target_note": string,"p_title": string }; Returns: number
@@ -1226,6 +1368,9 @@ isOneToOne: false
                            },
 "update_lead_magnet":
 { Args: { "p_audience": string,"p_delivery": string,"p_expected_revision": number,"p_format": string,"p_lead_fields": Json,"p_lead_magnet_id": string,"p_outline": Json,"p_promise": string,"p_stage_id": string,"p_status": string,"p_title": string }; Returns: number
+                           },
+"update_production_brief":
+{ Args: { "p_brand_tone_constraints": string,"p_brief_id": string,"p_core_message": string,"p_deliverable_types": (string)[],"p_expected_revision": number,"p_reference_notes": string,"p_scope_summary": string,"p_status": string,"p_target_audience": string,"p_title": string }; Returns: number
                            },
 "void_channel_publication":
 { Args: { "p_publication_id": string,"p_reason": string }; Returns: string
