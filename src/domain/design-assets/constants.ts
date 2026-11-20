@@ -13,6 +13,8 @@ export const DESIGN_ASSET_LIMITS = {
   changeNote: 300,
   maxFileBytes: 10 * 1024 * 1024,
   maxColorFileBytes: 1024 * 1024,
+  /** 업무실 용량 상한(모든 판의 서로 다른 파일 합). DB app.design_asset_quota_bytes() 와 같은 값(시험이 대조) */
+  workspaceQuotaBytes: 500 * 1024 * 1024,
 } as const;
 
 export const DESIGN_ASSET_KIND_KEYS = ["logo", "image", "color", "font"] as const;

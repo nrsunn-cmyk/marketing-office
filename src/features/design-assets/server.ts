@@ -83,6 +83,15 @@ const kindOfMime = (m: DesignMime): DesignAssetKind =>
 // ─────────────────────────────────────────────
 // 읽기
 // ─────────────────────────────────────────────
+/** 판들이 가리키는 서로 다른 파일(storage_key)의 크기 합 — DB app.design_asset_used_bytes 의 판 부분과 같은 계산 */
+export function distinctBytes(rows: ReadonlyArray<{ storage_key: string; file_size_bytes: number }>): number {
+  const seen = new Map<string, number>();
+  for (const r of rows) if (!seen.has(r.storage_key)) seen.set(r.storage_key, Number(r.file_size_bytes));
+  let sum = 0;
+  for (const n of seen.values()) sum += n;
+  return sum;
+}
+
 export interface DesignAssetVersionView {
   id: string;
   version: number;
@@ -131,6 +140,11 @@ export interface DesignAssetsData {
   limit: number;
   /** 사용처로 고를 수 있는 홈페이지 섹션(같은 프로젝트·작업 중 문서의 현재 판) */
   usageOptions: Array<{ docId: string; sectionId: string; label: string }>;
+  /**
+   * 업무실 저장 용량(Master O4). usedBytes = 업무실 모든 자산 판이 가리키는 서로 다른 파일 크기 합(되돌리기 판은 같은 파일이라 한 번만).
+   * DB 상한 검사(app.design_asset_used_bytes)는 진행 중 예약도 더하지만, 예약은 사용자가 읽을 수 없어 화면 값에서는 빠진다(올리는 중인 파일만큼 차이).
+   */
+  storage: { usedBytes: number; limitBytes: number };
 }
 
 export async function getDesignAssetsFor(productionBriefId: string): Promise<Result<DesignAssetsData>> {
@@ -146,13 +160,14 @@ export async function getDesignAssetsFor(productionBriefId: string): Promise<Res
   if (!br.data) return fail("NOT_FOUND", "제작 브리프를 찾을 수 없습니다.");
   const b = br.data;
 
-  const [pr, ar, as, docs] = await Promise.all([
+  const [pr, ar, as, docs, used] = await Promise.all([
     sb.from("projects").select("status").eq("id", b.project_id).eq("workspace_id", workspace.id).maybeSingle(),
     sb.from("artifacts").select("task_id").eq("id", b.strategy_artifact_id).eq("workspace_id", workspace.id).maybeSingle(),
     sb.from("design_assets").select("*").eq("workspace_id", workspace.id).eq("project_id", b.project_id).order("created_at", { ascending: true }),
     sb.from("web_copy_docs").select("id, current_version_no, archived_at").eq("workspace_id", workspace.id).eq("project_id", b.project_id),
+    sb.from("design_asset_versions").select("storage_key, file_size_bytes").eq("workspace_id", workspace.id),
   ]);
-  for (const [where, r] of [["project", pr], ["artifact", ar], ["assets", as], ["docs", docs]] as const) if (r.error) return readFail(`getDesignAssetsFor.${where}`, r.error);
+  for (const [where, r] of [["project", pr], ["artifact", ar], ["assets", as], ["docs", docs], ["storage", used]] as const) if (r.error) return readFail(`getDesignAssetsFor.${where}`, r.error);
   let taskCancelled = false;
   if (ar.data?.task_id) {
     const tk = await sb.from("tasks").select("status").eq("id", ar.data.task_id).eq("workspace_id", workspace.id).maybeSingle();
@@ -257,6 +272,7 @@ export async function getDesignAssetsFor(productionBriefId: string): Promise<Res
     count: allProject.length,
     limit: DESIGN_ASSET_LIMITS.perProject,
     usageOptions,
+    storage: { usedBytes: distinctBytes(used.data ?? []), limitBytes: DESIGN_ASSET_LIMITS.workspaceQuotaBytes },
   });
 }
 

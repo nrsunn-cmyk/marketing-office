@@ -181,8 +181,9 @@ describe("읽기·그 밖의 쓰기", () => {
         { id: "a1", production_brief_id: "b1", project_id: "p1", title: "로고", asset_kind: "logo", origin_type: "external_upload", license_note: null, status: "drafting", archived_at: null, revision: 2, current_version_no: 2, source_brief_revision: 5 },
       ],
       design_asset_versions: [
-        { id: "v2", asset_id: "a1", version_no: 2, kind: "replace", change_note: "색", file_name: "b.png", file_size_bytes: 20, mime_type: "image/png", restored_from_version_no: null, created_at: "t2" },
-        { id: "v1", asset_id: "a1", version_no: 1, kind: "create", change_note: null, file_name: "a.svg", file_size_bytes: 10, mime_type: "image/svg+xml", restored_from_version_no: null, created_at: "t1" },
+        { id: "v3", asset_id: "a9", version_no: 3, storage_key: "w1/design-assets/k1.svg", file_size_bytes: 10 }, // 다른 브리프 자산의 되돌리기 판(같은 파일, 한 번만 셈)
+        { id: "v2", asset_id: "a1", version_no: 2, kind: "replace", change_note: "색", storage_key: "w1/design-assets/k2.png", file_name: "b.png", file_size_bytes: 20, mime_type: "image/png", restored_from_version_no: null, created_at: "t2" },
+        { id: "v1", asset_id: "a1", version_no: 1, kind: "create", change_note: null, storage_key: "w1/design-assets/k1.svg", file_name: "a.svg", file_size_bytes: 10, mime_type: "image/svg+xml", restored_from_version_no: null, created_at: "t1" },
       ],
       design_asset_usages: [
         { id: "us1", asset_id: "a1", web_copy_doc_id: "d1", section_id: "s1" },
@@ -197,6 +198,8 @@ describe("읽기·그 밖의 쓰기", () => {
     expect(r.data).toMatchObject({ stale: true, canWrite: true, canCreate: true, count: 1, limit: 50, usageOptions: [{ docId: "d1", sectionId: "s1", label: "홈 · 첫 화면" }] });
     expect(r.data.assets[0]).toMatchObject({ fileName: "b.png", mimeType: "image/png", version: 2, stale: false, usages: [{ label: "홈 · 첫 화면" }, { label: null }] });
     expect(r.data.assets[0].versions.map((v) => [v.version, v.current])).toEqual([[2, true], [1, false]]);
+    // 저장 용량(Master O4): 업무실 전체 판의 서로 다른 파일 합 10 + 20, 상한은 DB 와 같은 500MB
+    expect(r.data.storage).toEqual({ usedBytes: 30, limitBytes: 524288000 });
     vi.stubEnv("DESIGN_ASSET_SIGNING_KEY", "");
     const off = await getDesignAssetsFor("b1");
     expect(off).toMatchObject({ ok: true, data: { canWrite: false, canCreate: false } });
@@ -208,5 +211,20 @@ describe("읽기·그 밖의 쓰기", () => {
     expect(await setDesignAssetUsages("a1", 7, [{ docId: B, sectionId: U }])).toEqual({ ok: true, data: { revision: 7 } });
     expect(S.rpc[1].args.p_usages).toEqual([{ doc_id: B, section_id: U }]);
     expect(await setDesignAssetUsages("a1", 7, [{ docId: "x", sectionId: U }])).toMatchObject({ ok: false, code: "VALIDATION" });
+  });
+});
+
+describe("저장 용량 상수", () => {
+  it("앱 상한 = migration 31 app.design_asset_quota_bytes() 값(한쪽만 바꾸지 않게)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { DESIGN_ASSET_LIMITS } = await import("@/domain/design-assets");
+    const sql = readFileSync("supabase/migrations/20261121004000_p3c_design_assets.sql", "utf8");
+    const m = /design_asset_quota_bytes\(\) returns bigint\s+language sql immutable set search_path = '' as \$\$ select (\d+)::bigint/.exec(sql);
+    expect(Number(m?.[1])).toBe(DESIGN_ASSET_LIMITS.workspaceQuotaBytes);
+  });
+  it("distinctBytes: 같은 파일은 한 번만", async () => {
+    const { distinctBytes } = await import("./server");
+    expect(distinctBytes([{ storage_key: "a", file_size_bytes: 5 }, { storage_key: "a", file_size_bytes: 5 }, { storage_key: "b", file_size_bytes: 7 }])).toBe(12);
+    expect(distinctBytes([])).toBe(0);
   });
 });
