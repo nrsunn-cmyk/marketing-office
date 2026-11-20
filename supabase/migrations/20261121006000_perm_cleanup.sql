@@ -48,6 +48,22 @@ revoke delete, truncate on
 from authenticated;
 
 -- 4) 모든 public 표: REFERENCES·TRIGGER·TRUNCATE 회수(앱이 쓰지 않음)
+--    회수 직전에 표별로 원래 있었는지 기록한다(RELEASE-PLAN-02 발견: 이 migration 은 배포 순서상 맨 뒤라, 그사이 생긴 표 중에는
+--    만들 때부터 REFERENCES·TRIGGER 를 회수해 둔 표가 있다. 되돌림이 "지금 SELECT 가 있는 표 전부"에 돌려주면 원래 없던 권한이 생긴다.
+--    그래서 되돌림은 이 기록에 있는 것만 정확히 돌려주고 기록 표를 지운다). 사용자·익명은 이 기록 표를 읽을 수 없다
+create table app.perm_cleanup_prior (
+  relname        text primary key,
+  had_references boolean not null,
+  had_trigger    boolean not null,
+  had_truncate   boolean not null,
+  recorded_at    timestamptz not null default now()
+);
+revoke all on app.perm_cleanup_prior from public, anon, authenticated;
+insert into app.perm_cleanup_prior (relname, had_references, had_trigger, had_truncate)
+select c.relname, has_table_privilege('authenticated', c.oid, 'REFERENCES'), has_table_privilege('authenticated', c.oid, 'TRIGGER'),
+       has_table_privilege('authenticated', c.oid, 'TRUNCATE')
+  from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p');
+
 do $$
 declare
   t text;
