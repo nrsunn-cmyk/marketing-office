@@ -74,14 +74,6 @@ const act = async (
   id: string,
   mk: (rev: number) => { text: string; params: unknown[] },
 ) => run(f, mk((await plan(id)).revision));
-const replica = async (fn: () => Promise<unknown>) => {
-  await db.exec("set session_replication_role = replica");
-  try {
-    await fn();
-  } finally {
-    await db.exec("set session_replication_role = origin");
-  }
-};
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const sign = async (
   purpose: string,
@@ -415,6 +407,7 @@ describe.skipIf(!present)(`P3-d 영상 구성·파일 공격 시험(${T.plans})`
         P3D.err.validation,
       );
       const { subtitle: _s, ...noSub } = scene(1);
+      void _s;
       await expectDbError(createPlan(a, c, [noSub]), P3D.err.validation);
       const id = await createPlan(a, c, [
         scene(1, { title: "첫째" }),
@@ -531,6 +524,7 @@ describe.skipIf(!present)(`P3-d 영상 구성·파일 공격 시험(${T.plans})`
       const c = await ctx(a);
       const asset = await designAsset(a, c);
       const { asset_ids: _x, ...rest } = scene(1);
+      void _x;
       await expectDbError(
         createPlan(a, c, [
           { ...rest, assets: [{ asset_id: asset, version_no: 99 }] },
