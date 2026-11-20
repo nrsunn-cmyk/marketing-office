@@ -21,6 +21,7 @@ import { BriefActionButton } from "./production-brief-buttons";
 import type { BriefAction } from "./production-brief-edit-form";
 import { DeliveryLogForm } from "./delivery-bundle-log-form";
 import { pptExportHref } from "./ppt-deck-model";
+import { EX_LABELS } from "../../projects/[projectId]/execution/execution-model";
 import { VideoDownloadButton } from "./video-download-button";
 import {
   DB_COPY,
@@ -125,7 +126,20 @@ export function DeliveryBundleSection({ data, readOnly, taskId, actions = {} }: 
           </p>
         </>
       ) : (
-        <Body data={data} readOnly={readOnly} actions={actions} />
+        <>
+          <Body data={data} readOnly={readOnly} actions={actions} />
+          {/* 진입 ③: P4 실행·성과와의 관계 안내(연결 단추 없음, 실행 화면 링크만) */}
+          <div className={`${styles.notice} ${db.dbBanner}`} role="note">
+            <p className={f.keep}>
+              <span className={f.tag}>{EX_LABELS.bundleNextBadge}</span> {EX_LABELS.bundleNextNotice}
+            </p>
+            <p>
+              <Link href={`/projects/${data.projectId}/execution`} className={`${styles.secondaryButton} ${f.touch}`}>
+                {EX_LABELS.bundleNextLink}
+              </Link>
+            </p>
+          </div>
+        </>
       )}
     </section>
   );

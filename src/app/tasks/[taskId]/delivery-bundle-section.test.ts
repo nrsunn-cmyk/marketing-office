@@ -227,3 +227,15 @@ it.runIf(Boolean(process.env.DB_HARNESS))("화면 점검용 HTML 쓰기", () => 
   mkdirSync(out, { recursive: true });
   for (const k of Object.keys(STATES)) writeFileSync(join(out, `${k}.html`), render(k));
 });
+
+describe("진입 ③: P4 실행·성과 다음 단계 안내(AGY P4-ENTRY-HANDOFF 1절 ③)", () => {
+  it("납품 묶음 아래 안내 + 프로젝트 실행 화면 링크(연결 단추 없음), 불러오기 실패면 없음", () => {
+    const h = render("작성중");
+    expect(text(h)).toContain("준비 중 (1차 연결 없음)");
+    expect(text(h)).toContain("다음 단계: 실행 · 성과 (P4) — 현재 1차 실행 대기열은 티스토리 채널 초안(검토 완료)에서 올릴 수 있습니다. P3 납품 묶음과의 연결은 준비 중입니다.");
+    expect(h).toContain('href="/projects/pj-1/execution"');
+    expect(text(h)).toContain("프로젝트 실행 화면 보기");
+    expect(text(h)).not.toContain("실행 대기열에 올리기");
+    expect(render("불러오기실패")).not.toContain("/execution");
+  });
+});

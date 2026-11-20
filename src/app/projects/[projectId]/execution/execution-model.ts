@@ -94,6 +94,10 @@ export const EX_LABELS = {
   entryResults: "성과 기록 · 수동 입력",
   draftNotReviewed: "검토 완료 상태의 초안만 실행 대기열에 올릴 수 있습니다. 초안 상태를 검토 완료로 바꾼 뒤 다시 확인해 주세요.",
   viewQueue: "실행 대기열 보기",
+  // 진입 ③ P3 납품 묶음 하단(AGY P4-ENTRY-HANDOFF 1절 ③, entry.html 3번) — 1차 연결 단추 없음, 안내 + 실행 화면 링크만
+  bundleNextBadge: "준비 중 (1차 연결 없음)",
+  bundleNextNotice: "다음 단계: 실행 · 성과 (P4) — 현재 1차 실행 대기열은 티스토리 채널 초안(검토 완료)에서 올릴 수 있습니다. P3 납품 묶음과의 연결은 준비 중입니다.",
+  bundleNextLink: "프로젝트 실행 화면 보기",
 } as const;
 
 export const RESULT_UNIT_LABELS = { count: "건", percent: "%", won: "원", seconds: "초" } as const;
