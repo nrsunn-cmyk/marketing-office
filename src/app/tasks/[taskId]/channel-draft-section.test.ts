@@ -31,6 +31,7 @@ vi.mock("../../_components/action-form", async () => {
       h("form", { className }, children as never, h("button", { type: "submit", className: variant === "secondary" ? "secondaryButton" : "button" }, submitLabel)),
   };
 });
+vi.mock("@/features/execution/actions", () => ({ enqueueExecutionAction: vi.fn() }));
 vi.mock("./funnel.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./channel-draft.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
@@ -346,4 +347,24 @@ it.runIf(Boolean(process.env.CHANNEL_DRAFT_HARNESS))("화면 점검용 HTML 쓰�
   for (const k of Object.keys(STATES)) writeFileSync(join(out, `${k}.html`), render(k));
   // 접힌 영역을 모두 펼친 모양
   for (const k of ["작성중", "게시기록됨"]) writeFileSync(join(out, `${k}-펼침.html`), render(k).replace(/<details class="inlineDetails">/g, '<details class="inlineDetails" open="">'));
+});
+
+describe("P4A-UI-01: 실행 대기열에 올리기(AGY P4-ENTRY-HANDOFF 1절 ①)", () => {
+  const P = "pppppppp-pppp-4ppp-8ppp-000000000001";
+  const one = (st: Parameters<typeof draft>[1], over: { readOnly?: boolean; projectId?: string | undefined } = {}) =>
+    renderToString(createElement(ChannelDraftBody, { data: data([draft(1, st)]), briefId: BRIEF, briefArchived: false, readOnly: over.readOnly ?? false, approvedVersion: 2, projectId: "projectId" in over ? over.projectId : P }));
+  it("검토 완료 초안: 내보내기 아래 '+ 실행 대기열에 올리기'(projectId·draftId)와 대기열 보기 링크", () => {
+    const h = one({ status: "reviewed", displayStatus: "reviewed" });
+    expect(buttons(h)).toContain("+ 실행 대기열에 올리기");
+    expect(h).toContain(`name="projectId" value="${P}"`);
+    expect(h).toContain(`href="/projects/${P}/execution#queue"`);
+    expect(text(h)).toContain("실행 대기열 보기");
+  });
+  it("작성 중: 단추 없이 안내 / 읽기 전용·보관·프로젝트 모름: 없음", () => {
+    const d = one({ status: "drafting" });
+    expect(buttons(d)).not.toContain("+ 실행 대기열에 올리기");
+    expect(text(d)).toContain("검토 완료 상태의 초안만 실행 대기열에 올릴 수 있습니다.");
+    for (const h of [one({ status: "reviewed", displayStatus: "reviewed" }, { readOnly: true }), one({ status: "reviewed", displayStatus: "reviewed", archived: true }), one({ status: "reviewed", displayStatus: "reviewed" }, { projectId: undefined })])
+      expect(text(h)).not.toContain("실행 대기열");
+  });
 });

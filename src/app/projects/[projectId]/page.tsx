@@ -17,11 +17,14 @@ import { createTaskAction } from "@/features/tasks/actions";
 import { listTasks } from "@/features/tasks/server";
 import { getProject } from "@/features/projects/server";
 import { listResearchSources } from "@/features/research-sources/server";
+import { getExecutionBoard } from "@/features/execution/server";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
 import { MobileActionSheet } from "../../_components/mobile-action-sheet";
 import styles from "../../ui.module.css";
+import { ExecutionEntryCard, ProjectJumpBar } from "./execution/execution-entry";
+import { executionCounts } from "./execution/execution-model";
 
 export const metadata: Metadata = { title: "프로젝트 · 마케팅 업무실" };
 
@@ -68,12 +71,24 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
     console.error("[project sources]", e);
   }
 
+  // P4A-UI-01: 실행·성과 건수(진입 카드). 실패해도 전용 화면으로 가는 단추는 보인다
+  let execCounts: ReturnType<typeof executionCounts> | null = null;
+  try {
+    const r = await getExecutionBoard(project.id);
+    if (r.ok) execCounts = executionCounts(r.data);
+    else console.error("[project execution]", r.code, r.message);
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[project execution]", e);
+  }
+
   return (
     <>
       <div className={styles.header}>
         <h1 className={`${styles.title} ${styles.titleWrap}`}>{project.title}</h1>
         <span className={styles.badge}>{PROJECT_STATUS_LABELS[project.status] ?? project.status}</span>
       </div>
+      <ProjectJumpBar />
       <section className={styles.section} aria-labelledby="project-info">
         <h2 id="project-info" className={styles.subtitle}>
           프로젝트 정보
@@ -164,7 +179,11 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
         </ActionForm>
         </MobileActionSheet>
       </section>
-      <AssetsPanel owner={{ projectId: project.id }} heading="프로젝트 자료" />
+      {/* P4A-UI-01: 작업 바로 아래 실행·성과 진입(AGY P4-ENTRY-HANDOFF 2절 가 모바일 순서 3번) */}
+      <ExecutionEntryCard projectId={project.id} counts={execCounts} />
+      <div id="project-assets">
+        <AssetsPanel owner={{ projectId: project.id }} heading="프로젝트 자료" />
+      </div>
       <section className={styles.section} aria-labelledby="project-sources">
         <h2 id="project-sources" className={styles.subtitle}>
           외부 출처
