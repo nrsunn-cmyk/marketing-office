@@ -1,0 +1,371 @@
+/* P3F-UI-PREP-01 결과물 검수 체크리스트. 시안 Design/p3-production/qa-checklist.html.
+ * 색·간격은 기존 토큰만. 44px 규칙은 funnel.module.css 의 .funnel 범위, 탭·라디오는 44px.
+ * 아이콘·그림·배지는 AGY SVG 인라인(currentColor). */
+
+.qaSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강 */
+}
+:global([data-theme="dark"]) .qaSection {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .qaSection {
+    --text-muted: inherit;
+  }
+}
+
+.qaHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.qaTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.qaIcon {
+  flex: none;
+  color: var(--info-text);
+}
+.qaBanner p,
+.qaEmpty p {
+  margin: 0;
+}
+
+/* 결과물 종류 탭(44px) */
+.qaTabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: var(--space-2);
+}
+.qaTab {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.qaTab[aria-pressed="true"] {
+  border: 2px solid var(--info-border);
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-weight: var(--font-weight-semibold);
+}
+.qaTab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.qaPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.qaEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.qaEmptyArt {
+  color: var(--text-muted);
+}
+
+.qaRoundHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.qaBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.qaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.qaBadge_drafting {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.qaBadge_fix_requested {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+.qaBadge_reviewed {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.qaBadge_archived {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-style: dashed;
+}
+.qaTagIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.qaTarget {
+  margin: 0;
+}
+
+.qaForm {
+  min-width: 0;
+}
+.qaItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.qaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.qaItemFix {
+  border-color: var(--warning-border);
+}
+.qaItemHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.qaItemTitle {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+.qaMeta {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+.qaVerdict {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.qaVerdict_pending {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+.qaVerdict_passed {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.qaVerdict_needs_fix {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+/* 판정 라디오(44px 라벨) */
+.qaVerdicts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.qaVerdicts legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+.qaVerdictGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  gap: var(--space-2);
+}
+.qaRadio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.qaRadio:has(input:checked) {
+  border: 2px solid var(--info-border);
+  background: var(--info-bg);
+}
+.qaRadio input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 0;
+}
+.qaRadio:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+.qaFieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.qaCount {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.qaCountOver {
+  color: var(--danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 승인 게이트 */
+.qaGate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.qaGate p {
+  margin: 0;
+}
+.qaGateReady {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.qaGateButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.qaGateButtons:empty {
+  display: none;
+}
+
+.qaDanger {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.qaView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+.qaViewRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.qaViewRow dt {
+  font-weight: var(--font-weight-semibold);
+}
+.qaViewRow dd {
+  margin: 0;
+}
+.qaViewText {
+  white-space: pre-wrap;
+}
+
+/* 보완 요청 · 재검수 흐름 이력 */
+.qaHistory {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.qaSubhead {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+.qaHistoryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.qaHistoryItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.qaHistoryItem p {
+  margin: 0;
+}
+.qaHistoryCurrent {
+  border-color: var(--info-border);
+}
+.qaFixedTag {
+  color: var(--success-text);
+}
+
+/* P3FG-UI-FIX-01: 새 검수 항목 제목 칸 */
+.qaReq {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.qaSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

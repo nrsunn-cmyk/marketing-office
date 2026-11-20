@@ -1,0 +1,382 @@
+/* P3E-UI-PREP-01 PPT 구성·템플릿·내보내기. 시안 Design/p3-production/ppt-deck.html.
+ * 색·간격은 기존 토큰만. 44px 규칙은 funnel.module.css 의 .funnel 범위, 체크 상자는 44px 라벨.
+ * 아이콘·그림·배지는 AGY SVG 인라인(currentColor). */
+
+.ppSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강 */
+}
+:global([data-theme="dark"]) .ppSection {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .ppSection {
+    --text-muted: inherit;
+  }
+}
+
+.ppHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.ppTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.ppIcon {
+  flex: none;
+  color: var(--info-text);
+}
+.ppBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+.ppBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.ppBadge_drafting {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.ppBadge_reviewed {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.ppBadge_archived {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-style: dashed;
+}
+.ppTagIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ppBanner p,
+.ppEmpty p {
+  margin: 0;
+}
+.ppEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.ppEmptyArt {
+  color: var(--text-muted);
+}
+
+.ppForm {
+  min-width: 0;
+}
+.ppGrid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+.ppFieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.ppReq {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.ppCount {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ppCountOver {
+  color: var(--danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+.ppSubhead {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+
+.ppSlides {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ppSlide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.ppSlideHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.ppSlideTitle {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+.ppTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ppAssets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.ppAssets legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+.ppAssetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-2);
+}
+.ppCheck {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.ppCheck:has(input:checked) {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+}
+.ppCheck input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 0;
+}
+.ppCheck:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.ppDanger {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ppReadOnly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ppView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+.ppViewRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ppViewRow dt {
+  font-weight: var(--font-weight-semibold);
+}
+.ppViewRow dd {
+  margin: 0;
+}
+.ppViewText {
+  white-space: pre-wrap;
+}
+.ppSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 템플릿 라디오 카드(44px 이상) */
+.ppTemplates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.ppTemplates legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}
+.ppTemplateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-2);
+}
+.ppTemplate {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.ppTemplate:has(input:checked) {
+  border: 2px solid var(--info-border);
+  background: var(--info-bg);
+}
+.ppTemplate input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 2px 0 0;
+}
+.ppTemplate:focus-within {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+.ppTemplateText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ppTemplateName {
+  font-weight: var(--font-weight-semibold);
+}
+.ppTemplateDesc {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+.ppTemplate:has(input:checked) .ppTemplateDesc {
+  color: var(--info-text);
+}
+
+/* 내보내기 자리 */
+.ppExport {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.ppExport > p {
+  margin: 0;
+}
+.ppExportButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* P3E-UI-CONNECT-01: 브리프마다 블록·만들기·판 이력·판별 내보내기(영상 구성과 같은 꼴, 기존 토큰만) */
+.ppBrief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.ppBriefTitle {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+}
+.ppCreate {
+  min-width: 0;
+}
+.ppVersions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.ppVersions > p {
+  margin: 0;
+}
+.ppVersionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ppVersion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.ppVersion p {
+  margin: 0;
+}
+.ppVersionCurrent {
+  border: 2px solid var(--info-border);
+}
+.ppVersionName {
+  font-weight: var(--font-weight-semibold);
+}
+.ppVersionTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
