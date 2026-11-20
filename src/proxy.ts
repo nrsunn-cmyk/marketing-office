@@ -25,12 +25,18 @@ function isAdminPath(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
-/** 관리자가 아니거나 확인에 실패했을 때의 404. 갱신된 세션 쿠키는 그대로 싣는다. 본문은 관리자 흔적 없는 짧은 글 */
-function notFoundResponse(from: NextResponse): NextResponse {
-  const res = new NextResponse("찾을 수 없습니다.", {
-    status: 404,
-    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store", "x-robots-tag": "noindex, nofollow" },
-  });
+/**
+ * 관리자가 아니거나 확인에 실패했을 때의 404(Tester QA-ADMIN-404-01 D1 고침).
+ * 글자 한 줄이 아니라 앱의 "찾을 수 없습니다" 화면(src/app/not-found.tsx — 머리글·제목·돌아갈 길, 관리자 흔적 없음)을 404 상태로 그린다:
+ * 어떤 경로에도 맞지 않는 내부 주소로 rewrite 하면 Next 가 not-found 화면을 404 로 그린다. 주소창의 주소는 그대로다.
+ * 갱신된 세션 쿠키는 그대로 싣는다.
+ */
+const NOT_FOUND_PATH = "/_admin-not-found";
+function notFoundResponse(request: NextRequest, from: NextResponse): NextResponse {
+  const target = request.nextUrl.clone();
+  target.pathname = NOT_FOUND_PATH;
+  target.search = "";
+  const res = NextResponse.rewrite(target, { status: 404, headers: { "cache-control": "private, no-store", "x-robots-tag": "noindex, nofollow" } });
   for (const c of from.cookies.getAll()) res.cookies.set(c);
   return res;
 }
@@ -72,7 +78,7 @@ export async function proxy(request: NextRequest) {
   // 관리자 화면만 요청 시점에 관리자 여부를 확인한다(이 경로에만 RPC 1번). 확인 오류도 404(관리자 화면을 보여 주지 않는 쪽으로)
   if (loggedIn && isAdminPath(request.nextUrl.pathname)) {
     const { data: isAdmin, error } = await supabase.rpc("admin_whoami");
-    if (error || isAdmin !== true) return notFoundResponse(response);
+    if (error || isAdmin !== true) return notFoundResponse(request, response);
   }
   return response;
 }

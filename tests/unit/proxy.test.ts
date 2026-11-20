@@ -42,13 +42,14 @@ describe("Proxy 관리자 화면 404", () => {
     expect(S.rpcCalls).toEqual([]);
   });
 
-  it("로그인 + 관리자 아님 → /admin·/admin/usage·/admin/p3 모두 404, 본문에 관리자 흔적 없음, 갱신 쿠키 실림", async () => {
+  it("로그인 + 관리자 아님 → /admin·/admin/usage·/admin/p3 모두 404, 앱 not-found 화면으로 rewrite, 갱신 쿠키 실림", async () => {
     S.sub = "u1";
     S.setCookie = true;
     for (const p of ["/admin", "/admin/usage", "/admin/p3", "/admin/audit?x=1"]) {
       const r = await proxy(req(p));
       expect(r.status, p).toBe(404);
-      expect(await r.text()).toBe("찾을 수 없습니다.");
+      // 앱의 not-found 화면을 그리도록 없는 내부 주소로 rewrite(QA-ADMIN-404-01 D1). 주소창 주소는 그대로
+      expect(new URL(r.headers.get("x-middleware-rewrite") ?? "").pathname, p).toBe("/_admin-not-found");
       expect(r.headers.get("x-robots-tag")).toBe("noindex, nofollow");
       expect(r.headers.get("cache-control")).toBe("private, no-store");
       expect(r.cookies.get("sb-x-auth-token")?.value).toBe("새값");
