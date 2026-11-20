@@ -419,6 +419,138 @@ isOneToOne: false
       referencedColumns: ["workspace_id","id"]
     }
                   ]
+                },"delivery_bundle_items": {
+                  Row: {
+                    "brief_revision": number | null,"bundle_id": string,"content_sha256": string,"created_at": string,"design_asset_id": string | null,"design_asset_version_id": string | null,"id": string,"kind": string,"ppt_deck_id": string | null,"ppt_deck_version_id": string | null,"production_brief_id": string | null,"project_id": string,"qa_review_id": string | null,"sort_order": number,"version_no": number,"video_plan_id": string | null,"video_plan_version_id": string | null,"web_copy_doc_id": string | null,"web_copy_version_id": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "brief_revision"?: number | null,"bundle_id": string,"content_sha256": string,"created_at"?: string,"design_asset_id"?: string | null,"design_asset_version_id"?: string | null,"id"?: string,"kind": string,"ppt_deck_id"?: string | null,"ppt_deck_version_id"?: string | null,"production_brief_id"?: string | null,"project_id": string,"qa_review_id"?: string | null,"sort_order": number,"version_no": number,"video_plan_id"?: string | null,"video_plan_version_id"?: string | null,"web_copy_doc_id"?: string | null,"web_copy_version_id"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "brief_revision"?: number | null,"bundle_id"?: string,"content_sha256"?: string,"created_at"?: string,"design_asset_id"?: string | null,"design_asset_version_id"?: string | null,"id"?: string,"kind"?: string,"ppt_deck_id"?: string | null,"ppt_deck_version_id"?: string | null,"production_brief_id"?: string | null,"project_id"?: string,"qa_review_id"?: string | null,"sort_order"?: number,"version_no"?: number,"video_plan_id"?: string | null,"video_plan_version_id"?: string | null,"web_copy_doc_id"?: string | null,"web_copy_version_id"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_bundle_items_design_asset_id_design_asset_version_fkey"
+      columns: ["design_asset_id","design_asset_version_id"]
+isOneToOne: false
+      referencedRelation: "design_asset_versions"
+      referencedColumns: ["asset_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_ppt_deck_id_ppt_deck_version_id_fkey"
+      columns: ["ppt_deck_id","ppt_deck_version_id"]
+isOneToOne: false
+      referencedRelation: "ppt_deck_versions"
+      referencedColumns: ["deck_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_bundle_id_fkey"
+      columns: ["project_id","bundle_id"]
+isOneToOne: false
+      referencedRelation: "delivery_bundles"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_design_asset_id_fkey"
+      columns: ["project_id","design_asset_id"]
+isOneToOne: false
+      referencedRelation: "design_assets"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_ppt_deck_id_fkey"
+      columns: ["project_id","ppt_deck_id"]
+isOneToOne: false
+      referencedRelation: "ppt_decks"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_production_brief_id_fkey"
+      columns: ["project_id","production_brief_id"]
+isOneToOne: false
+      referencedRelation: "production_briefs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_qa_review_id_fkey"
+      columns: ["project_id","qa_review_id"]
+isOneToOne: false
+      referencedRelation: "qa_reviews"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_video_plan_id_fkey"
+      columns: ["project_id","video_plan_id"]
+isOneToOne: false
+      referencedRelation: "video_plans"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_project_id_web_copy_doc_id_fkey"
+      columns: ["project_id","web_copy_doc_id"]
+isOneToOne: false
+      referencedRelation: "web_copy_docs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_video_plan_id_video_plan_version_id_fkey"
+      columns: ["video_plan_id","video_plan_version_id"]
+isOneToOne: false
+      referencedRelation: "video_plan_versions"
+      referencedColumns: ["plan_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_web_copy_doc_id_web_copy_version_id_fkey"
+      columns: ["web_copy_doc_id","web_copy_version_id"]
+isOneToOne: false
+      referencedRelation: "web_copy_versions"
+      referencedColumns: ["doc_id","id"]
+    },{
+      foreignKeyName: "delivery_bundle_items_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"delivery_bundles": {
+                  Row: {
+                    "archived_at": string | null,"bundle_no": number,"created_at": string,"created_by": string,"id": string,"item_count": number,"project_id": string,"restored_from_id": string | null,"revision": number,"status": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"bundle_no": number,"created_at"?: string,"created_by": string,"id"?: string,"item_count": number,"project_id": string,"restored_from_id"?: string | null,"revision"?: number,"status"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"bundle_no"?: number,"created_at"?: string,"created_by"?: string,"id"?: string,"item_count"?: number,"project_id"?: string,"restored_from_id"?: string | null,"revision"?: number,"status"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_bundles_project_id_restored_from_id_fkey"
+      columns: ["project_id","restored_from_id"]
+isOneToOne: false
+      referencedRelation: "delivery_bundles"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "delivery_bundles_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"delivery_logs": {
+                  Row: {
+                    "bundle_id": string,"created_at": string,"created_by": string,"delivered_at": string,"id": string,"method": string,"note": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bundle_id": string,"created_at"?: string,"created_by": string,"delivered_at": string,"id"?: string,"method": string,"note"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "bundle_id"?: string,"created_at"?: string,"created_by"?: string,"delivered_at"?: string,"id"?: string,"method"?: string,"note"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_logs_workspace_id_bundle_id_fkey"
+      columns: ["workspace_id","bundle_id"]
+isOneToOne: false
+      referencedRelation: "delivery_bundles"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"delivery_records": {
                   Row: {
                     "artifact_version_id": string,"created_at": string,"delivered_at": string,"export_id": string | null,"id": string,"method": string,"note": string | null,"project_id": string,"workspace_id": string
@@ -877,6 +1009,94 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"qa_check_items": {
+                  Row: {
+                    "checked_at": string | null,"checked_by": string | null,"created_at": string,"id": string,"is_default": boolean,"is_required": boolean,"item_title": string,"memo": string | null,"review_id": string,"sort_order": number,"verdict": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checked_at"?: string | null,"checked_by"?: string | null,"created_at"?: string,"id"?: string,"is_default"?: boolean,"is_required"?: boolean,"item_title": string,"memo"?: string | null,"review_id": string,"sort_order": number,"verdict"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "checked_at"?: string | null,"checked_by"?: string | null,"created_at"?: string,"id"?: string,"is_default"?: boolean,"is_required"?: boolean,"item_title"?: string,"memo"?: string | null,"review_id"?: string,"sort_order"?: number,"verdict"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "qa_check_items_workspace_id_review_id_fkey"
+      columns: ["workspace_id","review_id"]
+isOneToOne: false
+      referencedRelation: "qa_reviews"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
+                },"qa_reviews": {
+                  Row: {
+                    "approved_at": string | null,"approved_by": string | null,"archived_at": string | null,"created_at": string,"created_by": string,"design_asset_id": string | null,"design_asset_version_id": string | null,"id": string,"ppt_deck_id": string | null,"ppt_deck_version_id": string | null,"project_id": string,"revision": number,"round_no": number,"status": string,"target_id": string | null,"target_kind": string,"target_version_no": number,"updated_at": string,"video_plan_id": string | null,"video_plan_version_id": string | null,"web_copy_doc_id": string | null,"web_copy_version_id": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"created_by": string,"design_asset_id"?: string | null,"design_asset_version_id"?: string | null,"id"?: string,"ppt_deck_id"?: string | null,"ppt_deck_version_id"?: string | null,"project_id": string,"revision"?: number,"round_no": number,"status"?: string,"target_id"?: never,"target_kind": string,"target_version_no": number,"updated_at"?: string,"video_plan_id"?: string | null,"video_plan_version_id"?: string | null,"web_copy_doc_id"?: string | null,"web_copy_version_id"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"archived_at"?: string | null,"created_at"?: string,"created_by"?: string,"design_asset_id"?: string | null,"design_asset_version_id"?: string | null,"id"?: string,"ppt_deck_id"?: string | null,"ppt_deck_version_id"?: string | null,"project_id"?: string,"revision"?: number,"round_no"?: number,"status"?: string,"target_id"?: never,"target_kind"?: string,"target_version_no"?: number,"updated_at"?: string,"video_plan_id"?: string | null,"video_plan_version_id"?: string | null,"web_copy_doc_id"?: string | null,"web_copy_version_id"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "qa_reviews_design_asset_id_design_asset_version_id_fkey"
+      columns: ["design_asset_id","design_asset_version_id"]
+isOneToOne: false
+      referencedRelation: "design_asset_versions"
+      referencedColumns: ["asset_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_ppt_deck_id_ppt_deck_version_id_fkey"
+      columns: ["ppt_deck_id","ppt_deck_version_id"]
+isOneToOne: false
+      referencedRelation: "ppt_deck_versions"
+      referencedColumns: ["deck_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_project_id_design_asset_id_fkey"
+      columns: ["project_id","design_asset_id"]
+isOneToOne: false
+      referencedRelation: "design_assets"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_project_id_ppt_deck_id_fkey"
+      columns: ["project_id","ppt_deck_id"]
+isOneToOne: false
+      referencedRelation: "ppt_decks"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_project_id_video_plan_id_fkey"
+      columns: ["project_id","video_plan_id"]
+isOneToOne: false
+      referencedRelation: "video_plans"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_project_id_web_copy_doc_id_fkey"
+      columns: ["project_id","web_copy_doc_id"]
+isOneToOne: false
+      referencedRelation: "web_copy_docs"
+      referencedColumns: ["project_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_video_plan_id_video_plan_version_id_fkey"
+      columns: ["video_plan_id","video_plan_version_id"]
+isOneToOne: false
+      referencedRelation: "video_plan_versions"
+      referencedColumns: ["plan_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_web_copy_doc_id_web_copy_version_id_fkey"
+      columns: ["web_copy_doc_id","web_copy_version_id"]
+isOneToOne: false
+      referencedRelation: "web_copy_versions"
+      referencedColumns: ["doc_id","id"]
+    },{
+      foreignKeyName: "qa_reviews_workspace_id_project_id_fkey"
+      columns: ["workspace_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["workspace_id","id"]
+    }
+                  ]
                 },"quote_items": {
                   Row: {
                     "description": string | null,"id": string,"line_amount_won": number | null,"name": string,"position": number,"quantity_hundredths": number,"quote_version_id": string,"unit_price_won": number | null,"workspace_id": string
@@ -1303,8 +1523,14 @@ isOneToOne: false
 "add_brief_claim":
 { Args: { "p_brief_id": string,"p_claim_kind"?: string,"p_text": string }; Returns: string
                            },
+"add_delivery_log":
+{ Args: { "p_bundle_id": string,"p_delivered_at": string,"p_expected_revision": number,"p_method": string,"p_note": string }; Returns: number
+                           },
 "add_funnel_item":
 { Args: { "p_channel"?: string,"p_description"?: string,"p_details"?: Json,"p_kind": string,"p_stage_id": string,"p_status"?: string,"p_target_note"?: string,"p_title": string }; Returns: string
+                           },
+"add_qa_item":
+{ Args: { "p_expected_revision": number,"p_is_required": boolean,"p_review_id": string,"p_title": string }; Returns: number
                            },
 "add_research_source":
 { Args: { "p_project_id": string,"p_publisher"?: string,"p_quoted_excerpt"?: string,"p_retrieved_at": string,"p_title": string,"p_url": string }; Returns: string
@@ -1335,6 +1561,9 @@ isOneToOne: false
 "approve_company_profile_version":
 { Args: { "p_comment"?: string,"p_decision": string,"p_expected_last_seq": number,"p_profile_version_id": string }; Returns: number
                            },
+"approve_qa_review":
+{ Args: { "p_expected_revision": number,"p_review_id": string }; Returns: number
+                           },
 "archive_brief_claim":
 { Args: { "p_claim_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -1343,6 +1572,9 @@ isOneToOne: false
                            },
 "archive_content_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"archive_delivery_bundle":
+{ Args: { "p_bundle_id": string,"p_expected_revision": number }; Returns: number
                            },
 "archive_design_asset":
 { Args: { "p_asset_id": string,"p_expected_revision": number }; Returns: number
@@ -1358,6 +1590,9 @@ isOneToOne: false
                            },
 "archive_production_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
+                           },
+"archive_qa_review":
+{ Args: { "p_expected_revision": number,"p_review_id": string }; Returns: number
                            },
 "archive_video_plan":
 { Args: { "p_expected_revision": number,"p_plan_id": string }; Returns: number
@@ -1381,6 +1616,9 @@ isOneToOne: false
 { Args: { "p_audience"?: string,"p_channel": string,"p_channel_spec"?: Json,"p_core_message"?: string,"p_cta"?: string,"p_funnel_item_id": string,"p_title": string }; Returns: {
               "brief_id": string,"reused": boolean
             }[]
+                           },
+"create_delivery_bundle":
+{ Args: { "p_project_id": string }; Returns: string
                            },
 "create_design_asset":
 { Args: { "p_license_note": string,"p_origin_type": string,"p_sha256": string,"p_signature": string,"p_signed_at": number,"p_title": string,"p_upload_id": string }; Returns: string
@@ -1424,6 +1662,9 @@ isOneToOne: false
 "link_claim_source":
 { Args: { "p_claim_id": string,"p_kind": string,"p_note"?: string,"p_profile_field"?: string,"p_target_id": string }; Returns: string
                            },
+"open_qa_review":
+{ Args: { "p_target_id": string,"p_target_kind": string }; Returns: string
+                           },
 "rebase_channel_draft":
 { Args: { "p_draft_id": string,"p_expected_revision": number }; Returns: number
                            },
@@ -1445,6 +1686,9 @@ isOneToOne: false
 "rebase_production_brief":
 { Args: { "p_brief_id": string,"p_expected_revision": number }; Returns: number
                            },
+"rebase_qa_review":
+{ Args: { "p_expected_revision": number,"p_review_id": string }; Returns: string
+                           },
 "rebase_video_plan":
 { Args: { "p_expected_revision": number,"p_plan_id": string }; Returns: number
                            },
@@ -1465,8 +1709,14 @@ isOneToOne: false
 "reject_design_asset_upload":
 { Args: { "p_reason": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: undefined
                            },
+"remove_qa_item":
+{ Args: { "p_expected_revision": number,"p_item_id": string,"p_review_id": string }; Returns: number
+                           },
 "replace_design_asset_file":
 { Args: { "p_asset_id": string,"p_change_note": string,"p_expected_revision": number,"p_sha256": string,"p_signature": string,"p_signed_at": number,"p_upload_id": string }; Returns: number
+                           },
+"request_qa_fix":
+{ Args: { "p_expected_revision": number,"p_review_id": string }; Returns: number
                            },
 "reserve_brief_copy_run":
 { Args: { "p_brief_id": string,"p_claim_ids": (string)[],"p_expected_revision": number,"p_input_hash": string,"p_model": string,"p_provider": string,"p_signature": string,"p_signed_at": number }; Returns: {
@@ -1482,6 +1732,9 @@ isOneToOne: false
 { Args: { "p_file_name": string,"p_mime": string,"p_plan_id": string,"p_signature": string,"p_signed_at": number,"p_size": number }; Returns: {
               "expires_at": string,"storage_key": string,"upload_id": string
             }[]
+                           },
+"restore_delivery_bundle":
+{ Args: { "p_bundle_id": string }; Returns: string
                            },
 "restore_design_asset_version":
 { Args: { "p_asset_id": string,"p_expected_revision": number,"p_version_no": number }; Returns: number
@@ -1528,6 +1781,9 @@ isOneToOne: false
 "set_funnel_item_lead_magnet":
 { Args: { "p_expected_revision": number,"p_item_id": string,"p_lead_magnet_id": string | null }; Returns: number
                            },
+"set_qa_item":
+{ Args: { "p_expected_revision": number,"p_item_id": string,"p_memo": string,"p_review_id": string,"p_verdict": string }; Returns: number
+                           },
 "set_research_source_review":
 { Args: { "p_expected_revision": number,"p_source_id": string,"p_status": string }; Returns: number
                            },
@@ -1545,6 +1801,9 @@ isOneToOne: false
                            },
 "update_content_brief":
 { Args: { "p_audience": string,"p_brief_id": string,"p_channel_spec": Json,"p_copy_draft": string,"p_copy_origin": string,"p_core_message": string,"p_cta": string,"p_expected_revision": number,"p_hook": string,"p_image_guide": string,"p_status": string,"p_title": string }; Returns: number
+                           },
+"update_delivery_bundle":
+{ Args: { "p_bundle_id": string,"p_expected_revision": number,"p_status": string }; Returns: number
                            },
 "update_design_asset":
 { Args: { "p_asset_id": string,"p_expected_revision": number,"p_license_note": string,"p_status": string,"p_title": string }; Returns: number
