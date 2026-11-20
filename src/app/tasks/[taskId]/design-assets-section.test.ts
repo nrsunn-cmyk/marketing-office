@@ -32,6 +32,7 @@ vi.mock("@/features/design-assets/actions", () => ({
 vi.mock("@/features/design-assets/server", () => ({}));
 vi.mock("@/features/production-brief/server", () => ({}));
 vi.mock("@/features/projects/server", () => ({}));
+vi.mock("./qa-fix-flags", () => ({ fixRequestedIdsFor: async () => [] }));
 vi.mock("./funnel.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./design-assets.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));

@@ -13,6 +13,7 @@ import {
   createDeliveryBundle,
   openQaReview,
   rebaseQaReview,
+  removeQaItem,
   requestQaFix,
   restoreDeliveryBundle,
   setQaItem,
@@ -59,8 +60,12 @@ export async function openQaReviewAction(_prev: FormState, fd: FormData): Promis
   return { ok: true, message: "검수 체크리스트를 시작했습니다." };
 }
 
+/** 중간 실패 때 앞서 저장된 개수 한 줄(Backend 참고 1 — 문구는 AGY 확인 요청) */
+const partialNote = (done: number) => (done > 0 ? ` (앞의 ${done}개 변경은 저장되었습니다.)` : "");
+
 /**
- * 검수 내용 저장: payload { set: [{ itemId, verdict, memo }], add: [{ title, isRequired }] }.
+ * 검수 내용 저장: payload { remove: [itemId], set: [{ itemId, verdict, memo }], add: [{ title, isRequired }] }.
+ * 삭제를 먼저 한다(Backend P3FG-ACTIONS-REVIEW-01 2절 2 — 기본 항목은 DB 가 거절).
  * 항목마다 서버를 차례로 부르고, 각 호출이 돌려준 revision 을 다음 호출에 쓴다. 중간에 실패하면 거기서 멈추고 그 문구를 보인다
  * (앞선 항목은 저장된 채 — 화면을 새로 고쳐 이어서 고친다)
  */
@@ -68,31 +73,44 @@ export async function saveQaItemsAction(_prev: FormState, fd: FormData): Promise
   const r0 = ids(fd, "roundId");
   if (!r0) return BAD;
   const raw = readJson(fd);
-  const p = z.object({ set: z.array(z.unknown()).max(30), add: z.array(z.unknown()).max(30) }).safeParse(raw);
+  const p = z
+    .object({ remove: z.array(uuid).max(30).default([]), set: z.array(z.unknown()).max(30), add: z.array(z.unknown()).max(30) })
+    .safeParse(raw);
   if (!p.success) return { message: "입력을 읽을 수 없습니다. 화면을 새로 고쳐 주세요." };
-  if (p.data.set.length === 0 && p.data.add.length === 0) return NO_CHANGE;
+  const { remove, set, add } = p.data;
+  if (remove.length === 0 && set.length === 0 && add.length === 0) return NO_CHANGE;
   let rev = r0.revision;
   let done = 0;
-  for (const item of p.data.set) {
-    const r = await setQaItem(r0.id, rev, item);
+  for (const itemId of remove) {
+    const r = await removeQaItem(r0.id, rev, itemId);
     if (!r.ok) {
       if (done) refresh();
-      return { message: r.message };
+      return { message: r.message + partialNote(done) };
     }
     rev = r.data.revision;
     done++;
   }
-  for (const item of p.data.add) {
+  for (const item of set) {
+    const r = await setQaItem(r0.id, rev, item);
+    if (!r.ok) {
+      if (done) refresh();
+      return { message: r.message + partialNote(done) };
+    }
+    rev = r.data.revision;
+    done++;
+  }
+  for (const item of add) {
     const r = await addQaItem(r0.id, rev, item);
     if (!r.ok) {
       if (done) refresh();
-      return { message: r.message };
+      return { message: r.message + partialNote(done) };
     }
     rev = r.data.revision;
     done++;
   }
   refresh();
-  return { ok: true, message: "검수 판정과 메모를 저장했습니다." };
+  // 삭제만 했으면 QA_COPY.itemRemovedOk, 그 밖은 savedOk
+  return { ok: true, message: set.length === 0 && add.length === 0 ? "추가 검수 항목을 삭제했습니다." : "검수 판정과 메모를 저장했습니다." };
 }
 
 export async function requestQaFixAction(_prev: FormState, fd: FormData): Promise<FormState> {

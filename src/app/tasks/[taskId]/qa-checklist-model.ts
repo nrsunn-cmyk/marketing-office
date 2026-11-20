@@ -79,6 +79,11 @@ export const QA_COPY = {
   // 선택 항목이 보완 필요여도 승인은 된다(Master ⑦) — 그때 경고
   optionalNeedsFixWarn: (n: number) => `보완 필요 선택 항목 ${n}개가 남아 있습니다.`,
   fixRequestedOnTarget: "검수에서 보완 요청됨",
+  // 검수 항목 삭제(AGY DESIGN-REVIEW-P3FG-CONNECT-01 3절): 열린 회차의 추가 항목(기본 아님)만, 접힌 확인 단계
+  removeItem: "항목 삭제",
+  removeItemConfirm: "추가한 검수 항목을 삭제합니다. 기본 필수 항목은 삭제할 수 없습니다.",
+  removeItemSubmit: "삭제 확인",
+  itemRemovedOk: "추가 검수 항목을 삭제했습니다.",
 } as const;
 
 /** 시안 qa-checklist.html 의 라벨(AGY 문구 — 그대로) */
@@ -201,9 +206,11 @@ export function checkItemTitle(title: string): string | null {
  * 서버로 보낼 값(Backend 6절: 항목마다 setQaItem·addQaItem). 바뀐 기존 항목만 { itemId, verdict, memo },
  * 새 항목은 { title, isRequired: true }(판정은 저장 뒤 — 서버가 미확인으로 만든다). 메모는 빈칸이면 null. 값은 자르지 않는다
  */
-export function toQaPayload(items: readonly QaItemDraft[], saved: readonly Pick<QaItemView, "id" | "verdict" | "memo">[] = []) {
+export function toQaPayload(items: readonly QaItemDraft[], saved: readonly Pick<QaItemView, "id" | "verdict" | "memo">[] = [], removed: readonly string[] = []) {
   const before = new Map(saved.map((s) => [s.id, s]));
+  const gone = new Set(removed);
   const set = items
+    .filter((it) => it.id === null || !gone.has(it.id))
     .filter((it): it is QaItemDraft & { id: string } => it.id !== null)
     .filter((it) => {
       const b = before.get(it.id);
@@ -211,7 +218,17 @@ export function toQaPayload(items: readonly QaItemDraft[], saved: readonly Pick<
     })
     .map((it) => ({ itemId: it.id, verdict: it.verdict, memo: it.memo.trim() ? it.memo : null }));
   const add = items.filter((it) => it.id === null).map((it) => ({ title: it.itemTitle, isRequired: true }));
-  return { set, add };
+  // 삭제는 set·add 보다 먼저 처리한다(Backend P3FG-ACTIONS-REVIEW-01 2절 2). 기본 항목은 DB 가 거절한다
+  return { remove: [...gone], set, add };
+}
+
+/** 삭제 단추를 보일 항목: 열린 회차(보관 안 됨·검토 완료 전)의 기본 아닌 추가 항목만(AGY 3절 2) */
+export const canRemoveQaItem = (round: Pick<QaRoundView, "status" | "archivedAt">, item: Pick<QaItemView, "isDefault">) =>
+  round.archivedAt === null && round.status !== "reviewed" && !item.isDefault;
+
+/** 검수에서 보완 요청된 산출물 id(열린 회차가 fix_requested). 각 단계 화면 배지용 — 서버 추가 없이 검수 읽기로 계산 */
+export function fixRequestedTargetIds(targets: readonly Pick<QaTargetView, "targetId" | "rounds">[]): string[] {
+  return targets.flatMap((t) => (t.targetId && t.rounds.some((r) => r.status === "fix_requested" && r.archivedAt === null) ? [t.targetId] : []));
 }
 
 /** 승인 게이트 안내: 서버 gate.blockedBy → QA_COPY(Backend 6절). null 이면 승인 가능 */

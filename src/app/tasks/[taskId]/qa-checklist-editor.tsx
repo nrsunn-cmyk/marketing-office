@@ -18,6 +18,7 @@ import {
   QA_VERDICTS,
   QA_VERDICT_KEYS,
   canAddQaItem,
+  canRemoveQaItem,
   checkQaItems,
   countChars,
   counterText,
@@ -127,7 +128,7 @@ function TargetPanel({ target, canWrite, readOnly, actions }: { target: QaTarget
               {QA_COPY.roundLimitReached}
             </p>
           )}
-          {st.locked || round.status === "reviewed" ? <ReadOnlyItems items={round.items} /> : <ItemsEditor round={round} action={actions.save} />}
+          {st.locked || round.status === "reviewed" ? <ReadOnlyItems items={round.items} /> : <ItemsEditor key={round.revision} round={round} action={actions.save} />}
           {!st.locked && round.status !== "reviewed" && !st.stale && <Gate round={round} actions={actions} />}
           {!st.locked && (
             <details className={`${f.inlineDetails} ${qa.qaDanger}`}>
@@ -188,6 +189,8 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
   const [drafts, setDrafts] = useState<QaItemDraft[]>(() => items.map((it) => ({ id: it.id, itemTitle: it.itemTitle, verdict: it.verdict, memo: it.memo })));
   const [touched, setTouched] = useState(false);
   const [note, setNote] = useState("");
+  /** 삭제하기로 한 추가 항목(저장할 때 서버에서 먼저 지운다) */
+  const [removed, setRemoved] = useState<string[]>([]);
   const issues = checkQaItems(drafts);
   const set = (i: number, patch: Partial<QaItemDraft>) => {
     setTouched(true);
@@ -197,7 +200,7 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
     <ActionForm action={action ?? notConnectedAction} submitLabel={QA_COPY.save} pendingLabel={P3_COMMON_COPY.savePending} className={`${f.form} ${qa.qaForm}`}>
       <input type="hidden" name="roundId" value={round.id} />
       <input type="hidden" name="revision" value={round.revision} />
-      <input type="hidden" name="payload" value={JSON.stringify(toQaPayload(drafts, items))} />
+      <input type="hidden" name="payload" value={JSON.stringify(toQaPayload(drafts, items, removed))} />
       <ol className={qa.qaItems}>
         {drafts.map((d, i) => {
           const it = d.id === null ? null : (items.find((x) => x.id === d.id) ?? null);
@@ -214,6 +217,26 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
                 <span className={`${qa.qaVerdict} ${qa[`qaVerdict_${d.verdict}`]}`}>{QA_VERDICTS[d.verdict]}</span>
               </div>
               {who && <p className={`${styles.muted} ${f.keep} ${qa.qaMeta}`}>{who}</p>}
+              {it && canRemoveQaItem(round, it) && (
+                // 접힌 확인 단계. 일반 단추라 Enter 로 눌리지 않고, 저장할 때 서버에서 지운다(삭제 → 판정 저장 순서)
+                <details className={`${f.inlineDetails} ${qa.qaDanger}`}>
+                  <summary>{QA_COPY.removeItem}</summary>
+                  <p className={`${styles.muted} ${f.keep}`}>{QA_COPY.removeItemConfirm}</p>
+                  <button
+                    type="button"
+                    className={`${styles.secondaryButton} ${f.touch}`}
+                    aria-label={`${it.itemTitle} ${QA_COPY.removeItemSubmit}`}
+                    onClick={() => {
+                      setTouched(true);
+                      setRemoved([...removed, it.id]);
+                      setDrafts(drafts.filter((x) => x.id !== it.id));
+                      setNote(`'${it.itemTitle}' 항목을 삭제 목록에 넣었습니다. ${QA_COPY.save}을 누르면 삭제됩니다.`);
+                    }}
+                  >
+                    {QA_COPY.removeItemSubmit}
+                  </button>
+                </details>
+              )}
               {d.id === null && (
                 <div className={styles.field}>
                   <div className={qa.qaFieldHead}>

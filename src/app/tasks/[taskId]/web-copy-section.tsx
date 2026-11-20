@@ -6,6 +6,8 @@ import type { TaskDetail } from "@/features/tasks/server";
 import { archiveWebCopyAction, createWebCopyDocAction, rebaseWebCopyAction, restoreWebCopyVersionAction, saveWebCopyAction } from "@/features/web-copy/actions";
 import { getWebCopyFor, type WebCopyBoard, type WebCopyDocView } from "@/features/web-copy/server";
 import styles from "../../ui.module.css";
+import { fixRequestedIdsFor } from "./qa-fix-flags";
+import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
 import wc from "./web-copy.module.css";
 import { BriefActionButton } from "./production-brief-buttons";
@@ -65,14 +67,16 @@ export async function WebCopyArea({ detail }: { detail: TaskDetail }) {
     unstable_rethrow(e); // 로그인·업무실 확인의 이동(redirect)은 그대로 통과
     console.error("[web-copy]", e);
   }
-  return <WebCopySection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} />;
+  // P3FG-UI-CONNECT-01-R1: 검수에서 보완 요청된 산출물 배지(기존 검수 읽기로 계산, 실패하면 배지만 빠짐)
+  const fixRequestedIds = await fixRequestedIdsFor(detail.project.id);
+  return <WebCopySection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} fixRequestedIds={fixRequestedIds} />;
 }
 
 /**
  * 화면 본문(동기, 시험에서 가짜 보드로 그린다). 인계표 P3B-HANDOFF.md 상태:
  *   작성 중 · 검토 완료 · 이전 브리프 기준(원인별 안내 4종) · 읽기 전용 · 빈 상태 · 만들 수 없음 + 불러오기 실패(boards = null).
  */
-export function WebCopySection({ boards, readOnly, taskId, actions = {} }: { boards: WebCopyBoard[] | null; readOnly: boolean; taskId: string; actions?: WebCopyActions }) {
+export function WebCopySection({ boards, readOnly, taskId, actions = {}, fixRequestedIds = [] }: { boards: WebCopyBoard[] | null; readOnly: boolean; taskId: string; actions?: WebCopyActions; fixRequestedIds?: readonly string[] }) {
   return (
     <section className={`${styles.section} ${f.funnel} ${wc.wcSection_root}`} aria-labelledby="web-copy">
       <div className={wc.wcHead}>
@@ -101,7 +105,7 @@ export function WebCopySection({ boards, readOnly, taskId, actions = {} }: { boa
           </p>
         </div>
       ) : (
-        boards.map((b) => <BriefBlock key={b.brief.id} board={b} readOnly={readOnly} actions={actions} />)
+        boards.map((b) => <BriefBlock key={b.brief.id} board={b} readOnly={readOnly} actions={actions} fixRequestedIds={fixRequestedIds} />)
       )}
     </section>
   );
@@ -109,7 +113,7 @@ export function WebCopySection({ boards, readOnly, taskId, actions = {} }: { boa
 
 const sourceOptions = (board: WebCopyBoard): WebCopySourceOption[] => board.sources.map((s) => ({ id: s.id, label: s.title.trim() || s.url }));
 
-function BriefBlock({ board, readOnly, actions }: { board: WebCopyBoard; readOnly: boolean; actions: WebCopyActions }) {
+function BriefBlock({ board, readOnly, actions, fixRequestedIds = [] }: { board: WebCopyBoard; readOnly: boolean; actions: WebCopyActions; fixRequestedIds?: readonly string[] }) {
   const doc = board.doc;
   const headId = `web-copy-${board.brief.id}`;
   return (
@@ -123,6 +127,7 @@ function BriefBlock({ board, readOnly, actions }: { board: WebCopyBoard; readOnl
           <span className={`${wc.wcStatus} ${wc[`wcStatus_${doc.status}`]}`}>{doc.displayLabel}</span>
           {doc.staleLabel && <span className={`${f.tag} ${f.tag_warn}`}>{doc.staleLabel}</span>}
           <span className={f.tag}>{`편집 v${doc.currentVersionNo}`}</span>
+          <QaFixTag show={fixRequestedIds.includes(doc.id)} />
         </p>
       )}
       {doc === null ? (

@@ -8,6 +8,7 @@ const m = vi.hoisted(() => ({
   fix: vi.fn(),
   approve: vi.fn(),
   rebase: vi.fn(),
+  remove: vi.fn(),
   archiveQa: vi.fn(),
   create: vi.fn(),
   restore: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("./server", () => ({
   requestQaFix: (...a: unknown[]) => m.fix(...a),
   approveQaReview: (...a: unknown[]) => m.approve(...a),
   rebaseQaReview: (...a: unknown[]) => m.rebase(...a),
+  removeQaItem: (...a: unknown[]) => m.remove(...a),
   archiveQaReview: (...a: unknown[]) => m.archiveQa(...a),
   createDeliveryBundle: (...a: unknown[]) => m.create(...a),
   restoreDeliveryBundle: (...a: unknown[]) => m.restore(...a),
@@ -74,7 +76,8 @@ describe("검수 동작", () => {
   it("저장: 중간 실패면 거기서 멈추고 서버 문구, 앞서 저장된 것이 있으면 새로 고침 / 바뀐 것 없음 / 틀린 입력", async () => {
     m.set.mockResolvedValueOnce(rev(6)).mockResolvedValueOnce({ ok: false, code: "CONFLICT", message: "다른 곳에서 먼저 고쳤습니다." });
     const payload = JSON.stringify({ set: [{ itemId: I1, verdict: "passed", memo: null }, { itemId: I2, verdict: "passed", memo: null }, { itemId: I1, verdict: "pending", memo: null }], add: [] });
-    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload }))).toEqual({ message: "다른 곳에서 먼저 고쳤습니다." });
+    // 앞서 저장된 개수 한 줄(Backend 참고 1)
+    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload }))).toEqual({ message: "다른 곳에서 먼저 고쳤습니다. (앞의 1개 변경은 저장되었습니다.)" });
     expect(m.set).toHaveBeenCalledTimes(2);
     expect(m.refresh).toHaveBeenCalledTimes(1);
     expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload: JSON.stringify({ set: [], add: [] }) }))).toEqual({ message: "바뀐 판정·메모가 없습니다." });
@@ -119,5 +122,23 @@ describe("납품 동작", () => {
     expect(m.update).toHaveBeenCalledWith(B, 3, "reviewed");
     expect(await A.archiveDeliveryBundleAction({}, fd({ bundleId: B, revision: "3" }))).toEqual({ ok: true, message: "납품 묶음을 보관했습니다." });
     expect(await A.refreshDeliveryAction()).toEqual({ ok: true, message: "최신 승인본 목록을 다시 불러왔습니다." });
+  });
+});
+
+describe("R1: 저장의 삭제(remove → set → add 차례)", () => {
+  it("삭제를 먼저, revision 을 이어 쓰고, 삭제만이면 itemRemovedOk / 틀린 id 는 서버 전에 거절", async () => {
+    m.remove.mockResolvedValueOnce(rev(6));
+    m.set.mockResolvedValueOnce(rev(7));
+    const payload = JSON.stringify({ remove: [I2], set: [{ itemId: I1, verdict: "passed", memo: null }], add: [] });
+    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload }))).toEqual({ ok: true, message: "검수 판정과 메모를 저장했습니다." });
+    expect(m.remove).toHaveBeenCalledWith(R, 5, I2);
+    expect(m.set).toHaveBeenCalledWith(R, 6, { itemId: I1, verdict: "passed", memo: null });
+    m.remove.mockResolvedValueOnce(rev(6));
+    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload: JSON.stringify({ remove: [I2], set: [], add: [] }) }))).toEqual({ ok: true, message: "추가 검수 항목을 삭제했습니다." });
+    m.remove.mockResolvedValueOnce({ ok: false, code: "INVALID_TRANSITION", message: "기본 필수 항목은 삭제할 수 없습니다." });
+    expect(await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload: JSON.stringify({ remove: [I1], set: [], add: [] }) }))).toEqual({ message: "기본 필수 항목은 삭제할 수 없습니다." });
+    const before = m.remove.mock.calls.length;
+    expect((await A.saveQaItemsAction({}, fd({ roundId: R, revision: "5", payload: JSON.stringify({ remove: ["x"], set: [], add: [] }) }))).message).toBe("입력을 읽을 수 없습니다. 화면을 새로 고쳐 주세요.");
+    expect(m.remove.mock.calls.length).toBe(before);
   });
 });

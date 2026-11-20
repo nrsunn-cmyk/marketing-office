@@ -23,6 +23,7 @@ vi.mock("@/features/web-copy/actions", () => ({ createWebCopyDocAction: vi.fn(),
 vi.mock("@/features/web-copy/server", () => ({}));
 vi.mock("@/features/production-brief/server", () => ({}));
 vi.mock("@/features/projects/server", () => ({}));
+vi.mock("./qa-fix-flags", () => ({ fixRequestedIdsFor: async () => [] }));
 vi.mock("./funnel.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./web-copy.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));

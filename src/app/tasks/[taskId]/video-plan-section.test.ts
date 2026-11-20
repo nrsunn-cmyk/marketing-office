@@ -32,6 +32,7 @@ vi.mock("@/features/video-plans/actions", () => ({
 vi.mock("@/features/video-plans/server", () => ({}));
 vi.mock("@/features/production-brief/server", () => ({}));
 vi.mock("@/features/projects/server", () => ({}));
+vi.mock("./qa-fix-flags", () => ({ fixRequestedIdsFor: async () => [] }));
 vi.mock("./funnel.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./video-plan.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./design-assets.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
@@ -229,4 +230,12 @@ it.runIf(Boolean(process.env.VP_HARNESS))("화면 점검용 HTML 쓰기", () => 
   const out = process.env.VP_HARNESS!;
   mkdirSync(out, { recursive: true });
   for (const k of Object.keys(STATES)) writeFileSync(join(out, `${k}.html`), render(k));
+});
+
+describe("R1: 검수에서 보완 요청됨 배지", () => {
+  it("검수 열린 회차가 보완 요청이면 구성안 배지 줄에 'QA_COPY.fixRequestedOnTarget', 아니면 없음", () => {
+    const on = renderToString(createElement(VideoPlanSection, { boards: STATES["작성중"].boards, readOnly: false, taskId: "t", fixRequestedIds: [PLAN.id] }));
+    expect(text(on)).toContain("검수에서 보완 요청됨");
+    expect(text(render("작성중"))).not.toContain("검수에서 보완 요청됨");
+  });
 });

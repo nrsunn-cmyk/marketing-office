@@ -18,6 +18,8 @@ import {
 import { getVideoPlanFor } from "@/features/video-plans/server";
 import { BadgeArchived, BadgeDrafting, BadgeReady, BadgeStale, EmptyBriefArt, P3VideoIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { fixRequestedIdsFor } from "./qa-fix-flags";
+import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
 import vp from "./video-plan.module.css";
 import { BriefActionButton } from "./production-brief-buttons";
@@ -98,7 +100,9 @@ export async function VideoPlanArea({ detail }: { detail: TaskDetail }) {
     unstable_rethrow(e); // 로그인·업무실 확인의 이동(redirect)은 그대로 통과
     console.error("[video-plan]", e);
   }
-  return <VideoPlanSection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} />;
+  // P3FG-UI-CONNECT-01-R1: 검수에서 보완 요청된 산출물 배지(기존 검수 읽기로 계산, 실패하면 배지만 빠짐)
+  const fixRequestedIds = await fixRequestedIdsFor(detail.project.id);
+  return <VideoPlanSection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} fixRequestedIds={fixRequestedIds} />;
 }
 
 /**
@@ -106,7 +110,7 @@ export async function VideoPlanArea({ detail }: { detail: TaskDetail }) {
  * 작성 중 · 검토 완료 · 이전 기준(원인별) · 보관 · 읽기 전용 · 빈 상태 + 자산 보관 경고 · 맞추기 막힘 · 구성안 한도 · 첨부 막힘 · 불러오기 실패.
  * 진행률 막대는 그리지 않는다 — 길이 합계·장면 수·실제 바이트만.
  */
-export function VideoPlanSection({ boards, readOnly, taskId, actions = {} }: { boards: VideoPlanBoard[] | null; readOnly: boolean; taskId: string; actions?: VideoPlanActions }) {
+export function VideoPlanSection({ boards, readOnly, taskId, actions = {}, fixRequestedIds = [] }: { boards: VideoPlanBoard[] | null; readOnly: boolean; taskId: string; actions?: VideoPlanActions; fixRequestedIds?: readonly string[] }) {
   return (
     <section className={`${styles.section} ${f.funnel} ${vp.vpSection}`} aria-labelledby="video-plan">
       <div className={vp.vpHead}>
@@ -140,7 +144,7 @@ export function VideoPlanSection({ boards, readOnly, taskId, actions = {} }: { b
               </p>
             </div>
           ) : (
-            boards.map((b) => <BriefBlock key={b.brief.id} board={b} readOnly={readOnly} actions={actions} />)
+            boards.map((b) => <BriefBlock key={b.brief.id} board={b} readOnly={readOnly} actions={actions} fixRequestedIds={fixRequestedIds} />)
           )}
         </>
       )}
@@ -180,7 +184,7 @@ const blankPlan = (): VideoPlanView => ({
   planVersions: [],
 });
 
-function BriefBlock({ board, readOnly, actions }: { board: VideoPlanBoard; readOnly: boolean; actions: VideoPlanActions }) {
+function BriefBlock({ board, readOnly, actions, fixRequestedIds = [] }: { board: VideoPlanBoard; readOnly: boolean; actions: VideoPlanActions; fixRequestedIds?: readonly string[] }) {
   const { data } = board;
   const plan = data.plan;
   const archived = plan?.archivedAt != null;
@@ -200,7 +204,7 @@ function BriefBlock({ board, readOnly, actions }: { board: VideoPlanBoard; readO
   return (
     <section className={vp.vpBrief} aria-labelledby={headId}>
       <h3 id={headId} className={vp.vpBriefTitle}>{`기준 제작 브리프: ${board.brief.title}`}</h3>
-      {plan && <Badges plan={plan} active={data.activePlanCount} />}
+      {plan && <Badges plan={plan} active={data.activePlanCount} fixRequested={fixRequestedIds.includes(plan.id)} />}
       {lockNote && <Note text={lockNote} />}
       {plan && staleNotes.length > 0 && (
         <div className={`${styles.notice} ${f.warnBox}`} role="note">
@@ -256,7 +260,7 @@ function BriefBlock({ board, readOnly, actions }: { board: VideoPlanBoard; readO
   );
 }
 
-function Badges({ plan, active }: { plan: VideoPlanView; active: number }) {
+function Badges({ plan, active, fixRequested = false }: { plan: VideoPlanView; active: number; fixRequested?: boolean }) {
   const Icon = plan.status === "reviewed" ? BadgeReady : BadgeDrafting;
   return (
     <p className={vp.vpBadges}>
@@ -278,6 +282,7 @@ function Badges({ plan, active }: { plan: VideoPlanView; active: number }) {
       )}
       <span className={f.tag}>{durationSummary(plan.scenes)}</span>
       <span className={f.tag}>{VP_LABELS.representative(active)}</span>
+      <QaFixTag show={fixRequested} />
     </p>
   );
 }
