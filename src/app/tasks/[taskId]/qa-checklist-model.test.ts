@@ -5,6 +5,7 @@ import {
   QA_STATUSES,
   QA_TARGET_KIND_KEYS,
   QA_VERDICTS,
+  canAddQaItem,
   checkItemTitle,
   checkQaItems,
   currentRound,
@@ -12,6 +13,8 @@ import {
   gateBadgeText,
   latestReviewedVersion,
   memoKey,
+  newQaItem,
+  titleKey,
   qaGate,
   qaTabText,
   qaTargetState,
@@ -73,20 +76,45 @@ describe("P3-f 검수 체크리스트 화면 모델(인계표 P3F-HANDOFF.md)", 
 
   it("입력 점검: 보완 필요는 메모 필수, 메모 500자, 항목 제목 120자 — 확정 문구 그대로", () => {
     const issues = checkQaItems([
-      { id: "a", verdict: "needs_fix", memo: "  " },
-      { id: "b", verdict: "passed", memo: "가".repeat(501) },
-      { id: "c", verdict: "needs_fix", memo: "CTA 문구 수정" },
-      { id: "d", verdict: "pending", memo: "" },
+      { id: "a", itemTitle: "a", verdict: "needs_fix", memo: "  " },
+      { id: "b", itemTitle: "b", verdict: "passed", memo: "가".repeat(501) },
+      { id: "c", itemTitle: "c", verdict: "needs_fix", memo: "CTA 문구 수정" },
+      { id: "d", itemTitle: "d", verdict: "pending", memo: "" },
+      { id: null, itemTitle: "  ", verdict: "pending", memo: "" },
+      { id: null, itemTitle: "가".repeat(121), verdict: "pending", memo: "" },
+      { id: null, itemTitle: "모바일 넘침 확인", verdict: "pending", memo: "" },
     ]);
-    expect(issues).toEqual({ [memoKey(0)]: "보완 필요 판정에는 검수 메모를 입력해 주세요.", [memoKey(1)]: "검수 메모는 500자까지 쓸 수 있습니다." });
+    // memoRequired 는 하나(AGY DESIGN-REVIEW-P3FG-UI-01 1번, 31자), 새 항목만 제목 점검
+    expect(issues).toEqual({
+      [memoKey(0)]: "보완 필요로 판정한 항목은 검수 메모를 꼭 적어 주세요.",
+      [memoKey(1)]: "검수 메모는 500자까지 쓸 수 있습니다.",
+      [titleKey(4)]: "검수 항목 제목을 입력해 주세요.",
+      [titleKey(5)]: "검수 항목 제목은 120자까지 쓸 수 있습니다.",
+    });
     expect(checkItemTitle("")).toBe(QA_COPY.itemTitleRequired);
     expect(checkItemTitle("가".repeat(121))).toBe(QA_COPY.itemTitleMax);
     expect(checkItemTitle("모바일 넘침 확인")).toBeNull();
   });
 
   it("보낼 값: 판정·메모만, 항목 id 그대로, 값은 자르지 않음", () => {
-    const p = toQaPayload([{ id: "i1", verdict: "needs_fix", memo: "가".repeat(600) }]);
-    expect(p).toEqual({ items: [{ id: "i1", verdict: "needs_fix", memo: "가".repeat(600) }] });
+    const p = toQaPayload([
+      { id: "i1", itemTitle: "기존", verdict: "needs_fix", memo: "가".repeat(600) },
+      { id: null, itemTitle: "추가 항목", verdict: "pending", memo: "" },
+    ]);
+    expect(p).toEqual({
+      items: [
+        { id: "i1", verdict: "needs_fix", memo: "가".repeat(600) },
+        { id: null, itemTitle: "추가 항목", isRequired: true, verdict: "pending", memo: "" },
+      ],
+    });
+    // 항목 추가: 30개까지(인계표 1~30), 새 항목은 미확인·빈 제목
+    expect(canAddQaItem(29)).toBe(true);
+    expect(canAddQaItem(30)).toBe(false);
+    expect(newQaItem()).toEqual({ id: null, itemTitle: "", verdict: "pending", memo: "" });
+    expect(QA_COPY.addItem).toBe("+ 검수 항목 추가");
+    expect(QA_COPY.itemTitlePlaceholder).toBe("추가로 확인할 검수 항목 제목을 입력해 주세요.");
+    expect(QA_COPY.itemLimitReached).toBe("검수 항목은 30개까지 둘 수 있습니다. 불필요한 항목을 정리한 뒤 추가해 주세요.");
+    expect("memoRequiredNote" in QA_COPY).toBe(false);
   });
 
   it("문구: AGY P3-COPY-FINAL 4절 그대로(일부), 시각", () => {

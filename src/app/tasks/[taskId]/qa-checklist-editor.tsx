@@ -17,12 +17,15 @@ import {
   QA_TARGET_KINDS,
   QA_VERDICTS,
   QA_VERDICT_KEYS,
+  canAddQaItem,
   checkQaItems,
   countChars,
   counterText,
   formatKstMinute,
   gateBadgeText,
   memoKey,
+  newQaItem,
+  titleKey,
   qaGate,
   qaTabText,
   qaTargetState,
@@ -188,38 +191,62 @@ function checkerText(it: Pick<QaItemView, "checkedByName" | "checkedAt">): strin
 function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefAction }) {
   const id = useId();
   const items = sortedItems(round.items);
-  const [drafts, setDrafts] = useState<QaItemDraft[]>(() => items.map((it) => ({ id: it.id, verdict: it.verdict, memo: it.memo })));
+  const [drafts, setDrafts] = useState<QaItemDraft[]>(() => items.map((it) => ({ id: it.id, itemTitle: it.itemTitle, verdict: it.verdict, memo: it.memo })));
   const [touched, setTouched] = useState(false);
+  const [note, setNote] = useState("");
   const issues = checkQaItems(drafts);
   const set = (i: number, patch: Partial<QaItemDraft>) => {
     setTouched(true);
     setDrafts(drafts.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   };
-  const memoMissing = drafts.some((d) => d.verdict === "needs_fix" && countChars(d.memo) === 0);
   return (
     <ActionForm action={action ?? notConnectedAction} submitLabel={QA_COPY.save} pendingLabel={P3_COMMON_COPY.savePending} className={`${f.form} ${qa.qaForm}`}>
       <input type="hidden" name="roundId" value={round.id} />
       <input type="hidden" name="revision" value={round.revision} />
       <input type="hidden" name="payload" value={JSON.stringify(toQaPayload(drafts))} />
-      {memoMissing && (
-        <p className={`${styles.notice} ${f.warnBox} ${f.keep}`} role="note">
-          {QA_COPY.memoRequiredNote}
-        </p>
-      )}
       <ol className={qa.qaItems}>
-        {items.map((it, i) => {
-          const d = drafts[i];
+        {drafts.map((d, i) => {
+          const it = d.id === null ? null : (items.find((x) => x.id === d.id) ?? null);
           const n = countChars(d.memo);
-          const msg = n > QA_LIMITS.memo || touched ? issues[memoKey(i)] : undefined;
-          const who = checkerText(it);
+          // 보완 필요인데 메모가 비면 바로(AGY memoRequired 하나), 넘침도 바로, 그 밖은 손댄 뒤
+          const msg = n > QA_LIMITS.memo || (d.verdict === "needs_fix" && n === 0) || touched ? issues[memoKey(i)] : undefined;
+          const who = it ? checkerText(it) : null;
           const base = `${id}-i${i}`;
+          const titleMsg = d.id === null && (touched || countChars(d.itemTitle) > QA_LIMITS.itemTitle) ? issues[titleKey(i)] : undefined;
           return (
-            <li key={it.id} className={`${qa.qaItem} ${d.verdict === "needs_fix" ? qa.qaItemFix : ""}`}>
+            <li key={d.id ?? `new-${i}`} className={`${qa.qaItem} ${d.verdict === "needs_fix" ? qa.qaItemFix : ""}`}>
               <div className={qa.qaItemHead}>
-                <h4 className={qa.qaItemTitle} id={`${base}-h`}>{`${i + 1}. ${it.isRequired ? `${QA_LABELS.required} ` : ""}${it.itemTitle}`}</h4>
+                <h4 className={qa.qaItemTitle} id={`${base}-h`}>{`${i + 1}. ${!it || it.isRequired ? `${QA_LABELS.required} ` : ""}${it ? it.itemTitle : d.itemTitle.trim()}`}</h4>
                 <span className={`${qa.qaVerdict} ${qa[`qaVerdict_${d.verdict}`]}`}>{QA_VERDICTS[d.verdict]}</span>
               </div>
               {who && <p className={`${styles.muted} ${f.keep} ${qa.qaMeta}`}>{who}</p>}
+              {d.id === null && (
+                <div className={styles.field}>
+                  <div className={qa.qaFieldHead}>
+                    <label htmlFor={`${base}-title`}>
+                      검수 항목 제목 <span className={qa.qaReq}>(필수)</span>
+                    </label>
+                    <span id={`${base}-title-count`} className={`${qa.qaCount} ${countChars(d.itemTitle) > QA_LIMITS.itemTitle ? qa.qaCountOver : ""}`}>
+                      {counterText(countChars(d.itemTitle), QA_LIMITS.itemTitle)}
+                    </span>
+                  </div>
+                  <input
+                    id={`${base}-title`}
+                    type="text"
+                    value={d.itemTitle}
+                    placeholder={QA_COPY.itemTitlePlaceholder}
+                    onChange={(e) => set(i, { itemTitle: e.target.value })}
+                    aria-required
+                    aria-invalid={titleMsg ? true : undefined}
+                    aria-describedby={`${base}-title-count${titleMsg ? ` ${base}-title-msg` : ""}`}
+                  />
+                  {titleMsg && (
+                    <span id={`${base}-title-msg`} className={styles.error}>
+                      {titleMsg}
+                    </span>
+                  )}
+                </div>
+              )}
               <fieldset className={qa.qaVerdicts} aria-describedby={`${base}-h`}>
                 <legend>{QA_LABELS.verdict}</legend>
                 <div className={qa.qaVerdictGrid}>
@@ -257,6 +284,25 @@ function ItemsEditor({ round, action }: { round: QaRoundView; action?: BriefActi
           );
         })}
       </ol>
+      {canAddQaItem(drafts.length) ? (
+        <button
+          type="button"
+          className={`${styles.secondaryButton} ${f.touch}`}
+          onClick={() => {
+            setDrafts([...drafts, newQaItem()]);
+            setNote(`${drafts.length + 1}번째 검수 항목을 추가했습니다.`);
+          }}
+        >
+          {QA_COPY.addItem}
+        </button>
+      ) : (
+        <p className={`${styles.muted} ${f.keep}`} role="note">
+          {QA_COPY.itemLimitReached}
+        </p>
+      )}
+      <p className={qa.qaSrOnly} role="status" aria-live="polite">
+        {note}
+      </p>
     </ActionForm>
   );
 }
