@@ -52,6 +52,8 @@ const PLAN: VideoPlanView = {
   revision: 5,
   stale: false,
   staleReasons: [],
+  staleAssetCount: 0,
+  rebaseBlockedCode: null,
   rebaseBlockedReason: null,
   archivedAssetCount: 0,
   totalSec: 38,
@@ -74,6 +76,7 @@ const data = (plan: VideoPlanView | null, x: Partial<VideoPlanData> = {}): Video
   canWrite: plan !== null,
   readOnlyReason: null,
   canCreate: plan === null,
+  createBlockedCode: null,
   createBlockedReason: plan === null ? null : "작업 중인 영상 구성안이 이미 있습니다.",
   canAttach: plan !== null,
   attachBlockedReason: null,
@@ -87,14 +90,14 @@ const stale = (x: Partial<VideoPlanView>): VideoPlanView => ({ ...PLAN, stale: t
 const STATES: Record<string, { boards: VideoPlanBoard[] | null; readOnly?: boolean }> = {
   작성중: { boards: [board(data(PLAN))] },
   검토완료: { boards: [board(data({ ...PLAN, status: "reviewed" }))] },
-  이전기준: { boards: [board(data(stale({ staleReasons: ["brief", "asset"] })))] },
-  맞추기막힘: { boards: [board(data(stale({ staleReasons: ["brief"], rebaseBlockedReason: "제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요." })))] },
+  이전기준: { boards: [board(data(stale({ staleReasons: ["brief", "asset"], staleAssetCount: 2 })))] },
+  맞추기막힘: { boards: [board(data(stale({ staleReasons: ["brief"], rebaseBlockedCode: "brief_drafting", rebaseBlockedReason: "제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요." })))] },
   자산보관: { boards: [board(data({ ...PLAN, archivedAssetCount: 2 }))] },
   보관: { boards: [board(data({ ...PLAN, status: "reviewed", archivedAt: "2026-11-20T00:00:00Z" }, { canWrite: false, canAttach: false, readOnlyReason: "보관한 영상 구성안입니다. 조회와 파일 내려받기만 할 수 있고 고치기·첨부는 할 수 없습니다." }))] },
   읽기전용: { boards: [board(data(stale({ staleReasons: ["brief"] })))], readOnly: true },
   첨부꺼짐: { boards: [board(data(PLAN, { canAttach: false, attachBlockedReason: "영상 파일 첨부가 아직 켜져 있지 않습니다. 관리자에게 문의해 주세요." }))] },
   빈상태: { boards: [board(data(null))] },
-  구성안한도: { boards: [board(data(null, { canCreate: false, createBlockedReason: "영상 구성안은 제작 브리프당 10개까지입니다(보관 포함)." }))] },
+  구성안한도: { boards: [board(data(null, { canCreate: false, createBlockedCode: "plan_limit_total", createBlockedReason: "영상 구성안은 제작 브리프당 10개까지입니다(보관 포함)." }))] },
   브리프없음: { boards: [] },
   불러오기실패: { boards: null },
 };
@@ -145,10 +148,11 @@ describe("영상 구성·파일 관리 상태별 화면(서버 연결)", () => {
     expect(t).not.toContain("+ 영상 구성안 만들기");
   });
 
-  it("이전 기준(원인별): 브리프·자산 안내 둘 + 맞추기(자산 수는 서버가 주기 전까지 공통 안내)", () => {
+  it("이전 기준(원인별): 브리프·자산 안내 둘(자산은 서버 staleAssetCount 로 바뀐 자산 n개) + 맞추기", () => {
     const t = text(render("이전기준"));
     expect(t).toContain("이전 기준: 공통 제작 브리프가 새 버전으로 바뀌었습니다. 대사와 장면 구성을 확인해 주세요.");
-    expect(t).toContain("이전 기준: 공통 제작 브리프 또는 연결된 디자인 자산이 새 버전으로 바뀌었습니다. 대사와 연결 자산을 확인해 주세요.");
+    expect(t).toContain("연결된 디자인 자산 2개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요.");
+    expect(t).not.toContain("공통 제작 브리프 또는 연결된 디자인 자산이 새 버전으로");
     expect(t).toContain(REBASE);
   });
 

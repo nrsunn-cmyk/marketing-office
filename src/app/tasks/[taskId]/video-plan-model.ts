@@ -4,7 +4,16 @@
  * P3-COPY-FINAL.md 의 VP_COPY·P3_COMMON_COPY(그대로 — 새 문구를 만들지 않는다).
  * 영상 생성·편집·자막 합성은 하지 않는다(기획과 완성 파일 버전 관리만, 인계표 3절 1).
  */
-import type { VideoFileVersionView, VideoPlanData, VideoPlanVersionView, VideoPlanView, VideoSceneView, VideoStaleReason } from "@/features/video-plans/server";
+import type {
+  VideoCreateBlockedCode,
+  VideoFileVersionView,
+  VideoPlanData,
+  VideoPlanVersionView,
+  VideoPlanView,
+  VideoRebaseBlockedCode,
+  VideoSceneView,
+  VideoStaleReason,
+} from "@/features/video-plans/server";
 import { briefTrim, charLength } from "@/domain/production-brief/constants";
 import { maxLengthMessage, requiredMessage } from "../../_components/josa";
 
@@ -44,7 +53,7 @@ export const VIDEO_PLAN_STATUSES = { drafting: "작성 중", reviewed: "검토 �
 export type VideoPlanStatus = keyof typeof VIDEO_PLAN_STATUSES;
 export const VIDEO_PLAN_STATUS_KEYS = Object.keys(VIDEO_PLAN_STATUSES) as VideoPlanStatus[];
 
-export type { VideoSceneView, VideoFileVersionView, VideoPlanVersionView, VideoPlanView, VideoPlanData, VideoStaleReason };
+export type { VideoSceneView, VideoFileVersionView, VideoPlanVersionView, VideoPlanView, VideoPlanData, VideoStaleReason, VideoRebaseBlockedCode, VideoCreateBlockedCode };
 export type VideoAssetOption = VideoPlanData["assets"][number];
 
 /** 화면 문구 최종본(P3-COPY-FINAL.md 2절 VP_COPY — 그대로) */
@@ -233,19 +242,30 @@ export const VIDEO_PLAN_VERSION_KINDS = { create: "처음 만듦", save: "저장
  * 이전 기준 원인별 안내(AGY staleReasons). 브리프 → staleReasonBrief, 자산 → 바뀐 자산 수를 서버가 주면 staleReasonAsset(n),
  * 아직 주지 않으면 공통 staleBanner(Backend 에 개수 요청). 보관 구성안이면 없음
  */
-export function videoStaleNotices(plan: Pick<VideoPlanView, "stale" | "staleReasons" | "archivedAt"> & { staleAssetCount?: number }): string[] {
+/** 원인별 이전 기준 안내. 자산은 서버 staleAssetCount(판 바뀐 연결 자산 수, Backend 4772d79)로 "바뀐 자산 {n}개" */
+export function videoStaleNotices(plan: Pick<VideoPlanView, "stale" | "staleReasons" | "archivedAt" | "staleAssetCount">): string[] {
   if (!plan.stale || plan.archivedAt) return [];
   const out: string[] = [];
   if (plan.staleReasons.includes("brief")) out.push(VP_COPY.staleReasonBrief);
-  if (plan.staleReasons.includes("asset")) out.push(typeof plan.staleAssetCount === "number" && plan.staleAssetCount > 0 ? staleReasonAssetText(plan.staleAssetCount) : VP_COPY.staleBanner);
+  // 수가 0 인데 자산 원인이 오는 일은 계약상 없지만, 오면 "0개" 대신 공통 안내
+  if (plan.staleReasons.includes("asset")) out.push(plan.staleAssetCount > 0 ? VP_COPY.staleReasonAsset(plan.staleAssetCount) : VP_COPY.staleBanner);
   return out;
 }
-/** 맞추기 막힘 사유 → AGY 확정 문구(서버 글로 원인을 가른다 — Backend 에 원인 코드 요청). 모르는 글은 그대로 */
-export function videoRebaseBlockedText(reason: string | null): string | null {
-  if (!reason) return null;
-  if (/보관한 제작 브리프/.test(reason)) return VP_COPY.rebaseBlockedBriefArchived;
-  if (/작성 중/.test(reason)) return VP_COPY.rebaseBlockedBriefDraft;
-  if (/판이 \d+개/.test(reason)) return VP_COPY.rebaseBlockedVersionLimit;
+
+/** 맞추기 막힘: 원인 코드 → AGY 확정 문구. 문구가 없는 코드(구성안 보관)·모르는 값은 서버 한글 사유(대체용) */
+const REBASE_BLOCKED_COPY: Partial<Record<VideoRebaseBlockedCode, string>> = {
+  brief_archived: VP_COPY.rebaseBlockedBriefArchived,
+  brief_drafting: VP_COPY.rebaseBlockedBriefDraft,
+  version_limit: VP_COPY.rebaseBlockedVersionLimit,
+};
+export function videoRebaseBlockedText(code: VideoRebaseBlockedCode | null, reason: string | null): string | null {
+  if (!code) return reason;
+  return REBASE_BLOCKED_COPY[code] ?? reason;
+}
+
+/** 만들기 막힘: 구성안 한도 두 코드 → AGY planLimitReached, 그 밖은 서버 한글 사유(대체용) */
+export function videoCreateBlockedText(code: VideoCreateBlockedCode | null, reason: string | null): string | null {
+  if (code === "plan_limit_total" || code === "plan_limit_active") return VP_COPY.planLimitReached;
   return reason;
 }
 /** 고르기 단계 미리 막기(형식·확장자만 이름·크기). 통과면 null. 최종 판단은 서버 */

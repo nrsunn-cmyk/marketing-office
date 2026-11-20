@@ -40,6 +40,7 @@ import {
   formatDuration,
   formatKstMinute,
   sortedScenes,
+  videoCreateBlockedText,
   videoRebaseBlockedText,
   videoStaleNotices,
   type VideoPlanData,
@@ -157,8 +158,6 @@ function Note({ text, prefix }: { text: string; prefix?: string }) {
   );
 }
 
-/** 만들기 막힘: 구성안 한도면 AGY planLimitReached, 그 밖은 서버 글 */
-const createBlockedText = (reason: string | null) => (reason && /제작 브리프당|활성/.test(reason) ? VP_COPY.planLimitReached : reason);
 /** 첨부 막힘: 파일 판 20개면 AGY fileLimitReached, 그 밖은 서버 글 */
 const attachBlockedText = (reason: string | null) => (reason && /20개|판이 \d+/.test(reason) && /파일/.test(reason) ? VP_COPY.fileLimitReached : reason);
 
@@ -171,6 +170,8 @@ const blankPlan = (): VideoPlanView => ({
   revision: 0,
   stale: false,
   staleReasons: [],
+  staleAssetCount: 0,
+  rebaseBlockedCode: null,
   rebaseBlockedReason: null,
   archivedAssetCount: 0,
   totalSec: 10,
@@ -188,7 +189,7 @@ function BriefBlock({ board, readOnly, actions }: { board: VideoPlanBoard; readO
   // 고칠 수 없는 이유: 프로젝트 읽기 전용은 위에 한 번, 구성안 보관은 VP_COPY.archivedNote, 그 밖은 서버 이유(없으면 권한 없음)
   const lockNote = readOnly || !plan ? null : archived ? VP_COPY.archivedNote : !data.canWrite ? (data.readOnlyReason ?? VP_COPY.noPermission) : null;
   const staleNotes = plan ? videoStaleNotices(plan) : [];
-  const blocked = plan?.stale ? videoRebaseBlockedText(plan.rebaseBlockedReason) : null;
+  const blocked = plan?.stale ? videoRebaseBlockedText(plan.rebaseBlockedCode, plan.rebaseBlockedReason) : null;
   const canCreate = !readOnly && data.canCreate;
   const create = canCreate && (
     <details className={`${f.inlineDetails} ${vp.vpCreate}`} open={!plan}>
@@ -224,7 +225,7 @@ function BriefBlock({ board, readOnly, actions }: { board: VideoPlanBoard; readO
             !readOnly &&
             data.createBlockedReason && (
               <p className={`${styles.muted} ${f.keep}`} role="note">
-                {createBlockedText(data.createBlockedReason)}
+                {videoCreateBlockedText(data.createBlockedCode, data.createBlockedReason)}
               </p>
             )
           )}
@@ -246,7 +247,7 @@ function BriefBlock({ board, readOnly, actions }: { board: VideoPlanBoard; readO
           </BriefActionButton>
         </details>
       )}
-      {plan && !readOnly && !canCreate && createBlockedText(data.createBlockedReason) === VP_COPY.planLimitReached && (
+      {plan && !readOnly && !canCreate && videoCreateBlockedText(data.createBlockedCode, data.createBlockedReason) === VP_COPY.planLimitReached && (
         <p className={`${styles.muted} ${f.keep}`} role="note">
           {VP_COPY.planLimitReached}
         </p>

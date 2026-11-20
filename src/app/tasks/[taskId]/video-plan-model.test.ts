@@ -20,6 +20,7 @@ import {
   guessVideoMime,
   precheckVideoFile,
   staleReasonAssetText,
+  videoCreateBlockedText,
   videoRebaseBlockedText,
   videoStaleNotices,
   videoUploadErrSizeText,
@@ -103,23 +104,33 @@ describe("P3-d 영상 구성 화면 모델(P3D-HANDOFF·P3-COPY-FINAL)", () => {
     expect(p).toMatchObject({ aspectRatio: "9:16", status: "reviewed" });
   });
 
-  it("이전 기준 원인별(staleReasons): 브리프·자산(수가 오면 staleReasonAsset, 아니면 공통 안내), 보관이면 없음", () => {
-    const base = { stale: true, archivedAt: null, staleReasons: ["brief"] as ("brief" | "asset")[] };
+  it("이전 기준 원인별(staleReasons): 브리프·자산(서버 staleAssetCount 로 staleReasonAsset {n}), 보관이면 없음", () => {
+    const base = { stale: true, archivedAt: null, staleReasons: ["brief"] as ("brief" | "asset")[], staleAssetCount: 0 };
     expect(videoStaleNotices(base)).toEqual([VP_COPY.staleReasonBrief]);
-    expect(videoStaleNotices({ ...base, staleReasons: ["asset"] })).toEqual([VP_COPY.staleBanner]);
     expect(videoStaleNotices({ ...base, staleReasons: ["asset"], staleAssetCount: 3 })).toEqual(["연결된 디자인 자산 3개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요."]);
+    expect(videoStaleNotices({ ...base, staleReasons: ["brief", "asset"], staleAssetCount: 1 })).toEqual([VP_COPY.staleReasonBrief, VP_COPY.staleReasonAsset(1)]);
+    // 계약상 없는 경우(자산 원인인데 0개)만 공통 안내
+    expect(videoStaleNotices({ ...base, staleReasons: ["asset"] })).toEqual([VP_COPY.staleBanner]);
     expect(videoStaleNotices({ ...base, archivedAt: "x" })).toEqual([]);
     expect(videoStaleNotices({ ...base, stale: false })).toEqual([]);
     expect(staleReasonAssetText(1)).toBe("연결된 디자인 자산 1개가 새 판으로 바뀌었습니다. 사용 자산을 확인해 주세요.");
     expect(archivedAssetsWarnText(2)).toBe("연결된 디자인 자산 2개가 보관되었습니다. 필요하면 다른 자산으로 바꿔 주세요.");
   });
 
-  it("맞추기 막힘(서버 글 → AGY 원인 문구), 모르는 글은 그대로", () => {
-    expect(videoRebaseBlockedText("보관한 제작 브리프라 맞출 수 없습니다. 이 구성안은 지난 브리프 기준 그대로 고칠 수 있습니다.")).toBe("바탕 제작 브리프가 보관되어 최신 기준으로 맞출 수 없습니다.");
-    expect(videoRebaseBlockedText("제작 브리프가 작성 중이라 맞출 수 없습니다. 브리프를 확정한 뒤 맞춰 주세요.")).toBe("바탕 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다.");
-    expect(videoRebaseBlockedText("구성안 판이 100개라 맞출 수 없습니다. 구성안을 보관하고 새로 만들어 주세요.")).toBe("구성안 판 이력이 100개에 도달해 최신 기준으로 맞출 수 없습니다.");
-    expect(videoRebaseBlockedText("보관한 영상 구성안은 맞출 수 없습니다.")).toBe("보관한 영상 구성안은 맞출 수 없습니다.");
-    expect(videoRebaseBlockedText(null)).toBeNull();
+  it("맞추기 막힘: 원인 코드 → AGY 문구, 문구 없는 코드·코드 없음은 서버 한글 사유(대체용)", () => {
+    const R = "서버 사유";
+    expect(videoRebaseBlockedText("brief_archived", R)).toBe("바탕 제작 브리프가 보관되어 최신 기준으로 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText("brief_drafting", R)).toBe("바탕 제작 브리프가 아직 확정 전이라 최신 기준으로 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText("version_limit", R)).toBe("구성안 판 이력이 100개에 도달해 최신 기준으로 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText("plan_archived", "보관한 영상 구성안은 맞출 수 없습니다.")).toBe("보관한 영상 구성안은 맞출 수 없습니다.");
+    expect(videoRebaseBlockedText(null, R)).toBe(R);
+    expect(videoRebaseBlockedText(null, null)).toBeNull();
+  });
+
+  it("만들기 막힘: 구성안 한도 두 코드만 planLimitReached, 나머지는 서버 한글 사유(대체용)", () => {
+    for (const c of ["plan_limit_total", "plan_limit_active"] as const) expect(videoCreateBlockedText(c, "x")).toBe(VP_COPY.planLimitReached);
+    for (const c of ["project_archived", "task_cancelled", "brief_archived", "brief_drafting", "no_video_deliverable"] as const) expect(videoCreateBlockedText(c, "서버 사유")).toBe("서버 사유");
+    expect(videoCreateBlockedText(null, null)).toBeNull();
   });
 
   it("영상 파일 미리 거르기: 형식(MP4·MOV·WEBM)·확장자만 이름·크기(서버 한도 {limit})", () => {
