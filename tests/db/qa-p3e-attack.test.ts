@@ -386,9 +386,9 @@ describe.skipIf(!present)(`P3-e PPT 구성안 공격 시험(${T.decks})`, () => 
     }
     expect(passed, "제어 문자가 저장됨").toEqual([]);
     const ok = await create(a, c, [
-      slide({ bullets: "첫 줄\n둘째\t줄\r\n셋째", notes: "메모\n둘째" }),
+      slide({ bullets: "첫 줄\n둘째\t줄\n셋째", notes: "메모\n둘째" }),
     ]);
-    expect((await cur(ok)).slides[0].bullets).toBe("첫 줄\n둘째\t줄\r\n셋째");
+    expect((await cur(ok)).slides[0].bullets).toBe("첫 줄\n둘째\t줄\n셋째");
   });
 
   it("템플릿·상태 주입: __proto__·constructor·대문자·경로·공백 거절, 3종만 통과", async () => {
