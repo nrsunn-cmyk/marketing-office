@@ -27,6 +27,7 @@ vi.mock("@/features/ppt-decks/actions", () => ({
 vi.mock("@/features/ppt-decks/server", () => ({}));
 vi.mock("@/features/production-brief/server", () => ({}));
 vi.mock("@/features/projects/server", () => ({}));
+vi.mock("./qa-fix-flags", () => ({ fixRequestedIdsFor: async () => [] }));
 vi.mock("./funnel.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./ppt-deck.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("./design-assets.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));

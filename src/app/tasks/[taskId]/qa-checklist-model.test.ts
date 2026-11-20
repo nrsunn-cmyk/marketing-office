@@ -7,6 +7,8 @@ import {
   QA_TARGET_KIND_KEYS,
   QA_VERDICTS,
   canAddQaItem,
+  canRemoveQaItem,
+  fixRequestedTargetIds,
   checkItemTitle,
   checkQaItems,
   currentRound,
@@ -128,6 +130,7 @@ describe("P3-f 검수 체크리스트 화면 모델(인계표 P3F-HANDOFF.md)", 
       saved,
     );
     expect(p).toEqual({
+      remove: [],
       set: [
         { itemId: "i1", verdict: "needs_fix", memo: "가".repeat(600) },
         { itemId: "i3", verdict: "passed", memo: null },
@@ -153,5 +156,35 @@ describe("P3-f 검수 체크리스트 화면 모델(인계표 P3F-HANDOFF.md)", 
     expect(QA_COPY.archive).toBe("이 검수 기록 보관");
     expect(formatKstMinute("2026-11-19T18:10:00Z")).toBe("2026-11-20 03:10 KST");
     expect(formatKstMinute(null)).toBe("시각 알 수 없음");
+  });
+});
+
+describe("R1: 항목 삭제·보완 요청 배지(AGY DESIGN-REVIEW-P3FG-CONNECT-01·Backend P3FG-ACTIONS-REVIEW-01)", () => {
+  it("삭제는 열린 회차의 기본 아닌 항목만, 보낼 값은 remove 먼저(삭제한 항목은 set 에서 뺌)", () => {
+    const open = round(1, []);
+    expect(canRemoveQaItem(open, { isDefault: false })).toBe(true);
+    expect(canRemoveQaItem(open, { isDefault: true })).toBe(false);
+    expect(canRemoveQaItem({ ...open, status: "fix_requested" }, { isDefault: false })).toBe(true);
+    expect(canRemoveQaItem({ ...open, status: "reviewed" }, { isDefault: false })).toBe(false);
+    expect(canRemoveQaItem({ ...open, archivedAt: "2026-11-20T00:00:00Z" }, { isDefault: false })).toBe(false);
+    const p = toQaPayload([{ id: "x1", itemTitle: "추가", verdict: "passed", memo: "" }], [item("x1", "pending", false)], ["x1"]);
+    expect(p).toEqual({ remove: ["x1"], set: [], add: [] });
+    for (const [s, n] of [
+      [QA_COPY.removeItem, 5],
+      [QA_COPY.removeItemConfirm, 39],
+      [QA_COPY.removeItemSubmit, 5],
+      [QA_COPY.itemRemovedOk, 17],
+    ] as const)
+      expect(Array.from(s).length, s).toBe(n);
+  });
+
+  it("보완 요청 배지 대상: 열린 회차가 fix_requested 인 산출물 id 만(보관 회차·다른 상태는 아님)", () => {
+    const ids = fixRequestedTargetIds([
+      target({ targetId: "a", rounds: [round(1, [], { status: "fix_requested" })] }),
+      target({ targetId: "b", rounds: [round(1, [], { status: "fix_requested", archivedAt: "2026-11-20T00:00:00Z" }), round(2, [])] }),
+      target({ targetId: "c", rounds: [round(1, [], { status: "reviewed" })] }),
+      target({ targetId: null, rounds: [round(1, [], { status: "fix_requested" })] }),
+    ]);
+    expect(ids).toEqual(["a"]);
   });
 });

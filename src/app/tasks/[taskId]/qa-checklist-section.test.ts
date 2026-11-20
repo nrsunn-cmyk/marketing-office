@@ -120,6 +120,8 @@ const STATES: Record<string, { data: QaChecklistData | null; readOnly?: boolean 
   // 서버 게이트가 막음(필수는 통과했지만 대상 판이 검토 완료 전) → 서버 이유 문구, 승인 없음
   서버막음: { data: data(web({ rounds: [round(1, PASSED, { gate: { requiredTotal: 3, requiredPassed: 3, optionalNeedsFix: 0, blockedBy: "not_reviewed" } })] })) },
   대상없음: { data: { targets: [], canWrite: true } },
+  // 열린 회차에 추가 항목(기본 아님) 하나 → 그 항목에만 접힌 삭제
+  추가항목: { data: data(web({ rounds: [round(1, [...ITEMS, item(4, "추가: 다크 화면 대비 확인", "pending", { isRequired: true, isDefault: false })])] })) },
 };
 const render = (k: string) => renderToString(createElement(QaChecklistSection, { data: STATES[k].data, readOnly: Boolean(STATES[k].readOnly), taskId: "t-1" }));
 const count = (h: string, re: RegExp) => (h.match(re) ?? []).length;
@@ -185,7 +187,7 @@ describe("검수 체크리스트 상태별 화면", () => {
     const h = render("작성중");
     const m = /name="payload" value="([^"]*)"/.exec(h);
     const p = JSON.parse(m![1].replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
-    expect(p).toEqual({ set: [], add: [] });
+    expect(p).toEqual({ remove: [], set: [], add: [] });
   });
 
   it("선택 항목만 보완 필요: 승인 가능 + 경고(optionalNeedsFixWarn), 서버 게이트가 막으면 서버 이유 문구·승인 없음", () => {
@@ -308,4 +310,15 @@ it.runIf(Boolean(process.env.QA_HARNESS))("화면 점검용 HTML 쓰기", () => 
   const out = process.env.QA_HARNESS!;
   mkdirSync(out, { recursive: true });
   for (const k of Object.keys(STATES)) writeFileSync(join(out, `${k}.html`), render(k));
+});
+
+describe("R1: 검수 항목 삭제(AGY 3절)", () => {
+  it("열린 회차의 추가 항목에만 접힌 '항목 삭제', 안은 안내 + 일반 단추 '삭제 확인'(저장 폼의 기본 단추가 되지 않음)", () => {
+    const h = render("추가항목");
+    expect(count(h, /<summary>항목 삭제<\/summary>/g)).toBe(1);
+    expect(text(h)).toContain("추가한 검수 항목을 삭제합니다. 기본 필수 항목은 삭제할 수 없습니다.");
+    expect(h).toMatch(/<button type="button" class="secondaryButton touch" aria-label="추가: 다크 화면 대비 확인 삭제 확인">삭제 확인<\/button>/);
+    // 기본 항목뿐인 회차·검토 완료·보관에는 없다
+    for (const k of ["작성중", "검토완료", "보관"]) expect(render(k), k).not.toContain("항목 삭제");
+  });
 });

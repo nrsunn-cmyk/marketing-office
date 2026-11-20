@@ -8,6 +8,8 @@ import { getProject } from "@/features/projects/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeArchived, BadgeDrafting, BadgeReady, BadgeStale, EmptyBriefArt, P3PptIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { fixRequestedIdsFor } from "./qa-fix-flags";
+import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
 import pp from "./ppt-deck.module.css";
 import { BriefActionButton } from "./production-brief-buttons";
@@ -76,7 +78,9 @@ export async function PptDeckArea({ detail }: { detail: TaskDetail }) {
     unstable_rethrow(e); // 로그인·업무실 확인의 이동(redirect)은 그대로 통과
     console.error("[ppt-deck]", e);
   }
-  return <PptDeckSection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} />;
+  // P3FG-UI-CONNECT-01-R1: 검수에서 보완 요청된 산출물 배지(기존 검수 읽기로 계산, 실패하면 배지만 빠짐)
+  const fixRequestedIds = await fixRequestedIdsFor(detail.project.id);
+  return <PptDeckSection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} fixRequestedIds={fixRequestedIds} />;
 }
 
 /**
@@ -84,7 +88,7 @@ export async function PptDeckArea({ detail }: { detail: TaskDetail }) {
  * 작성 중 · 검토 완료 · 이전 기준(원인별) · 보관 · 읽기 전용 · 빈 상태 + 자산 보관 경고 · 맞추기 막힘 · 판 20 · 구성안 한도 · 불러오기 실패.
  * 진행률 막대는 그리지 않는다 — 슬라이드 수·판 수만. 보관·읽기 전용에서도 내보내기 링크는 보인다(P3E-HANDOFF 3절 2).
  */
-export function PptDeckSection({ boards, readOnly, taskId, actions = {} }: { boards: PptDeckBoard[] | null; readOnly: boolean; taskId: string; actions?: PptDeckActions }) {
+export function PptDeckSection({ boards, readOnly, taskId, actions = {}, fixRequestedIds = [] }: { boards: PptDeckBoard[] | null; readOnly: boolean; taskId: string; actions?: PptDeckActions; fixRequestedIds?: readonly string[] }) {
   return (
     <section className={`${styles.section} ${f.funnel} ${pp.ppSection}`} aria-labelledby="ppt-deck">
       <div className={pp.ppHead}>
@@ -117,7 +121,7 @@ export function PptDeckSection({ boards, readOnly, taskId, actions = {} }: { boa
               </p>
             </div>
           ) : (
-            boards.map((b) => <BriefBlock key={b.brief.id} board={b} readOnly={readOnly} actions={actions} />)
+            boards.map((b) => <BriefBlock key={b.brief.id} board={b} readOnly={readOnly} actions={actions} fixRequestedIds={fixRequestedIds} />)
           )}
         </>
       )}
@@ -163,7 +167,7 @@ function blankDeck(briefTitle: string): PptDeckView {
   };
 }
 
-function BriefBlock({ board, readOnly, actions }: { board: PptDeckBoard; readOnly: boolean; actions: PptDeckActions }) {
+function BriefBlock({ board, readOnly, actions, fixRequestedIds = [] }: { board: PptDeckBoard; readOnly: boolean; actions: PptDeckActions; fixRequestedIds?: readonly string[] }) {
   const { data } = board;
   const deck = data.deck;
   const archived = deck?.archivedAt != null;
@@ -185,7 +189,7 @@ function BriefBlock({ board, readOnly, actions }: { board: PptDeckBoard; readOnl
   return (
     <section className={pp.ppBrief} aria-labelledby={headId}>
       <h3 id={headId} className={pp.ppBriefTitle}>{`기준 제작 브리프: ${board.brief.title}`}</h3>
-      {deck && <Badges deck={deck} active={data.activeDeckCount} />}
+      {deck && <Badges deck={deck} active={data.activeDeckCount} fixRequested={fixRequestedIds.includes(deck.id)} />}
       {lockNote && <Note text={lockNote} />}
       {full && (
         // 시안 version-full-banner 는 경고 상자(banner-warning)
@@ -249,7 +253,7 @@ function BriefBlock({ board, readOnly, actions }: { board: PptDeckBoard; readOnl
   );
 }
 
-function Badges({ deck, active }: { deck: PptDeckView; active: number }) {
+function Badges({ deck, active, fixRequested = false }: { deck: PptDeckView; active: number; fixRequested?: boolean }) {
   const Icon = deck.status === "reviewed" ? BadgeReady : BadgeDrafting;
   return (
     <p className={pp.ppBadges}>
@@ -271,6 +275,7 @@ function Badges({ deck, active }: { deck: PptDeckView; active: number }) {
       )}
       <span className={f.tag}>{slideCountText(deck.slides.length)}</span>
       <span className={f.tag}>{PPT_LABELS.representative(active)}</span>
+      <QaFixTag show={fixRequested} />
     </p>
   );
 }
