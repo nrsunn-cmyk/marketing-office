@@ -5,7 +5,7 @@
 -- 구성안: 저장할 때마다 새 판(제목·템플릿·상태·슬라이드 전체 스냅샷, 판 20 — AGY 결정 5). 슬라이드 빼기 = 목록에서 제거,
 --   되살리기는 옛 판 되돌리기(슬라이드 id 유지). 슬라이드 자산 {asset_id, version_no}: 판 번호는 서버가 찍고(새로 넣은 것만 그 순간
 --   current_version_no, 이미 연결된 것은 그대로) → 자산 새 판이면 이전 기준(stale), 푸는 길은 맞추기(rebase)뿐. P3-d 와 같은 규칙.
--- 제어 문자(\u0001-\u0008, \u000B, \u000C, \u000E-\u001F, \u007F)는 저장 때 거절한다(내보내기 XML 이 깨지지 않게, Tester ES1). 줄바꿈·탭은 허용.
+-- 제어 문자(\u0001-\u0008, \u000B-\u000D, \u000E-\u001F, \u007F)는 저장 때 거절한다(내보내기 XML 이 깨지지 않게, Tester ES1. CR 은 P3DE-BACKEND-FIX-01). 줄바꿈(\n)·탭은 허용.
 -- 템플릿은 3종 키만(royal_grid·minimal_report·brand_deck). 값(색·글꼴·좌표)은 앱 코드 상수(AGY P3E-TEMPLATES.md)라 DB 에는 키만 있다.
 --
 -- 바뀌는 것: ppt_decks(머리), ppt_deck_versions(판, 추가 전용), 정의자 RPC 5개, 감사 1행(entity_type 'ppt_deck', 제목·요점·메모 글자 없음)
@@ -16,10 +16,11 @@
 -- ─────────────────────────────────────────────
 -- 0) 값 규칙 도우미
 -- ─────────────────────────────────────────────
--- 글 칸: 1~max 자(코드 포인트), 앞뒤 공백 없음, 제어 문자 없음(줄바꿈 \n·\r·탭은 허용)
+-- 글 칸: 1~max 자(코드 포인트), 앞뒤 공백 없음, 제어 문자 없음(줄바꿈 \n·탭은 허용. CR \r 은 거절 — 앱은 \r\n 을 \n 으로 바꿔 보내고
+--   .md 내보내기는 LF 만이라서. P3DE-BACKEND-FIX-01, Tester QA-P3E-PREP-01 D3)
 create or replace function app.ppt_text_ok(p text, p_max integer) returns boolean
 language sql immutable set search_path = '' as $$
-  select coalesce(char_length(p) between 1 and p_max and p = btrim(p) and p !~ '[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]', false)
+  select coalesce(char_length(p) between 1 and p_max and p = btrim(p) and p !~ '[\u0001-\u0008\u000B-\u000D\u000E-\u001F\u007F]', false)
 $$;
 revoke execute on function app.ppt_text_ok(text, integer) from public, anon;
 
@@ -298,6 +299,14 @@ begin
       vno := null;
       if ps is not null then
         select (x ->> 'version_no')::integer into vno from jsonb_array_elements(ps -> 'assets') x where x ->> 'asset_id' = aid::text;
+      end if;
+      -- 다른 슬라이드에서 옮겨 온 자산(또는 빼고 새 슬라이드에 넣은 자산)도 직전 판 전체에서 같은 자산의 판 번호를 유지한다(여럿이면 가장 낮은 판).
+      --   저장만으로 이전 기준이 풀리지 않게 — 푸는 길은 맞추기뿐(P3DE-BACKEND-FIX-01, Tester QA-P3E-PREP-01 D1).
+      --   보관된 자산은 여기서 이어받지 않는다: 같은 슬라이드에 그대로 있으면 위에서 유지되고, 다른 슬라이드로 옮기거나 더 넣는 것은 새 연결이라 아래에서 거절(기존 규칙)
+      if vno is null and p_prev is not null
+         and exists (select 1 from public.design_assets x where x.id = aid and x.workspace_id = p_ws and x.project_id = p_project and x.archived_at is null) then
+        select min((x ->> 'version_no')::integer) into vno from jsonb_array_elements(p_prev) e, jsonb_array_elements(e -> 'assets') x
+         where x ->> 'asset_id' = aid::text;
       end if;
       if vno is null then
         select x.current_version_no into vno from public.design_assets x

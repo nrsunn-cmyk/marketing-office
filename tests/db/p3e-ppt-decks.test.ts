@@ -226,6 +226,41 @@ describe("디자인 자산 연결·이전 기준(ES5·Q10·Q11)", () => {
     await asA((tx) => tx.query("select update_production_brief($1, $2, 'PPT 브리프 2', '대상', '메시지', $3::text[], '범위', null, null, 'drafting')", [br.id, br.revision, ["ppt_deck", "design_assets"]]));
     await expectDbError(asA((tx) => tx.query("select rebase_ppt_deck($1, $2)", [id, r3])), /아직 확정 전이라/);
   });
+
+  it("P3DE-BACKEND-FIX-01 D1: 자산을 다른 슬라이드로 옮기거나 빼고 새 슬라이드에 넣어도 판 번호 유지(여럿이면 가장 낮은 판), 직전 판에서 아예 뺐다가 다시 넣으면 현재 판", async () => {
+    const br = await brief(a);
+    const as1 = await designAsset(a, br.id, "로고");
+    const id = await asA((tx) => createDeck(tx, br.id, [slide({ title: "1", asset_ids: [as1] }), slide({ title: "2" })]));
+    await designReplace(a, as1); // 자산 v2
+    const v1 = await ver(id);
+    // 슬라이드 1 → 기존 슬라이드 2 로 옮김
+    const [s1, s2] = asInput(v1.slides);
+    let rev = await asA((tx) => save(tx, id, 1, [{ ...s1, asset_ids: [] }, { ...s2, asset_ids: [as1] }]));
+    expect((await ver(id)).slides.map((s) => s.assets)).toEqual([[], [{ asset_id: as1, version_no: 1 }]]);
+    // 빼고 새 슬라이드(id null)에 넣음
+    const v2 = asInput((await ver(id)).slides);
+    rev = await asA((tx) => save(tx, id, rev, [{ ...v2[0] }, { ...v2[1], asset_ids: [] }, { id: null, title: "3", bullets: null, notes: null, asset_ids: [as1] }]));
+    expect((await ver(id)).slides[2].assets).toEqual([{ asset_id: as1, version_no: 1 }]);
+    // 맞추기 전까지 이전 기준이 남는다 → 맞추기로만 v2
+    rev = await asA((tx) => one<{ r: number }>(tx, "select rebase_ppt_deck($1, $2) as r", [id, rev])).then((x) => x.r);
+    expect((await ver(id)).slides[2].assets).toEqual([{ asset_id: as1, version_no: 2 }]);
+    // 한 판 동안 아예 뺐다가(저장) 다시 넣으면 새로 연결한 것 → 그 순간 현재 판
+    await designReplace(a, as1); // 자산 v3
+    const v3 = asInput((await ver(id)).slides);
+    rev = await asA((tx) => save(tx, id, rev, v3.map((s) => ({ ...s, asset_ids: [] }))));
+    const v4 = asInput((await ver(id)).slides);
+    await asA((tx) => save(tx, id, rev, [{ ...v4[0], asset_ids: [as1] }, v4[1], v4[2]]));
+    expect((await ver(id)).slides[0].assets).toEqual([{ asset_id: as1, version_no: 3 }]);
+  });
+
+  it("P3DE-BACKEND-FIX-01 D3: CR(\\r)이 든 글은 DB 가 거절(RPC 직접 호출), 줄바꿈 \\n·탭은 허용", async () => {
+    const br = await brief(a);
+    await expectDbError(asA((tx) => createDeck(tx, br.id, [slide({ bullets: "첫 줄\r\n둘째" })])), /VALIDATION/);
+    await expectDbError(asA((tx) => createDeck(tx, br.id, [slide({ title: "제목\r# 가짜" })])), /VALIDATION/);
+    await expectDbError(asA((tx) => createDeck(tx, br.id, [slide()], "구성안\r제목")), /VALIDATION/);
+    const id = await asA((tx) => createDeck(tx, br.id, [slide({ bullets: "첫 줄\n둘째\t칸" })]));
+    expect((await ver(id)).slides[0].bullets).toBe("첫 줄\n둘째\t칸");
+  });
 });
 
 describe("보관·남의 것·권한·감사(X2·X5·X6·X7·ES4·ES8)", () => {
