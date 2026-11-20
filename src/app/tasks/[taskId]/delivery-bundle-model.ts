@@ -98,7 +98,9 @@ export const DB_COPY = {
   deliveryLimitReached: "고객 전달 기록은 묶음당 50건까지 남길 수 있습니다.",
   staleBanner: "마지막 납품 묶음 이후 새로 승인된 결과물이 있습니다. 최신 승인본을 반영해 새 납품 묶음을 만들 수 있습니다.",
   rebase: "최신 승인본 목록 다시 불러오기",
-  archivedNote: "보관한 납품 묶음입니다. 이력 조회와 내려받기만 할 수 있고 새 묶음 생성·전달 기록 추가는 할 수 없습니다.",
+  // Master 결정: 최신 묶음을 보관해도 새 묶음은 만들 수 있다(AGY DESIGN-REVIEW-P3FG-UI-01 3번)
+  archivedNote: "보관한 납품 묶음입니다. 이 묶음은 조회와 내려받기만 할 수 있으며, 새 납품 묶음은 다시 만들 수 있습니다.",
+  archivedCanCreateNotice: "마지막 납품 묶음을 보관했습니다. 승인된 결과물 판이 있으면 새 납품 묶음을 만들 수 있습니다.",
   noPermission: "납품 묶음을 만들거나 전달 기록을 남길 권한이 없습니다.",
   loadError: "납품 묶음을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
   deliveryHint: "이 화면에서 이메일이나 메신저로 직접 발송하지 않습니다. 직접 전달한 뒤 방식·일시·메모만 남깁니다.",
@@ -162,11 +164,15 @@ export const logLine = (l: DbLogView) => `${formatKstMinute(l.deliveredAt)}${l.n
 
 /**
  * 원인별 안내(인계표 3절 4). 우선순위: 권한 없음 → 바탕 보관 → 최신 묶음 보관 → 승인 판 없음.
- * locked 이면 새 묶음·전달 기록·상태 저장·보관 없음(조회·내려받기는 남김).
+ * baseLocked(읽기 전용·권한 없음·바탕 보관)면 아무것도 못 한다. 최신 묶음만 보관이면 그 묶음의 전달 기록·상태·보관은 막고,
+ * 새 묶음 만들기·복구는 된다(Master 결정, AGY archivedCanCreateNotice). 조회·내려받기는 늘 된다.
  */
 export function deliveryState(d: DeliveryBundleData, opts: { readOnly: boolean }) {
   const latest = d.bundles[0] ?? null;
   const archived = latest?.archivedAt != null;
+  const baseLocked = opts.readOnly || !d.canWrite || d.baseArchived;
+  const bundlesFull = d.bundles.length >= DB_LIMITS.bundlesMax;
+  const canCreate = !baseLocked && d.included.length > 0 && !bundlesFull;
   const notice: string | null = opts.readOnly
     ? null // 프로젝트 읽기 전용 안내는 영역 위에 한 번
     : !d.canWrite
@@ -178,11 +184,12 @@ export function deliveryState(d: DeliveryBundleData, opts: { readOnly: boolean }
           : d.included.length === 0
             ? DB_COPY.baseNotApprovedNotice
             : null;
-  const locked = opts.readOnly || !d.canWrite || d.baseArchived || archived;
-  const bundlesFull = d.bundles.length >= DB_LIMITS.bundlesMax;
-  const canCreate = !locked && d.included.length > 0 && !bundlesFull;
+  /** 최신 묶음 보관 뒤 새로 만들 수 있으면 한 줄 더(archivedCanCreateNotice) */
+  const archivedCanCreate = archived && canCreate;
+  /** 최신 묶음을 고칠 수 없는지(전달 기록·상태 저장·보관) */
+  const locked = baseLocked || archived;
   const logsFull = (latest?.logs.length ?? 0) >= DB_LIMITS.logsPerBundle;
-  return { latest, archived, notice, locked, bundlesFull, canCreate, canRestore: !locked && !bundlesFull, logsFull, canLog: !locked && latest !== null && !logsFull, stale: d.stale && !archived };
+  return { latest, archived, notice, locked, baseLocked, bundlesFull, canCreate, archivedCanCreate, canRestore: !baseLocked && !bundlesFull, logsFull, canLog: !locked && latest !== null && !logsFull, stale: d.stale && !baseLocked };
 }
 
 // ── 전달 기록 입력 점검·보낼 값 ──

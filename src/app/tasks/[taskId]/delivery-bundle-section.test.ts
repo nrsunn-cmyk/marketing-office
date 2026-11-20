@@ -126,12 +126,16 @@ describe("납품 묶음 상태별 화면", () => {
     expect(t).toContain("최신 승인본 목록 다시 불러오기");
   });
 
-  it("보관: archivedNote, 내려받기만 남고 새 묶음·복구·전달 기록·상태·보관·이전 기준 없음", () => {
+  it("최신 묶음 보관(Master 결정): 새 안내 둘 + 새 묶음 만들기·복구·이전 기준은 되고, 그 묶음의 전달 기록·상태·보관은 없음", () => {
     const h = render("보관");
     const t = text(h);
-    expect(t).toContain("보관한 납품 묶음입니다. 이력 조회와 내려받기만 할 수 있고 새 묶음 생성·전달 기록 추가는 할 수 없습니다.");
+    expect(t).toContain("보관한 납품 묶음입니다. 이 묶음은 조회와 내려받기만 할 수 있으며, 새 납품 묶음은 다시 만들 수 있습니다.");
+    expect(t).toContain("마지막 납품 묶음을 보관했습니다. 승인된 결과물 판이 있으면 새 납품 묶음을 만들 수 있습니다.");
+    expect(t).toContain("+ 새 납품 묶음 만들기");
+    expect(t).toContain("이 판 기준으로 복구");
+    expect(t).toContain("최신 승인본 목록 다시 불러오기");
     expect(count(h, DOWNLOAD)).toBe(2);
-    for (const no of ["새 납품 묶음 만들기", "이 판 기준으로 복구", "전달 기록 남기기", "상태 저장", "이 납품 묶음 보관", "다시 불러오기", "이전 기준:"]) expect(t, no).not.toContain(no);
+    for (const no of ["전달 기록 남기기", "상태 저장", "이 납품 묶음 보관"]) expect(t, no).not.toContain(no);
     expect(t).toContain("이메일 직접 발송 · 묶음 v1.1"); // 기록은 조회
   });
 

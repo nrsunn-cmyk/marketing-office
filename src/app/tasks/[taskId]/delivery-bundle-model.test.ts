@@ -31,7 +31,11 @@ describe("P3-g 납품 묶음 화면 모델(인계표 P3G-HANDOFF.md)", () => {
     expect(deliveryState(data(), o)).toMatchObject({ notice: null, locked: false, canCreate: true, canLog: true, canRestore: true });
     expect(deliveryState(data({ canWrite: false }), o)).toMatchObject({ notice: DB_COPY.noPermission, locked: true, canCreate: false, canLog: false });
     expect(deliveryState(data({ baseArchived: true }), o)).toMatchObject({ notice: DB_COPY.baseArchivedNotice, locked: true });
-    expect(deliveryState(data({ bundles: [bundle("v1.0", { archivedAt: "2026-11-20T00:00:00Z" })], stale: true }), o)).toMatchObject({ notice: DB_COPY.archivedNote, locked: true, stale: false });
+    // 최신 묶음 보관: 그 묶음은 잠기지만 새 묶음·복구는 된다(Master 결정, AGY 3번)
+    expect(deliveryState(data({ bundles: [bundle("v1.0", { archivedAt: "2026-11-20T00:00:00Z" })], stale: true }), o)).toMatchObject({ notice: DB_COPY.archivedNote, locked: true, canLog: false, canCreate: true, archivedCanCreate: true, canRestore: true, stale: true });
+    expect(deliveryState(data({ included: [], bundles: [bundle("v1.0", { archivedAt: "2026-11-20T00:00:00Z" })] }), o)).toMatchObject({ archivedCanCreate: false, canCreate: false });
+    expect(DB_COPY.archivedNote).toBe("보관한 납품 묶음입니다. 이 묶음은 조회와 내려받기만 할 수 있으며, 새 납품 묶음은 다시 만들 수 있습니다.");
+    expect(DB_COPY.archivedCanCreateNotice).toBe("마지막 납품 묶음을 보관했습니다. 승인된 결과물 판이 있으면 새 납품 묶음을 만들 수 있습니다.");
     expect(deliveryState(data({ included: [] }), o)).toMatchObject({ notice: DB_COPY.baseNotApprovedNotice, canCreate: false, canLog: true });
     // 프로젝트 읽기 전용 안내는 영역 위에 한 번
     expect(deliveryState(data(), { readOnly: true })).toMatchObject({ notice: null, locked: true, canCreate: false });

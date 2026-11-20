@@ -115,12 +115,13 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
     <>
       {readOnly && <Note text={P3_COMMON_COPY.projectReadOnly} />}
       {st.notice && <Note text={st.notice} />}
+      {st.archivedCanCreate && <Note text={DB_COPY.archivedCanCreateNotice} />}
       {st.stale && (
         <div className={`${styles.notice} ${f.warnBox}`} role="note">
           <p className={f.keep}>
             <strong>{DB_LABELS.stalePrefix}</strong> {DB_COPY.staleBanner}
           </p>
-          {!st.locked && <BriefActionButton action={actions.rebase} hidden={{}} submitLabel={DB_COPY.rebase} pendingLabel={P3_COMMON_COPY.savePending} />}
+          {!st.baseLocked && <BriefActionButton action={actions.rebase} hidden={{}} submitLabel={DB_COPY.rebase} pendingLabel={P3_COMMON_COPY.savePending} />}
         </div>
       )}
 
@@ -200,7 +201,7 @@ function Body({ data, readOnly, actions }: { data: DeliveryBundleData; readOnly:
           </h3>
           <p className={`${styles.muted} ${f.keep}`}>{DB_LABELS.historyHint}</p>
           {st.canCreate && <BriefActionButton action={actions.create} hidden={{}} submitLabel={DB_COPY.createNext} pendingLabel={P3_COMMON_COPY.savePending} variant="primary" />}
-          {st.bundlesFull && !st.locked && (
+          {st.bundlesFull && !st.baseLocked && (
             <p className={`${styles.muted} ${f.keep}`} role="note">
               {DB_COPY.bundleLimitReached}
             </p>
