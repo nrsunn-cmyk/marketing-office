@@ -95,6 +95,8 @@ const data = (assets: DesignAssetView[], x: Partial<DesignAssetsData> = {}): Des
   count: assets.length,
   limit: 50,
   usageOptions: OPTIONS,
+  // 서버(Backend 378aa6c)가 늘 준다. 기본은 넉넉한 사용량
+  storage: { usedBytes: 4 * 1024 * 1024, limitBytes: 500 * 1024 * 1024 },
   ...x,
 });
 const board = (d: DesignAssetsData, previews: DesignAssetBoard["previews"] = PREVIEWS): DesignAssetBoard => ({ data: d, previews });
@@ -258,8 +260,8 @@ describe("디자인 자산 관리 상태별 화면(서버 연결)", () => {
     expect(one.indexOf('type="file"')).toBeLessThan(one.indexOf('class="daFilters"'));
   });
 
-  it("저장 용량(서버가 줄 때만): 사용 중 글, 90% 이상 안내, 가득 차면 업로드 패널 없음 / 서버가 안 주면 표시 없음", () => {
-    expect(text(render("작성중"))).not.toMatch(/사용 중 [\d.]+ (B|KB|MB)/); // 판 목록의 '사용 중' 표시와 구분
+  it("저장 용량(Backend 378aa6c storage): 사용 중 글, 90% 이상 안내, 가득 차면 업로드 패널 없음", () => {
+    expect(text(render("작성중"))).toContain("사용 중 4.0 MB / 500.0 MB");
     const ok = render("용량보통");
     expect(text(ok)).toContain("사용 중 120.0 MB / 500.0 MB");
     expect(ok).not.toMatch(/progressbar|<progress|%/);

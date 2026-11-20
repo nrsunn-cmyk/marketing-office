@@ -72,7 +72,7 @@ export const storageNearLimitText = (limit: number) => `업무실 디자인 자�
 export const storageLimitReachedText = (limit: number) => `업무실 디자인 자산 저장 용량(${formatBytes(limit)})이 가득 차 더 올릴 수 없습니다. 쓰지 않는 자산을 정리한 뒤 다시 올려 주세요.`;
 
 /**
- * 업무실 저장 용량(서버가 줄 때만 보인다 — Backend 요청 중). usedBytes = 모든 판의 서로 다른 파일 + 진행 중 예약 합,
+ * 업무실 저장 용량(Backend 378aa6c 가 storage 로 준다). usedBytes = 모든 판의 서로 다른 파일 크기 합(진행 중 예약은 빠짐 — DB 상한 검사는 예약 포함),
  * limitBytes = app.design_asset_quota_bytes(). 서버가 아직 주지 않으면 null → 화면에 아무것도 안 보임.
  */
 export type DesignStorage = { usedBytes: number; limitBytes: number };
