@@ -313,11 +313,10 @@ describe("SEC-AUDIT-FIX-02 R-A: 감사 기록 최소 권한, 로그인 역할 TR
 describe("SEC-AUDIT-FIX-02 R-B: 결과물 유형 = 작업 유형", () => {
   it("공격: 전략 작업에 logo_brief 결과물 직접 INSERT → 23514 TYPE_MISMATCH, 행 없음, 작업 상태 그대로", async () => {
     const taskId = await strategyTask(a);
-    const c = await codeOf(
-      asA((tx) =>
-        tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')", [a.workspaceId, a.projectA, taskId]),
-      ),
-    );
+    const sql = "insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')";
+    // 로그인 역할은 결과물 직접 INSERT 권한이 없다(PERM-CLEANUP-01) → 42501. 유형 검사 트리거는 관리자 권한으로도 막는다 → 23514
+    expect((await codeOf(asA((tx) => tx.query(sql, [a.workspaceId, a.projectA, taskId])))).code).toBe("42501");
+    const c = await codeOf(db.query(sql, [a.workspaceId, a.projectA, taskId]));
     expect(c.code).toBe("23514");
     expect(c.message).toMatch(/TYPE_MISMATCH/);
     expect(await count("select 1 from artifacts where task_id = $1", [taskId])).toBe(0);
@@ -326,15 +325,15 @@ describe("SEC-AUDIT-FIX-02 R-B: 결과물 유형 = 작업 유형", () => {
 
   it("로고 작업에 quote 결과물 직접 INSERT 도 23514", async () => {
     const taskId = await asA((tx) => createTask(tx, a, a.projectA));
-    const c = await codeOf(
-      asA((tx) => tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'quote')", [a.workspaceId, a.projectA, taskId])),
-    );
+    const sql = "insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'quote')";
+    expect((await codeOf(asA((tx) => tx.query(sql, [a.workspaceId, a.projectA, taskId])))).code).toBe("42501");
+    const c = await codeOf(db.query(sql, [a.workspaceId, a.projectA, taskId]));
     expect(c.code).toBe("23514");
   });
 
-  it("유형이 같으면 지금처럼 직접 INSERT 된다(P1 흐름 유지)", async () => {
+  it("유형이 같으면 결과물이 만들어진다(P1 흐름은 정의자 RPC, 제약은 관리자 권한으로 확인)", async () => {
     const taskId = await asA((tx) => createTask(tx, a, a.projectA));
-    await asA((tx) => tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')", [a.workspaceId, a.projectA, taskId]));
+    await db.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'logo_brief')", [a.workspaceId, a.projectA, taskId]);
     expect(await count("select 1 from artifacts where task_id = $1", [taskId])).toBe(1);
   });
 

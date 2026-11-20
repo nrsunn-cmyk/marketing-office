@@ -244,7 +244,8 @@ describe.skipIf(!present)(`P3-a 제작 브리프 공격 시험(${P3A.table})`, (
     });
     it("전략이 아닌 결과물(logo_brief) → 거절", async () => {
       const p = await newProject(a);
-      const art = await asU(a, async (tx) => {
+      // 준비 데이터는 관리자 연결로 넣는다: 권한 정리(PERM-CLEANUP-01, 묶음 P)로 로그인 사용자의 artifacts 직접 INSERT 가 막혔다(RELEASE-PREP-P-01)
+      const art = await (async (tx: Db) => {
         const t = (
           await one<{ id: string }>(
             tx,
@@ -259,7 +260,7 @@ describe.skipIf(!present)(`P3-a 제작 브리프 공격 시험(${P3A.table})`, (
             [a.workspaceId, p, t],
           )
         ).id;
-      });
+      })(db);
       await expectDbError(
         asU(a, (tx) => create(tx, p, art)),
         /NOT_FOUND|VALIDATION|NOT_APPROVED/,

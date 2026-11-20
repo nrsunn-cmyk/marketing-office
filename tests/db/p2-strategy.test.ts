@@ -7,7 +7,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
 import { buildStrategyDraft, type StrategyDraft } from "@/domain/strategy";
-import { asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture, type Tx } from "./harness";
+import { asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture, type Tx, DENIED } from "./harness";
 
 let db: Db;
 let a: Fixture;
@@ -160,7 +160,7 @@ describe("프로필 승인 규칙", () => {
         "insert into company_profile_approvals (workspace_id, client_id, company_profile_version_id, actor_id, decision) values ($1, $2, $3, $4, 'approved')",
         [a.workspaceId, a.clientA, a.profileA1, a.userId],
       )),
-      /row-level security/,
+      DENIED,
     );
   });
 
@@ -235,7 +235,7 @@ describe("업무실·프로젝트 경계 (P0)", () => {
     await expectDbError(asA((tx) => tx.query("select add_research_source($1, 'javascript:alert(1)', '제목', now())", [a.projectA])), /research_sources_url_check|check constraint/);
     await expectDbError(
       asA((tx) => tx.query("insert into research_sources (workspace_id, project_id, url, title, retrieved_at, created_by) values ($1, $2, 'https://example.com', 't', now(), $3)", [a.workspaceId, a.projectA, a.userId])),
-      /row-level security/,
+      DENIED,
     );
   });
 
@@ -253,16 +253,16 @@ describe("직접 쓰기 차단 (T16) — 전략 유형만, P1은 그대로", () 
     const taskId = await asA((tx) => newStrategyTask(tx));
     await expectDbError(
       asA((tx) => tx.query("insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, 'strategy')", [a.workspaceId, a.projectA, taskId])),
-      /DIRECT_WRITE_FORBIDDEN/,
+      /permission denied for table|DIRECT_WRITE_FORBIDDEN/,
     );
     await expectDbError(
       asA((tx) => tx.query("insert into task_input_snapshots (workspace_id, task_id, profile_snapshot, input_hash) values ($1, $2, '{}', 'h')", [a.workspaceId, taskId])),
-      /DIRECT_WRITE_FORBIDDEN/,
+      /permission denied for table|DIRECT_WRITE_FORBIDDEN/,
     );
     const g = await asA((tx) => generate(tx, taskId, a.profileA1, draft(strategyInput())));
     await expectDbError(
       asA((tx) => tx.query("insert into artifact_versions (workspace_id, artifact_id, version, content, generator) values ($1, $2, 99, '{}', 'manual')", [a.workspaceId, g.artifact_id])),
-      /DIRECT_WRITE_FORBIDDEN/,
+      /permission denied for table|DIRECT_WRITE_FORBIDDEN/,
     );
   });
 
@@ -281,7 +281,7 @@ describe("직접 쓰기 차단 (T16) — 전략 유형만, P1은 그대로", () 
     const v = await one<{ id: string }>(db, "select from_version_id as id from artifact_version_refs limit 1");
     await expectDbError(
       asA((tx) => tx.query("insert into artifact_version_refs (workspace_id, project_id, from_version_id, ref_kind, company_profile_version_id) values ($1, $2, $3, 'company_profile_version', $4)", [a.workspaceId, a.projectA, v.id, a.profileA1])),
-      /row-level security/,
+      DENIED,
     );
     await expectDbError(db.query("update artifact_version_refs set ref_kind = ref_kind"), /IMMUTABLE_ROW/);
     await expectDbError(db.query("delete from artifact_version_refs"), /IMMUTABLE_ROW/);
