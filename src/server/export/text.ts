@@ -17,9 +17,13 @@ export function xmlText(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/** 마크다운에서 링크·이미지·HTML·강조·표·제목으로 해석될 수 있는 글자 앞에 \ 를 붙인다(그대로 보이게). 제어 문자도 뺀다 */
+/**
+ * 마크다운에서 링크·이미지·HTML·강조·표·제목으로 해석될 수 있는 글자 앞에 \ 를 붙인다(그대로 보이게). 제어 문자도 뺀다.
+ * 부르는 곳은 모두 한 줄 자리(머리글·표 칸·목록 항목)라 줄바꿈 글자(CR·LF)는 공백으로 바꾼다 — .md 는 LF 만, 새 머리글·목록이 생기지 않게
+ * (P3DE-BACKEND-FIX-01, Tester QA-P3E-PREP-01 D3)
+ */
 export function mdText(s: string): string {
-  return s.replace(XML_INVALID, "").replace(/[\\`*_{}[\]<>()#+\-.!|~=]/g, (c) => `\\${c}`);
+  return s.replace(/\r\n?|\n/g, " ").replace(XML_INVALID, "").replace(/[\\`*_{}[\]<>()#+\-.!|~=]/g, (c) => `\\${c}`);
 }
 
 /**
@@ -39,10 +43,18 @@ export function safeDownloadName(title: string, fallback: string, max = 60): str
   return /^[_\s.]*$/.test(cut) ? fallback : cut;
 }
 
+/**
+ * RFC 5987 ext-value 인코딩: attr-char(영숫자 ! # $ & + - . ^ _ ` | ~) 밖은 모두 %XX.
+ * encodeURIComponent 는 * ' ( ) 를 그대로 두므로 따로 바꾼다(P3DE-BACKEND-FIX-01, Tester QA-P3E-PREP-01 D2)
+ */
+export function rfc5987(value: string): string {
+  return encodeURIComponent(value).replace(/[*'()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 /** Content-Disposition(RFC 5987). ASCII 대체 이름에는 사용자 글을 넣지 않는다 */
 export function attachmentHeader(fileName: string, asciiFallback: string): string {
   if (!/^[A-Za-z0-9._-]+$/.test(asciiFallback)) throw new Error("ASCII 대체 이름이 올바르지 않습니다");
-  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${rfc5987(fileName)}`;
 }
 
 /** 한국 시각 'YYYY-MM-DD HH:mm' */

@@ -19,8 +19,11 @@ export const PPT_DECK_LIMITS = {
 } as const;
 const L = PPT_DECK_LIMITS;
 
-/** 저장 때 거절하는 제어 문자(줄바꿈 \n·\r·탭은 허용). DB app.ppt_text_ok 와 같은 범위 */
-export const PPT_CONTROL_RE = /[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+/**
+ * 저장 때 거절하는 제어 문자(줄바꿈 \n·탭은 허용). DB app.ppt_text_ok 와 같은 범위.
+ * CR(\r)도 거절 범위다 — 입력의 \r\n·\r 은 clean 이 먼저 \n 으로 바꾸므로 화면 입력은 막히지 않는다(P3DE-BACKEND-FIX-01 D3)
+ */
+export const PPT_CONTROL_RE = /[\u0001-\u0008\u000B-\u000D\u000E-\u001F\u007F]/;
 
 export const PPT_TEMPLATE_KEYS = ["royal_grid", "minimal_report", "brand_deck"] as const;
 export type PptTemplateKey = (typeof PPT_TEMPLATE_KEYS)[number];
