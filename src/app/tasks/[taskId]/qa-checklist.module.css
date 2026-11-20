@@ -351,3 +351,21 @@
 .qaFixedTag {
   color: var(--success-text);
 }
+
+/* P3FG-UI-FIX-01: 새 검수 항목 제목 칸 */
+.qaReq {
+  font-weight: normal;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.qaSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

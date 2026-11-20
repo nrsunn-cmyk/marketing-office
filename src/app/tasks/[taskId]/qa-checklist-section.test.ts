@@ -87,6 +87,7 @@ const STATES: Record<string, { data: QaChecklistData | null; readOnly?: boolean 
   권한없음: { data: data(web(), { canWrite: false }) },
   회차한도: { data: data(web({ rounds: Array.from({ length: 30 }, (_, i) => round(i + 1, ITEMS, { stale: i === 29 })) })) },
   불러오기실패: { data: null },
+  항목한도: { data: data(web({ rounds: [round(1, Array.from({ length: 30 }, (_, i) => item(i + 1, `항목 ${i + 1}`, "pending")))] })) },
   메모넘침: { data: data(web({ rounds: [round(1, [item(1, "문구 점검", "needs_fix", { memo: "가".repeat(501) }), item(2, "넘침 점검", "needs_fix")])] })) },
 };
 const render = (k: string) => renderToString(createElement(QaChecklistSection, { data: STATES[k].data, readOnly: Boolean(STATES[k].readOnly), taskId: "t-1" }));
@@ -140,6 +141,13 @@ describe("검수 체크리스트 상태별 화면", () => {
     expect(t.indexOf("2차 작성 중")).toBeLessThan(t.indexOf("1차 보완 요청됨"));
     expect(t).toContain("1차 보완 요청됨 · 2026-11-19 21:30 KST · 홈페이지 구조·문구 v2 (보완 1건) 수정됨");
     expect(t).toContain("현재 회차");
+  });
+
+  it("검수 항목 추가(AGY 2번): 작성 중이면 '+ 검수 항목 추가' 단추, 30개면 한도 안내, 읽기 전용·보관이면 없음", () => {
+    expect(render("작성중")).toMatch(/<button type="button" class="secondaryButton touch">\+ 검수 항목 추가<\/button>/);
+    expect(text(render("보관"))).not.toContain("+ 검수 항목 추가");
+    expect(text(render("항목한도"))).toContain("검수 항목은 30개까지 둘 수 있습니다. 불필요한 항목을 정리한 뒤 추가해 주세요.");
+    expect(text(render("항목한도"))).not.toContain("+ 검수 항목 추가");
   });
 
   it("저장 payload: 판정·메모만, 항목 id 그대로", () => {
@@ -229,9 +237,9 @@ describe("검수 체크리스트 상태별 화면", () => {
     expect(text(h)).toContain("다시 불러오기");
   });
 
-  it("메모 넘침·보완 메모 없음: 폼 위 안내, 넘침은 바로, 값은 자르지 않음", () => {
+  it("메모 넘침·보완 메모 없음: 문구 하나(memoRequired)를 칸 아래에 바로, 넘침도 바로, 값은 자르지 않음", () => {
     const h = render("메모넘침");
-    expect(text(h)).toContain("보완 필요로 판정한 항목은 검수 메모를 꼭 적어 주세요.");
+    expect(count(h, /보완 필요로 판정한 항목은 검수 메모를 꼭 적어 주세요\./g)).toBe(1);
     expect(text(h)).toContain("501 / 500자");
     expect(text(h)).toContain("검수 메모는 500자까지 쓸 수 있습니다.");
     expect(h).toContain('class="qaCount qaCountOver"');

@@ -101,9 +101,8 @@ export const QA_COPY = {
   archivedNote: "보관한 검수 기록입니다. 조회만 할 수 있고 판정·보완 요청·승인은 할 수 없습니다.",
   noPermission: "검수 판정을 내리거나 승인할 권한이 없습니다.",
   loadError: "검수 체크리스트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
-  /** 같은 키가 표에 두 번 있다(31자 줄·26자 줄). 폼 위 안내는 앞 줄, 칸 아래 입력 점검은 뒤 줄 — AGY 확인 요청 */
-  memoRequiredNote: "보완 필요로 판정한 항목은 검수 메모를 꼭 적어 주세요.",
-  memoRequired: "보완 필요 판정에는 검수 메모를 입력해 주세요.",
+  // 하나로 통합(AGY DESIGN-REVIEW-P3FG-UI-01 1번, 31자)
+  memoRequired: "보완 필요로 판정한 항목은 검수 메모를 꼭 적어 주세요.",
   save: "검수 내용 저장",
   requestFix: "보완 요청 보내기",
   approve: "이 결과물 승인",
@@ -116,6 +115,10 @@ export const QA_COPY = {
   itemTitleRequired: "검수 항목 제목을 입력해 주세요.",
   itemTitleMax: "검수 항목 제목은 120자까지 쓸 수 있습니다.",
   memoMax: "검수 메모는 500자까지 쓸 수 있습니다.",
+  // 검수 항목 추가(AGY DESIGN-REVIEW-P3FG-UI-01 2번)
+  addItem: "+ 검수 항목 추가",
+  itemTitlePlaceholder: "추가로 확인할 검수 항목 제목을 입력해 주세요.",
+  itemLimitReached: "검수 항목은 30개까지 둘 수 있습니다. 불필요한 항목을 정리한 뒤 추가해 주세요.",
 } as const;
 
 /** 시안 qa-checklist.html 의 라벨(AGY 문구 — 그대로) */
@@ -199,11 +202,16 @@ export const countChars = (s: string) => charLength(briefTrim(s));
 export function counterText(n: number, max: number): string {
   return `${n.toLocaleString("ko-KR")} / ${max.toLocaleString("ko-KR")}자`;
 }
+/** 편집 값. 새로 추가한 항목은 id = null 이고 제목을 받는다(인계표 2절 나: is_required 기본 true) */
 export interface QaItemDraft {
-  id: string;
+  id: string | null;
+  itemTitle: string;
   verdict: QaVerdict;
   memo: string;
 }
+export const titleKey = (i: number) => `item:${i}:title`;
+export const canAddQaItem = (n: number) => n < QA_LIMITS.itemsMax;
+export const newQaItem = (): QaItemDraft => ({ id: null, itemTitle: "", verdict: "pending", memo: "" });
 export type QaIssues = Record<string, string>;
 export const memoKey = (i: number) => `item:${i}:memo`;
 export function checkQaItems(items: readonly QaItemDraft[]): QaIssues {
@@ -212,10 +220,14 @@ export function checkQaItems(items: readonly QaItemDraft[]): QaIssues {
     const n = countChars(it.memo);
     if (n > QA_LIMITS.memo) out[memoKey(i)] = QA_COPY.memoMax;
     else if (it.verdict === "needs_fix" && n === 0) out[memoKey(i)] = QA_COPY.memoRequired;
+    if (it.id === null) {
+      const t = checkItemTitle(it.itemTitle);
+      if (t) out[titleKey(i)] = t;
+    }
   });
   return out;
 }
-/** 항목 제목 점검(항목 추가가 서버와 함께 올 때 쓴다). 확정 문구와 같은지 시험으로 확인 */
+/** 새 항목 제목 점검(확정 문구 itemTitleRequired·itemTitleMax 와 같은지 시험으로 확인) */
 export function checkItemTitle(title: string): string | null {
   const n = countChars(title);
   if (n === 0) return requiredMessage("검수 항목 제목");
@@ -223,9 +235,13 @@ export function checkItemTitle(title: string): string | null {
   return null;
 }
 
-/** 서버로 보낼 값(자리용 이름 — 서버 계약이 오면 맞춘다). 판정·메모만, 항목 id 는 그대로 */
+/** 서버로 보낼 값(자리용 이름 — 서버 계약이 오면 맞춘다). 기존 항목은 id·판정·메모, 새 항목은 id null + 제목·필수. 값은 자르지 않는다 */
 export function toQaPayload(items: readonly QaItemDraft[]) {
-  return { items: items.map((it) => ({ id: it.id, verdict: it.verdict, memo: it.memo })) };
+  return {
+    items: items.map((it) =>
+      it.id === null ? { id: null, itemTitle: it.itemTitle, isRequired: true, verdict: it.verdict, memo: it.memo } : { id: it.id, verdict: it.verdict, memo: it.memo },
+    ),
+  };
 }
 
 /** "2026-11-20 03:10 KST" */
