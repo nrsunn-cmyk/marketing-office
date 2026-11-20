@@ -318,6 +318,21 @@ describe("디자인 자산 연결·이전 기준(Q10·Q11·DS4·X4)", () => {
     await asA((tx) => tx.query("select rebase_video_plan($1, $2)", [id, r4]));
     expect((await ver(id)).source_brief_revision).toBe(br.revision + 2);
   });
+
+  it("P3DE-BACKEND-FIX-01 D1: 자산을 다른 장면으로 옮기거나 빼고 새 장면에 넣어도 판 번호 유지, 맞추기로만 최신", async () => {
+    const br = await brief(a);
+    const as1 = await designAsset(a, br.id, "로고");
+    const id = await asA((tx) => createPlan(tx, br.id, [scene({ title: "하나", asset_ids: [as1] }), scene({ title: "둘" })]));
+    await designReplace(a, as1); // 자산 v2
+    const [s1, s2] = asInput((await ver(id)).scenes);
+    let rev = await asA((tx) => save(tx, id, 1, [{ ...s1, asset_ids: [] }, { ...s2, asset_ids: [as1] }]));
+    expect((await ver(id)).scenes.map((s) => s.assets)).toEqual([[], [{ asset_id: as1, version_no: 1 }]]);
+    const v2 = asInput((await ver(id)).scenes);
+    rev = await asA((tx) => save(tx, id, rev, [v2[0], { ...v2[1], asset_ids: [] }, scene({ title: "셋", asset_ids: [as1] })]));
+    expect((await ver(id)).scenes[2].assets).toEqual([{ asset_id: as1, version_no: 1 }]);
+    await asA((tx) => tx.query("select rebase_video_plan($1, $2)", [id, rev]));
+    expect((await ver(id)).scenes[2].assets).toEqual([{ asset_id: as1, version_no: 2 }]);
+  });
 });
 
 describe("영상 파일(D4·DS5·DS6·DS8·Master 결정 ④)", () => {

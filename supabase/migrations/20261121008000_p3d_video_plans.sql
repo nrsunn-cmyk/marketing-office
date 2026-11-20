@@ -452,6 +452,14 @@ begin
       if ps is not null then
         select (x ->> 'version_no')::integer into vno from jsonb_array_elements(ps -> 'assets') x where x ->> 'asset_id' = aid::text;
       end if;
+      -- 다른 장면에서 옮겨 온 자산(또는 빼고 새 장면에 넣은 자산)도 직전 판 전체에서 같은 자산의 판 번호를 유지한다(여럿이면 가장 낮은 판).
+      --   저장만으로 이전 기준이 풀리지 않게 — 푸는 길은 맞추기뿐(P3DE-BACKEND-FIX-01, Tester QA-P3E-PREP-01 D1).
+      --   보관된 자산은 여기서 이어받지 않는다: 같은 장면에 그대로 있으면 위에서 유지되고, 다른 장면로 옮기거나 더 넣는 것은 새 연결이라 아래에서 거절(기존 규칙)
+      if vno is null and p_prev is not null
+         and exists (select 1 from public.design_assets x where x.id = aid and x.workspace_id = p_ws and x.project_id = p_project and x.archived_at is null) then
+        select min((x ->> 'version_no')::integer) into vno from jsonb_array_elements(p_prev) e, jsonb_array_elements(e -> 'assets') x
+         where x ->> 'asset_id' = aid::text;
+      end if;
       if vno is null then
         select x.current_version_no into vno from public.design_assets x
          where x.id = aid and x.workspace_id = p_ws and x.project_id = p_project and x.archived_at is null;

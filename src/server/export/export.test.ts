@@ -172,9 +172,17 @@ describe("파일 이름·머리글(ES6)", () => {
     expect(attachmentHeader("봄 제안서-v3.pptx", "ppt-deck-v3.pptx")).toBe(`attachment; filename="ppt-deck-v3.pptx"; filename*=UTF-8''${encodeURIComponent("봄 제안서-v3.pptx")}`);
     expect(() => attachmentHeader("x", "봄.pptx")).toThrow();
     expect(() => attachmentHeader("x", 'a"; x=1')).toThrow();
+    // P3DE-BACKEND-FIX-01 D2: filename* 는 RFC 5987 attr-char·%XX 만(' ( ) * 도 인코딩), 원래 이름으로 되돌아온다
+    const v = attachmentHeader("고객's 발표 (최종)*-v1.pptx", "ppt-deck-v1.pptx").split("filename*=UTF-8''")[1];
+    expect(v).toMatch(/^(?:%[0-9A-F]{2}|[A-Za-z0-9!#$&+.^_`|~-])+$/);
+    expect(v).toContain("%27");
+    expect(decodeURIComponent(v)).toBe("고객's 발표 (최종)*-v1.pptx");
   });
   it("글 처리 도우미", () => {
     expect(mdText("a*b")).toBe("a\\*b");
+    // P3DE-BACKEND-FIX-01 D3: 한 줄 자리에 줄바꿈 글자(CR·LF)가 들어와도 공백으로 — 새 머리글이 생기지 않고 CR 이 나가지 않는다
+    expect(mdText("제목\r# 가짜")).toBe("제목 \\# 가짜");
+    expect(mdText("a\r\nb\nc")).toBe("a b c");
     expect(kstMinute(new Date("2026-11-19T15:30:00Z"))).toBe("2026-11-20 00:30");
   });
 });

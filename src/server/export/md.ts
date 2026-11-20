@@ -20,9 +20,9 @@ export function buildDeckMarkdown(input: PptxInput): string {
   ];
   input.slides.forEach((s, i) => {
     out.push("", `## ${i + 1}. ${mdText(s.title)}`);
-    const bullets = (s.bullets ?? "").split("\n").filter((x) => x.trim() !== "");
+    const bullets = (s.bullets ?? "").split(/\r\n?|\n/).filter((x) => x.trim() !== "");
     if (bullets.length) out.push("", ...bullets.map((x) => `- ${mdText(x.trim())}`));
-    const notes = (s.notes ?? "").split("\n").filter((x) => x.trim() !== "");
+    const notes = (s.notes ?? "").split(/\r\n?|\n/).filter((x) => x.trim() !== "");
     if (notes.length) out.push("", `> 발표자 메모: ${mdText(notes[0].trim())}`, ...notes.slice(1).map((x) => `> ${mdText(x.trim())}`));
     if (s.assets.length)
       out.push("", `사용 디자인 자산: ${s.assets.map((a) => `${mdText(input.assetNames.get(a.asset_id) ?? "알 수 없는 자산")} (v${a.version_no})`).join(", ")}`);
