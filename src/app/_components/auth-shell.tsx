@@ -28,7 +28,7 @@ export function AuthShell({
         <span className={s.iconBox} aria-hidden="true">
           {icon === "rocket" ? <RocketIcon /> : <LockIcon />}
         </span>
-        <span className={s.badge}>AI MARKETING OFFICE</span>
+        {/* SITE-FIX-01(AGY SITE-FIX-HANDOFF 3절): 영문 부제 'AI MARKETING OFFICE'는 바로 아래 한글 제목과 겹쳐 뺐다 */}
         <h1 className={s.title}>{title}</h1>
         {subtitle && <p className={s.subtitle}>{subtitle}</p>}
         <div className={s.card}>
