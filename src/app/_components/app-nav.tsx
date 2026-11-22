@@ -14,7 +14,7 @@ export function AppNav() {
   return (
     <header className={styles.appHeader}>
       <div className={styles.appHeaderInner}>
-        <Link href="/" className={styles.brand}>
+        <Link href="/workspace" className={styles.brand}>
           {/* AGY 심볼(Plan/AGY-Visual-Assets-20261114). 글자 이름이 옆에 있어 그림은 꾸밈으로 둔다 */}
           <Image src="/brand/logo-symbol.svg" alt="" width={28} height={28} unoptimized priority className={styles.brandMark} />
           {/* 좁은 화면(420px 이하)에서는 글자를 눈으로만 숨기고 화면 읽기 이름은 그대로 둔다(UI-NAV-02) */}

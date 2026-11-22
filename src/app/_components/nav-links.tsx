@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import styles from "../ui.module.css";
 
 const LINKS = [
-  { href: "/", label: "현황", icon: "📊", match: (p: string) => p === "/" },
+  { href: "/workspace", label: "현황", icon: "📊", match: (p: string) => p === "/workspace" },
   { href: "/clients", label: "고객", icon: "🏢", match: (p: string) => p.startsWith("/clients") },
   { href: "/projects", label: "프로젝트", icon: "📁", match: (p: string) => p.startsWith("/projects") || p.startsWith("/tasks") },
   { href: "/assets", label: "자료실", icon: "🗂️", match: (p: string) => p === "/assets" },

@@ -52,7 +52,7 @@ test("흐름 04: 승인본이 없으면 전달 기록 영역이 없다", async (
 
 /** 현황(/)의 "검토 대기 작업" 숫자. 같은 실행의 다른 시험이 만든 작업도 들어 있으므로 차이(증감)로만 본다. */
 async function reviewWaiting(page: Page): Promise<number> {
-  await page.goto("/");
+  await page.goto("/workspace");
   const tile = page
     .getByRole("list", { name: "현황 숫자" })
     .getByRole("listitem")

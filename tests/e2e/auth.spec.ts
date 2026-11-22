@@ -79,15 +79,19 @@ test("본인: 비밀번호 로그인 → 처음 설정 → 첫 화면", async ({
   await page.getByLabel("대표자").fill("대표");
   await page.getByRole("button", { name: "업무실 만들기" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.getByRole("heading", { name: "나다움 업무실" })).toBeVisible();
   await expect(page.getByText(OWNER, { exact: true })).toBeVisible();
 
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("고객 자료는 단 한 번 입력");
+  await expect(page.getByRole("list", { name: "현황 숫자" })).toHaveCount(0);
+
   await page.goto("/setup");
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/workspace$/);
   for (const path of ["/login", "/signup"]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/workspace$/);
   }
 });
 
@@ -102,7 +106,7 @@ test("비로그인 '/'는 공개 랜딩(200)이고 로그인·가입으로 갈 �
   await expect(page.getByText(/^기준 시각:/)).toHaveCount(0);
   await expect(page.getByRole("banner").getByRole("link", { name: "로그인" })).toHaveAttribute("href", "/login");
   await expect(page.getByRole("banner").getByRole("link", { name: "무료 시작하기" })).toHaveAttribute("href", "/signup");
-  for (const path of ["/projects", "/clients", "/settings"]) {
+  for (const path of ["/workspace", "/projects", "/clients", "/settings"]) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/login$/);
   }

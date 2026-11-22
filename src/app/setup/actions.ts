@@ -34,5 +34,5 @@ export async function setupWorkspace(_prev: SetupState, formData: FormData): Pro
     console.error("[setup] 업무실 생성 실패:", error.code, error.message);
     return { message: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
   }
-  redirect("/");
+  redirect("/workspace");
 }

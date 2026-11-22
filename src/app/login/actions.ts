@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { fieldErrors, type FormState } from "@/app/_components/form-state";
 import { loginEmailSchema, loginInputSchema, passwordPairSchema, signupInputSchema } from "@/contracts";
 import { allowedEmailsFromEnv, isAllowedEmail } from "@/server/auth/allowlist";
-import { requireUser } from "@/server/auth/session";
+import { getSignedInHome, requireUser } from "@/server/auth/session";
 import { siteUrl } from "@/server/env";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -37,7 +37,7 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
     console.error("[login] 로그인 실패:", error.status, error.code);
     return { message: error.status === 429 ? `요청이 너무 많습니다. ${TRY_LATER}` : `로그인하지 못했습니다. ${TRY_LATER}` };
   }
-  redirect("/");
+  redirect(await getSignedInHome());
 }
 
 export async function signupAction(_prev: FormState, fd: FormData): Promise<FormState> {

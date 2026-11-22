@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { isAdmin } from "@/features/admin/server";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { allowedEmailsFromEnv, isAllowedEmail } from "./allowlist";
 
@@ -33,6 +34,11 @@ export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   return user;
+}
+
+/** 로그인 뒤 역할에 맞는 첫 화면을 고른다. 관리자 화면의 권한 확인은 화면에서도 수행한다. */
+export async function getSignedInHome(): Promise<"/admin" | "/workspace"> {
+  return (await isAdmin()) ? "/admin" : "/workspace";
 }
 
 export interface Workspace {

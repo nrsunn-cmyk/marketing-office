@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PASSWORD_HELP } from "@/contracts";
-import { getSessionUser } from "@/server/auth/session";
+import { getSessionUser, getSignedInHome } from "@/server/auth/session";
 import { AuthForm, EmailField, NewPasswordFields } from "../_components/auth-form";
 import { AuthShell, authStyles as s } from "../_components/auth-shell";
 import { signupAction } from "../login/actions";
@@ -24,7 +24,7 @@ export default function SignupPage({ searchParams }: PageProps<"/signup">) {
 }
 
 async function SignupBody({ searchParams }: { searchParams: PageProps<"/signup">["searchParams"] }) {
-  if (await getSessionUser()) redirect("/");
+  if (await getSessionUser()) redirect(await getSignedInHome());
   const params = await searchParams;
   if (params.sent === "1") {
     return (

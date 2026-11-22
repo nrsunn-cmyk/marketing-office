@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 
 // 로그인 없이 열 수 있는 화면. /reset-password 는 재설정 메일 링크로 로그인된 뒤에만 연다.
-// 루트 경로("/")는 비로그인 방문자에게 공식 웹 메인 랜딩 페이지를 제공하므로 공개 허용한다.
+// 루트 경로("/")는 공개 메인이며 업무실 현황("/workspace")과 관리자 화면("/admin")은 로그인이 필요하다.
 const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/"];
 
 function isPublic(pathname: string): boolean {
