@@ -1,0 +1,220 @@
+/* P2G-UI-01 채널 초안(티스토리) 영역. 시안 Design/P2-next-concepts/channel-draft.html(R1).
+ * 색·간격은 기존 토큰만 쓴다(src/styles/tokens.css). 이름 앞에 cd 를 붙여 다른 영역과 겹치지 않게 한다.
+ * 44px 규칙은 funnel.module.css 의 .funnel 범위를 같이 쓴다. */
+
+.cdSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.cdHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.cdTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.cdBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+}
+.cdBlocked {
+  margin: 0;
+}
+
+.cdList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cdCard {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow-wrap: anywhere;
+}
+/* 회색 배지 대비 보강(리드마그넷 카드와 같은 방식): 밝은 화면에서만 카드 안 --text-muted 를 #475569(6.91:1)로 */
+.cdCard {
+  --text-muted: #475569;
+}
+:global([data-theme="dark"]) .cdCard {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .cdCard {
+    --text-muted: inherit;
+  }
+}
+.cdCardStale {
+  border: 2px solid var(--warning-border);
+}
+.cdCardArchived {
+  border-style: dashed;
+  background: var(--bg-subtle);
+}
+.cdArticle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.cdCardTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  word-break: keep-all;
+}
+
+/* 상태 배지: 글자로 상태가 보이고(색만으로 구분하지 않음), 색은 보조 */
+.cdStatus_drafting {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.cdStatus_reviewed {
+  background: var(--primary-50);
+  border-color: var(--primary-100);
+  color: var(--primary-700);
+}
+.cdStatus_published {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.cdStatus_archived {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+.cdBodyText {
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.cdBodyInput {
+  font-family: var(--font-family-mono);
+  min-height: 14rem;
+}
+
+.cdPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.cdPanelTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+.cdButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.cdStatusEmpty {
+  margin: 0;
+  min-height: 0;
+}
+
+.cdInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+.cdInfoRow {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+.cdInfoLabel {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+}
+.cdInfoValue {
+  margin: 0;
+  min-width: 0;
+  white-space: pre-wrap;
+}
+.cdInfoAction {
+  margin: 0;
+}
+.cdPlaceholders {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.4em;
+}
+.cdSourceBox {
+  width: 100%;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}
+
+.cdPubList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cdPub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--success-border);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+}
+.cdPub p {
+  margin: 0;
+}
+.cdPubVoided {
+  border-left-color: var(--border-strong);
+}
+.cdPubHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+.cdPubUrl {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cdWarnText {
+  color: var(--warning-text);
+}
+
+/* 좁은 화면: 글 정보 이름·값·단추를 위아래로 */
+@media (max-width: 480px) {
+  .cdInfoRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .cdInfoAction {
+    margin-top: var(--space-1);
+  }
+}
