@@ -1,0 +1,160 @@
+/* P4A-UI-01 실행·성과 화면. 시안 Design/p4-execution/*.html. 색·간격은 기존 토큰만, 진행률 막대 없음 */
+
+.exJump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+.exJump a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-semibold);
+}
+.exJump a:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.exSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(P3 화면과 같음) */
+}
+:global([data-theme="dark"]) .exSection {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .exSection {
+    --text-muted: inherit;
+  }
+}
+.exSection p {
+  margin: 0;
+}
+
+.exTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+.exTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+}
+.exTag_ok {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.exTag_info {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
+}
+.exTag_warn {
+  background: var(--warning-bg, var(--info-bg));
+  border-color: var(--warning-border, var(--info-border));
+  color: var(--warning-text, var(--text-main));
+}
+
+.exList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  min-width: 0;
+}
+.exCardTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+.exWarn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning-border, var(--border-strong));
+  border-radius: var(--radius-md);
+  background: var(--warning-bg, var(--bg-subtle));
+}
+.exButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.exInline {
+  display: contents;
+}
+.exGrid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-3);
+}
+.exSteps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+}
+.exCount {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+.exCount div {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.exCount dt {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.exCount dd {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-semibold);
+}
+.exLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exLinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}

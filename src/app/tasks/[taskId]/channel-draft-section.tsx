@@ -19,6 +19,7 @@ import f from "./funnel.module.css";
 import cd from "./channel-draft.module.css";
 import { ChannelDraftEditForm } from "./channel-draft-edit-form";
 import { ChannelDraftExportPanel } from "./channel-draft-export";
+import { ExecutionEnqueue } from "./execution-enqueue";
 import { activePublicationCount, draftToForm, formatKst, kstLocalNow, publicationRows } from "./channel-draft-form";
 
 /**
@@ -30,7 +31,7 @@ import { activePublicationCount, draftToForm, formatKst, kstLocalNow, publicatio
  * 읽기 전용: 프로젝트 보관·작업 취소(영역 전체), 초안 보관(그 초안만 — 복사·내보내기만 남음, 기록 취소도 안 됨 D4).
  * 브리프 보관·카드 보관은 새로 만들기만 막고 기존 초안 편집은 막지 않는다(서버와 같음).
  */
-export async function ChannelDraftSection({ board, detail, readOnly, taskId }: { board: FunnelBoard; detail: BriefDetail; readOnly: boolean; taskId: string }) {
+export async function ChannelDraftSection({ board, detail, readOnly, taskId, projectId }: { board: FunnelBoard; detail: BriefDetail; readOnly: boolean; taskId: string; projectId?: string }) {
   let data: ChannelDraftsForBrief | null;
   try {
     data = await getChannelDraftsFor(board, detail);
@@ -51,7 +52,7 @@ export async function ChannelDraftSection({ board, detail, readOnly, taskId }: {
     );
   }
   if (!data) return null;
-  return <ChannelDraftBody data={data} briefId={detail.brief.id} briefArchived={detail.brief.archived} readOnly={readOnly} approvedVersion={board.strategy.approvedVersion?.version ?? null} />;
+  return <ChannelDraftBody data={data} briefId={detail.brief.id} briefArchived={detail.brief.archived} readOnly={readOnly} approvedVersion={board.strategy.approvedVersion?.version ?? null} projectId={projectId} />;
 }
 
 /** 그리는 부분(동기). 시험·화면 점검은 이 함수를 쓴다 */
@@ -61,12 +62,15 @@ export function ChannelDraftBody({
   briefArchived,
   readOnly,
   approvedVersion,
+  projectId,
 }: {
   data: ChannelDraftsForBrief;
   briefId: string;
   briefArchived: boolean;
   readOnly: boolean;
   approvedVersion: number | null;
+  /** P4A-UI-01: 실행 대기열에 올리기용(없으면 단추 없음) */
+  projectId?: string;
 }) {
   const active = data.drafts.filter((d) => !d.archived);
   const archived = data.drafts.filter((d) => d.archived);
@@ -106,7 +110,7 @@ export function ChannelDraftBody({
           {active.length > 0 && (
             <ul className={cd.cdList} aria-label="티스토리 초안 목록">
               {active.map((d) => (
-                <DraftCard key={d.id} d={d} readOnly={readOnly} approvedVersion={approvedVersion} />
+                <DraftCard key={d.id} d={d} readOnly={readOnly} approvedVersion={approvedVersion} projectId={projectId} />
               ))}
             </ul>
           )}
@@ -115,7 +119,7 @@ export function ChannelDraftBody({
               <summary>보관한 초안 {archived.length}개</summary>
               <ul className={cd.cdList} aria-label="보관한 티스토리 초안 목록">
                 {archived.map((d) => (
-                  <DraftCard key={d.id} d={d} readOnly={readOnly} approvedVersion={approvedVersion} />
+                  <DraftCard key={d.id} d={d} readOnly={readOnly} approvedVersion={approvedVersion} projectId={projectId} />
                 ))}
               </ul>
             </details>
@@ -126,7 +130,7 @@ export function ChannelDraftBody({
   );
 }
 
-function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; readOnly: boolean; approvedVersion: number | null }) {
+function DraftCard({ d, readOnly, approvedVersion, projectId }: { d: ChannelDraftView; readOnly: boolean; approvedVersion: number | null; projectId?: string }) {
   const editable = !readOnly && !d.archived;
   const rows = publicationRows(d.publications);
   const activePubs = activePublicationCount(d.publications);
@@ -185,6 +189,8 @@ function DraftCard({ d, readOnly, approvedVersion }: { d: ChannelDraftView; read
         )}
 
         <ChannelDraftExportPanel exp={d.export} title={d.title} />
+        {/* P4A-UI-01: 복사·내보내기 아래 실행 대기열 올리기(AGY P4-ENTRY-HANDOFF 1절 ①) */}
+        {projectId && !readOnly && !d.archived && <ExecutionEnqueue projectId={projectId} draftId={d.id} reviewed={d.status === "reviewed"} />}
 
         <section className={cd.cdPanel} aria-labelledby={`${headingId}-pubs`}>
           <h4 id={`${headingId}-pubs`} className={cd.cdPanelTitle}>

@@ -278,7 +278,7 @@ export async function BriefPanel({
       )}
     </Shell>
     {/* P2G-UI-01: 브리프 바로 아래 티스토리 초안. 읽기 전용은 프로젝트 보관·작업 취소만 따른다(브리프·카드 보관은 새로 만들기만 막음, 서버와 같음) */}
-    <ChannelDraftSection board={board} detail={detail} readOnly={readOnly} taskId={taskId} />
+    <ChannelDraftSection board={board} detail={detail} readOnly={readOnly} taskId={taskId} projectId={projectId} />
     </>
   );
 }

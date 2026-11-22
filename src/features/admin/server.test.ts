@@ -16,7 +16,7 @@ vi.mock("@/server/supabase/server", () => ({
     },
   }),
 }));
-const { isAdmin, listAdminAccounts, getAdminUsage, listAdminAudit, getAdminP3Progress } = await import("./server");
+const { isAdmin, listAdminAccounts, getAdminUsage, listAdminAudit, getAdminP3Progress, getAdminP4Execution } = await import("./server");
 
 const account = (i: number) => ({
   user_id: `u${i}`, email: `u${i}@example.test`, signed_up_at: `2026-11-1${i}T00:00:00Z`, last_sign_in_at: null, email_confirmed: true,
@@ -110,5 +110,36 @@ describe("관리자 서버 함수", () => {
     expect(st.calls.at(-1)?.args).toEqual({ p_limit: 1 });
     st.result.admin_p3_progress = { data: null, error: { code: "42501", message: "FORBIDDEN: 관리자만 볼 수 있습니다" } };
     expect(await getAdminP3Progress()).toEqual({ ok: false, code: "NOT_FOUND", message: "페이지를 찾을 수 없습니다." });
+  });
+
+  it("P4 실행 현황(ADMIN-P4-01): 열 이름 변환, 업무실 이름·이메일 칸 없음, limit 1~500, 비관리자는 NOT_FOUND", async () => {
+    st.result.admin_p4_execution = {
+      data: [
+        {
+          workspace_id: "w1", project_id: "p1",
+          jobs_pending_approval: 1, jobs_blocked_mismatch: 2, jobs_queued: 0, jobs_running: 0, jobs_succeeded: 4, jobs_failed: 1, jobs_held: 0,
+          blocked_content_changed: 1, blocked_source_archived: 1, blocked_not_reviewed: 0, retry_exhausted: 1, tistory_published: 3, results_active: 6,
+          last_activity_at: "2026-11-20T01:50:00Z",
+        },
+      ],
+      error: null,
+    };
+    const r = await getAdminP4Execution(9999);
+    expect(st.calls.at(-1)).toEqual({ fn: "admin_p4_execution", args: { p_limit: 500 } });
+    expect(r).toEqual({
+      ok: true,
+      data: [
+        {
+          workspaceId: "w1", projectId: "p1",
+          jobs: { pendingApproval: 1, blockedMismatch: 2, queued: 0, running: 0, succeeded: 4, failed: 1, held: 0 },
+          blocked: { contentChanged: 1, sourceArchived: 1, notReviewed: 0 },
+          retryExhausted: 1, tistoryPublished: 3, resultsActive: 6, lastActivityAt: "2026-11-20T01:50:00Z",
+        },
+      ],
+    });
+    await getAdminP4Execution(0);
+    expect(st.calls.at(-1)?.args).toEqual({ p_limit: 1 });
+    st.result.admin_p4_execution = { data: null, error: { code: "42501", message: "FORBIDDEN: 관리자만 볼 수 있습니다" } };
+    expect(await getAdminP4Execution()).toEqual({ ok: false, code: "NOT_FOUND", message: "페이지를 찾을 수 없습니다." });
   });
 });

@@ -32,6 +32,7 @@ const TABS = [
   { href: "/admin/usage", label: "이용 현황" },
   { href: "/admin/audit", label: "감사 기록" },
   { href: "/admin/p3", label: "P3 진행 현황" },
+  { href: "/admin/p4", label: "P4 실행 현황" },
 ] as const;
 
 export function AdminHeader({ current, title, lead }: { current: (typeof TABS)[number]["href"]; title: string; lead: string }) {
