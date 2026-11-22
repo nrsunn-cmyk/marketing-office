@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { allowedEmailsFromEnv, isAllowedEmail } from "@/server/auth/allowlist";
 import { safeNextPath } from "@/server/auth/redirect";
+import { getSignedInHome } from "@/server/auth/session";
 import { siteUrl } from "@/server/env";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -40,5 +41,5 @@ export async function GET(request: NextRequest) {
     await supabase.auth.signOut();
     return to("/login?error=not_allowed");
   }
-  return to(next);
+  return to(next === "/" ? await getSignedInHome() : next);
 }

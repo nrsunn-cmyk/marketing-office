@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { getSessionUser } from "@/server/auth/session";
+import { getSessionUser, getSignedInHome } from "@/server/auth/session";
 import { AuthForm, EmailField, PasswordField } from "../_components/auth-form";
 import { AuthShell, authStyles as s } from "../_components/auth-shell";
 import { loginAction } from "./actions";
@@ -42,7 +42,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
 /** 요청마다 달라지는 부분: 이미 로그인했는지, 메일 링크에서 돌아온 안내 */
 async function LoginStatus({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
-  if (await getSessionUser()) redirect("/");
+  if (await getSessionUser()) redirect(await getSignedInHome());
   const params = await searchParams;
   const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
   return (

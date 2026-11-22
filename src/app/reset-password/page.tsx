@@ -15,7 +15,7 @@ export default function ResetPasswordPage() {
     <AuthShell
       title="새 비밀번호 정하기"
       footer={
-        <Link href="/" className={s.link}>
+        <Link href="/workspace" className={s.link}>
           업무실로 가기
         </Link>
       }

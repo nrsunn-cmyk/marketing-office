@@ -24,6 +24,6 @@ export default function SetupPage() {
 /** 로그인 확인 후, 이미 업무실이 있으면 첫 화면으로 보낸다. */
 async function SetupGate() {
   await requireUser();
-  if (await getWorkspace()) redirect("/");
+  if (await getWorkspace()) redirect("/workspace");
   return <SetupForm />;
 }

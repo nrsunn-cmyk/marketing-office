@@ -59,7 +59,7 @@ test("T17 현황: 실제 데이터로 숫자·오늘 처리할 작업·납기 �
   await page.getByRole("region", { name: "로고 입력" }).getByRole("button", { name: "브리프 만들기" }).click();
   await expect(page.getByRole("heading", { name: "결과 1번 버전" })).toBeVisible();
 
-  await page.goto("/");
+  await page.goto("/workspace");
   await expect(page.getByText(/^기준 시각:/)).toBeVisible();
   const tiles = page.getByRole("list", { name: "현황 숫자" });
   for (const label of ["진행 중 프로젝트", "검토 대기 작업", "자료 대기 프로젝트", "7일 안 납기"]) {
@@ -183,7 +183,7 @@ test("다크 모드에서도 접근성 위반 없음, 테마 전환 버튼은 �
 
 test("모바일 새 작업 시트: 키보드 닫기·포커스 복귀·작업 생성과 견적 화면", async ({ page }, testInfo) => {
   await loginWithWorkspace(page);
-  await page.goto("/");
+  await page.goto("/workspace");
   await expect(page.getByText(/^기준 시각:/)).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.screenshot({ path: testInfo.outputPath("dashboard-desktop.png") });
