@@ -10,7 +10,7 @@
 }
 /* 회색 글 대비 보강(리드마그넷 카드와 같은 방식): 밝은 화면에서만 --text-muted 를 #475569 로 */
 .pbSection {
-  --text-muted: #475569;
+  --text-muted: var(--text-muted-strong);
 }
 :global([data-theme="dark"]) .pbSection {
   --text-muted: inherit;
@@ -45,7 +45,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
 }

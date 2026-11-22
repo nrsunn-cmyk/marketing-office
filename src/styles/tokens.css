@@ -44,6 +44,7 @@
   /* Typography Colors */
   --text-main: #0f172a;
   --text-muted: #64748b;
+  --text-muted-strong: #475569;
   --text-dim: #94a3b8;
   --text-on-primary: #ffffff;
 
@@ -96,6 +97,7 @@
      3. Spacing System
      ========================================================================== */
   --space-0: 0px;
+  --space-0_5: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -139,6 +141,7 @@
 
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
+  --text-muted-strong: #94a3b8;
   --text-dim: #64748b;
   --text-on-primary: #0b1220; /* 다크 모드 primary(#38bdf8) 위 고대비 텍스트 (대비 8.2:1, WCAG AAA 통과) */
 
@@ -185,6 +188,7 @@
 
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
+    --text-muted-strong: #94a3b8;
     --text-dim: #64748b;
     --text-on-primary: #0b1220; /* 다크 모드 primary(#38bdf8) 위 고대비 텍스트 (대비 8.2:1, WCAG AAA 통과) */
 

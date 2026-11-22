@@ -47,7 +47,7 @@
 }
 /* 회색 배지 대비 보강(리드마그넷 카드와 같은 방식): 밝은 화면에서만 카드 안 --text-muted 를 #475569(6.91:1)로 */
 .cdCard {
-  --text-muted: #475569;
+  --text-muted: var(--text-muted-strong);
 }
 :global([data-theme="dark"]) .cdCard {
   --text-muted: inherit;

@@ -28,9 +28,9 @@ export default function ProjectsPage() {
       </Suspense>
       <section className={styles.section} aria-labelledby="new-own-project">
         <h2 id="new-own-project" className={styles.subtitle}>
-          자체 프로젝트 만들기
+          사내·개인 프로젝트 만들기
         </h2>
-        <p className={styles.muted}>고객 프로젝트는 고객 화면에서 만듭니다. 여기서는 우리 회사·개인 채널용 프로젝트를 만듭니다.</p>
+        <p className={styles.muted}>고객사 없이 운영하는 사내 브랜드 또는 개인 채널 프로젝트를 만듭니다.</p>
         <ActionForm action={createProjectAction} submitLabel="프로젝트 만들기">
           <div className={styles.field}>
             <label htmlFor="kind">종류</label>
@@ -79,14 +79,30 @@ async function ProjectList() {
     return (
       <section className={styles.section} aria-label="프로젝트 목록 상태">
         <div className={styles.emptyState}>
-          <strong>아직 프로젝트가 없습니다.</strong>
-          <p className={styles.muted}>고객 프로젝트는 고객 화면에서, 우리 회사·개인 채널용 프로젝트는 아래에서 만듭니다.</p>
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 48 48"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V14Z" />
+            <path d="M24 22v10M19 27h10" />
+          </svg>
+          <strong>아직 등록된 프로젝트가 없습니다.</strong>
+          <p className={styles.muted}>
+            고객사 프로젝트는 고객 목록에서 먼저 고객을 선택한 뒤 만들고, 사내 브랜드·개인 프로젝트는 아래에서 바로 만들 수 있습니다.
+          </p>
           <p className={styles.row}>
-            <Link href="/clients" className={styles.button}>
-              고객 화면으로
+            <Link href="/clients" className={`${styles.button} ${styles.touchTarget}`}>
+              고객 목록으로
             </Link>
-            <a href="#new-own-project" className={styles.secondaryButton}>
-              자체 프로젝트 만들기
+            <a href="#new-own-project" className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+              사내·개인 프로젝트 만들기
             </a>
           </p>
         </div>

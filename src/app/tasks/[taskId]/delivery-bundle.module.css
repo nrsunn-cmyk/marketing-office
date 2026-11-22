@@ -7,7 +7,7 @@
   flex-direction: column;
   gap: var(--space-3);
   overflow-wrap: anywhere;
-  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강 */
+  --text-muted: var(--text-muted-strong); /* 밝은 화면 회색 글 대비 보강 */
 }
 :global([data-theme="dark"]) .dbSection {
   --text-muted: inherit;
@@ -44,12 +44,12 @@
 .dbBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex: none;
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
 }
@@ -76,7 +76,7 @@
 .dbTagIcon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .dbBanner p,
 .dbEmpty p {
@@ -135,7 +135,7 @@
 .dbItemText {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
   flex: 1 1 240px;
   min-width: 0;
 }

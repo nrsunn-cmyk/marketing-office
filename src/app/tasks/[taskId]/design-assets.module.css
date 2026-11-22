@@ -7,7 +7,7 @@
   flex-direction: column;
   gap: var(--space-3);
   overflow-wrap: anywhere;
-  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(제작 브리프·리드마그넷과 같은 방식) */
+  --text-muted: var(--text-muted-strong); /* 밝은 화면 회색 글 대비 보강(제작 브리프·리드마그넷과 같은 방식) */
 }
 :global([data-theme="dark"]) .daSection {
   --text-muted: inherit;
@@ -37,7 +37,7 @@
 .daTagIcon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .daBanner p,
 .daEmpty p {
@@ -122,11 +122,11 @@
 .daBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
 }

@@ -7,7 +7,7 @@
   flex-direction: column;
   gap: var(--space-3);
   overflow-wrap: anywhere;
-  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(리드마그넷·제작 브리프와 같은 방식) */
+  --text-muted: var(--text-muted-strong); /* 밝은 화면 회색 글 대비 보강(리드마그넷·제작 브리프와 같은 방식) */
 }
 :global([data-theme="dark"]) .wcSection_root {
   --text-muted: inherit;
@@ -43,7 +43,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
 }
@@ -344,7 +344,7 @@
 .wcViewRow {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 .wcViewRow dt {
   font-weight: var(--font-weight-semibold);

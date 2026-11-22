@@ -7,7 +7,7 @@
   flex-direction: column;
   gap: var(--space-3);
   overflow-wrap: anywhere;
-  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강 */
+  --text-muted: var(--text-muted-strong); /* 밝은 화면 회색 글 대비 보강 */
 }
 :global([data-theme="dark"]) .qaSection {
   --text-muted: inherit;
@@ -99,11 +99,11 @@
 .qaBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
 }
@@ -130,7 +130,7 @@
 .qaTagIcon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .qaTarget {
   margin: 0;
@@ -181,7 +181,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 1.6;
 }
@@ -300,7 +300,7 @@
 .qaViewRow {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 .qaViewRow dt {
   font-weight: var(--font-weight-semibold);
