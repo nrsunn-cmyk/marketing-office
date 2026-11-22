@@ -17,6 +17,7 @@ import { getProject } from "@/features/projects/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeStale, EmptyAssetsArt, P3AssetsIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { fixRequestedIdsFor } from "./qa-fix-flags";
 import f from "./funnel.module.css";
 import da from "./design-assets.module.css";
 import { DesignAssetList, type DesignAssetActions, type DesignPreviews } from "./design-assets-list";
@@ -82,14 +83,16 @@ export async function DesignAssetArea({ detail }: { detail: TaskDetail }) {
     unstable_rethrow(e); // 로그인·업무실 확인의 이동(redirect)은 그대로 통과
     console.error("[design-assets]", e);
   }
-  return <DesignAssetSection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} />;
+  // P3FG-UI-CONNECT-01-R1: 검수에서 보완 요청된 산출물 배지(기존 검수 읽기로 계산, 실패하면 배지만 빠짐)
+  const fixRequestedIds = await fixRequestedIdsFor(detail.project.id);
+  return <DesignAssetSection boards={boards} readOnly={projectArchived || detail.task.status === "cancelled"} taskId={detail.task.id} actions={SERVER_ACTIONS} fixRequestedIds={fixRequestedIds} />;
 }
 
 /**
  * 화면 본문(동기, 시험에서 가짜 보드로 그린다). 시안 assets.html 상태:
  * 작성 중 · 검토 완료 · 이전 기준 · 보관 · 읽기 전용 · 빈 상태 · 업로드·확정 + 한도(50/50) · 권한 없음(서버 이유) · 불러오기 실패(boards = null).
  */
-export function DesignAssetSection({ boards, readOnly, taskId, actions = {} }: { boards: DesignAssetBoard[] | null; readOnly: boolean; taskId: string; actions?: DesignAssetActions }) {
+export function DesignAssetSection({ boards, readOnly, taskId, actions = {}, fixRequestedIds = [] }: { boards: DesignAssetBoard[] | null; readOnly: boolean; taskId: string; actions?: DesignAssetActions; fixRequestedIds?: readonly string[] }) {
   return (
     <section className={`${styles.section} ${f.funnel} ${da.daSection}`} aria-labelledby="design-assets">
       <div className={da.daHead}>
@@ -129,7 +132,7 @@ export function DesignAssetSection({ boards, readOnly, taskId, actions = {} }: {
               </p>
             </div>
           ) : (
-            boards.map((b) => <BriefBlock key={b.data.brief.id} board={b} readOnly={readOnly} actions={actions} />)
+            boards.map((b) => <BriefBlock key={b.data.brief.id} board={b} readOnly={readOnly} actions={actions} fixRequestedIds={fixRequestedIds} />)
           )}
         </>
       )}
@@ -137,7 +140,7 @@ export function DesignAssetSection({ boards, readOnly, taskId, actions = {} }: {
   );
 }
 
-function BriefBlock({ board, readOnly, actions }: { board: DesignAssetBoard; readOnly: boolean; actions: DesignAssetActions }) {
+function BriefBlock({ board, readOnly, actions, fixRequestedIds = [] }: { board: DesignAssetBoard; readOnly: boolean; actions: DesignAssetActions; fixRequestedIds?: readonly string[] }) {
   const { data, previews } = board;
   const locked = readOnly || !data.canWrite;
   const full = data.count >= data.limit;
@@ -200,7 +203,7 @@ function BriefBlock({ board, readOnly, actions }: { board: DesignAssetBoard; rea
       )}
       {/* 업로드 패널은 자산 수와 상관없이 늘 같은 자리(첫 자산을 올린 뒤에도 다시 만들어지지 않아 성공 안내가 남는다, Tester QA-P3C-E2E-01 O1) */}
       {canUpload && <DesignUploadPanel key={`upload-${data.brief.id}`} mode="create" briefId={data.brief.id} actions={actions.upload} />}
-      {data.assets.length > 0 && <DesignAssetList data={data} locked={locked} previews={previews} actions={actions} />}
+      {data.assets.length > 0 && <DesignAssetList data={data} locked={locked} previews={previews} actions={actions} fixRequestedIds={fixRequestedIds} />}
     </section>
   );
 }

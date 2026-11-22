@@ -1,0 +1,138 @@
+/* P3-HELP-UI-01 P3 사용 안내. 시안 Design/p3-production/p3-help.html. 색·간격은 기존 토큰만, 진행률 막대 없음 */
+
+.help {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: var(--space-2) var(--space-4);
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(영상 구성과 같음) */
+}
+:global([data-theme="dark"]) .help {
+  --text-muted: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .help {
+    --text-muted: inherit;
+  }
+}
+
+.summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  list-style: none;
+}
+.summary::-webkit-details-marker {
+  display: none;
+}
+.summaryBadge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 6px;
+  padding: 12px 0 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.intro {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.sectionH {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.steps,
+.terms {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+.terms {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+}
+.step,
+.term {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+.step {
+  background: var(--bg-app);
+}
+.term {
+  gap: 4px;
+  background: var(--bg-subtle);
+}
+.stepTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.stepName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 800;
+}
+.icon {
+  flex-shrink: 0;
+  color: var(--info-text);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.badgeOk {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.termTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+.desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}

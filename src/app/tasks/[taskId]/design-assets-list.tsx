@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { ActionForm } from "../../_components/action-form";
 import { BadgeArchived, BadgeDrafting, BadgeReady, BadgeStale } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
 import da from "./design-assets.module.css";
 import { notConnectedAction, type BriefAction } from "./production-brief-edit-form";
@@ -58,11 +59,14 @@ export function DesignAssetList({
   locked,
   previews = {},
   actions = {},
+  fixRequestedIds = [],
 }: {
   data: Pick<DesignAssetsData, "assets" | "usageOptions" | "brief">;
   locked: boolean;
   previews?: DesignPreviews;
   actions?: DesignAssetActions;
+  /** 검수에서 보완 요청된 자산 id(P3FG-UI-CONNECT-01-R1) */
+  fixRequestedIds?: readonly string[];
 }) {
   const [kind, setKind] = useState<DesignAssetKind | "all">("all");
   const counts = kindCounts(data.assets);
@@ -79,7 +83,7 @@ export function DesignAssetList({
       </div>
       <ul className={da.daList} aria-label={`${DA_COPY.heading} 목록`}>
         {shown.map((a) => (
-          <AssetCard key={a.id} a={a} briefId={data.brief.id} usageOptions={data.usageOptions} preview={previews[a.id]} locked={locked || a.archivedAt !== null} actions={actions} />
+          <AssetCard key={a.id} a={a} briefId={data.brief.id} usageOptions={data.usageOptions} preview={previews[a.id]} locked={locked || a.archivedAt !== null} actions={actions} fixRequested={fixRequestedIds.includes(a.id)} />
         ))}
       </ul>
     </>
@@ -156,6 +160,7 @@ function AssetCard({
   preview,
   locked,
   actions,
+  fixRequested = false,
 }: {
   a: DesignAssetView;
   briefId: string;
@@ -163,6 +168,7 @@ function AssetCard({
   preview?: { url?: string; text?: string };
   locked: boolean;
   actions: DesignAssetActions;
+  fixRequested?: boolean;
 }) {
   const titleId = `da-${a.id}`;
   const ids = { assetId: a.id, revision: a.revision };
@@ -188,6 +194,7 @@ function AssetCard({
           </span>
         )}
         <span className={f.tag}>{`v${a.version}`}</span>
+        <QaFixTag show={fixRequested} />
       </p>
       <p className={`${styles.muted} ${f.keep}`}>{assetMetaLine(a)}</p>
       <Preview a={a} preview={preview} />

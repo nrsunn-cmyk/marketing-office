@@ -18,6 +18,11 @@ import { FunnelSection } from "./funnel-section";
 import { ProductionBriefArea } from "./production-brief-section";
 import { WebCopyArea } from "./web-copy-section";
 import { DesignAssetArea } from "./design-assets-section";
+import { VideoPlanArea } from "./video-plan-section";
+import { PptDeckArea } from "./ppt-deck-section";
+import { P3Help } from "./p3-help";
+import { QaChecklistArea } from "./qa-checklist-section";
+import { DeliveryBundleArea } from "./delivery-bundle-section";
 import wcStyles from "./web-copy.module.css";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
@@ -124,6 +129,10 @@ async function TaskView({
             <a href="#production-brief">공통 제작 브리프</a>
             <a href="#web-copy">홈페이지 구조·문구</a>
             <a href="#design-assets">디자인 자산 관리</a>
+            <a href="#video-plan">영상 구성·파일 관리</a>
+            <a href="#ppt-deck">PPT 구성·템플릿</a>
+            <a href="#qa-checklist">검수 체크리스트</a>
+            <a href="#delivery-bundle">납품 묶음</a>
           </nav>
           <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
           {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
@@ -136,6 +145,8 @@ async function TaskView({
           >
             <FunnelSection detail={detail} briefId={briefId} />
           </Suspense>
+          {/* P3-HELP-UI-01: P3 영역 위 접힌 사용 안내(AGY P3-HELP-HANDOFF.md). 단계 배지는 p3-help-model.ts P3_CONNECTED_STEPS 한 곳 */}
+          <P3Help />
           {/* P3A-UI-CONNECT-01: P3 공통 제작 브리프(FunnelSection 아래·DeliveryPanel 위, AGY P3I-HANDOFF.md 1절) */}
           <Suspense
             fallback={
@@ -165,6 +176,46 @@ async function TaskView({
             }
           >
             <DesignAssetArea detail={detail} />
+          </Suspense>
+          {/* P3D-UI-CONNECT-01: P3 넷째 단계 영상 구성·파일(디자인 자산 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                영상 구성안을 불러오는 중…
+              </p>
+            }
+          >
+            <VideoPlanArea detail={detail} />
+          </Suspense>
+          {/* P3E-UI-CONNECT-01: P3 다섯째 단계 PPT 구성·템플릿·내보내기(영상 구성 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                PPT 구성안을 불러오는 중…
+              </p>
+            }
+          >
+            <PptDeckArea detail={detail} />
+          </Suspense>
+          {/* P3FG-UI-CONNECT-01: P3 여섯째 단계 검수 체크리스트(PPT 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                검수 체크리스트를 불러오는 중…
+              </p>
+            }
+          >
+            <QaChecklistArea detail={detail} />
+          </Suspense>
+          {/* P3FG-UI-CONNECT-01: P3 일곱째 단계 납품 묶음(검수 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                납품 묶음을 불러오는 중…
+              </p>
+            }
+          >
+            <DeliveryBundleArea detail={detail} />
           </Suspense>
         </>
       ) : (
