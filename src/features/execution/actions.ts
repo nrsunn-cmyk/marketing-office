@@ -7,6 +7,18 @@ import type { BlockReason, ExecutionStepResult } from "@/domain/execution";
 import type { Result } from "@/server/result";
 import { EXEC_ACTION_COPY } from "./copy";
 import {
+  cancelExecutionSchedule,
+  createCrmFollowup,
+  createInquiry,
+  disconnectChannelConnection,
+  dispatchExternalExecution,
+  saveChannelConnection,
+  scheduleExecution,
+  syncChannelMetrics,
+  updateCrmFollowup,
+  type ExternalChannelKey,
+} from "./channels";
+import {
   addExecutionResult,
   approveExecution,
   archiveExecution,
@@ -54,12 +66,17 @@ function stepState(r: Result<ExecutionStepResult>): FormState {
   return { ok: true };
 }
 
-/** 대기열에 올리기: 프로젝트 id + 채널 초안 id(검토 완료·보관 안 됨은 서버가 다시 본다) */
+const channelSchema = z.enum(["tistory_manual", "crm", "search_ad", "social_api"]);
+const extChannelSchema = z.enum(["crm", "search_ad", "social_api"]);
+
+/** 대기열에 올리기: 프로젝트 id + 채널 초안 id + 실행 채널(기본 tistory_manual) */
 export async function enqueueExecutionAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const project = uuid.safeParse(fd.get("projectId"));
   const draft = uuid.safeParse(fd.get("draftId"));
-  if (!project.success || !draft.success) return BAD;
-  const r = await enqueueExecution(project.data, draft.data);
+  const rawCh = fd.get("channel");
+  const ch = rawCh ? channelSchema.safeParse(rawCh) : { success: true as const, data: "tistory_manual" as const };
+  if (!project.success || !draft.success || !ch.success) return BAD;
+  const r = rawCh ? await enqueueExecution(project.data, draft.data, ch.data) : await enqueueExecution(project.data, draft.data);
   if (!r.ok) return { message: r.message };
   refresh();
   return { ok: true };
@@ -157,6 +174,118 @@ export async function archiveExecutionResultAction(_prev: FormState, fd: FormDat
   const id = uuid.safeParse(fd.get("resultId"));
   if (!id.success) return BAD;
   const r = await archiveExecutionResult(id.data);
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+// ── 외부 채널 연결 · 실행 · 성과 자동 수집(readonly_sync) ──
+export async function saveChannelConnectionAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const ch = extChannelSchema.safeParse(fd.get("channel"));
+  if (!ch.success) return BAD;
+  const monthly = Number(text(fd, "monthlyBudgetWon") || "0");
+  const perRun = Number(text(fd, "perRunLimitWon") || "0");
+  const secret = text(fd, "secretKey");
+  const r = await saveChannelConnection({
+    channel: ch.data as ExternalChannelKey,
+    accountLabel: text(fd, "accountLabel"),
+    endpointUrl: text(fd, "endpointUrl"),
+    metricsUrl: text(fd, "metricsUrl"),
+    monthlyBudgetWon: Number.isFinite(monthly) ? monthly : 0,
+    perRunLimitWon: Number.isFinite(perRun) ? perRun : 0,
+    secretKey: secret.trim() ? secret.trim() : undefined,
+  });
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true, message: "외부 채널 연결을 저장했습니다." };
+}
+
+export async function disconnectChannelConnectionAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const ch = extChannelSchema.safeParse(fd.get("channel"));
+  if (!ch.success) return BAD;
+  const r = await disconnectChannelConnection(ch.data as ExternalChannelKey);
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true, message: "외부 채널 연결을 끊고 저장된 키를 폐기했습니다." };
+}
+
+export async function dispatchExternalExecutionAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const ids = jobIds(fd);
+  if (!ids) return BAD;
+  return stepState(await dispatchExternalExecution(ids.jobId, ids.revision));
+}
+
+export async function syncChannelMetricsAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const project = uuid.safeParse(fd.get("projectId"));
+  const ch = extChannelSchema.safeParse(fd.get("channel"));
+  if (!project.success || !ch.success) return BAD;
+  const jobRaw = text(fd, "executionJobId");
+  const jobId = jobRaw && uuid.safeParse(jobRaw).success ? jobRaw : null;
+  const r = await syncChannelMetrics(project.data, ch.data as ExternalChannelKey, jobId);
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true, message: `${r.data.syncedCount}건의 성과 지표를 읽기 전용으로 수집했습니다.` };
+}
+
+// ── P4B: 예약 실행 · 상담/문의 · CRM 후속 작업 ──
+export async function scheduleExecutionAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const job = uuid.safeParse(fd.get("executionJobId"));
+  const at = text(fd, "scheduledAt").trim();
+  if (!job.success || !at) return BAD;
+  const iso = at.includes("+") || at.endsWith("Z") ? at : `${at}:00+09:00`;
+  const r = await scheduleExecution(job.data, iso);
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+export async function cancelScheduleAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const id = uuid.safeParse(fd.get("scheduleId"));
+  if (!id.success) return BAD;
+  const r = await cancelExecutionSchedule(id.data);
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+export async function createInquiryAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const project = uuid.safeParse(fd.get("projectId"));
+  const src = z.enum(["lead_magnet", "web_copy_contact", "manual"]).safeParse(fd.get("sourceKind") || "manual");
+  if (!project.success || !src.success) return BAD;
+  const r = await createInquiry({
+    projectId: project.data,
+    sourceKind: src.data,
+    contactName: text(fd, "contactName"),
+    contactPhone: text(fd, "contactPhone"),
+    contactEmail: text(fd, "contactEmail"),
+    note: text(fd, "note"),
+  });
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+export async function createCrmFollowupAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const inq = uuid.safeParse(fd.get("inquiryId"));
+  const due = text(fd, "dueDate").trim();
+  if (!inq.success || !/^\d{4}-\d{2}-\d{2}$/.test(due)) return BAD;
+  const r = await createCrmFollowup({
+    inquiryId: inq.data,
+    assigneeName: text(fd, "assigneeName"),
+    dueDate: due,
+  });
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+export async function updateCrmFollowupAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const id = uuid.safeParse(fd.get("followupId"));
+  const st = z.enum(["todo", "in_progress", "done", "hold"]).safeParse(fd.get("status"));
+  if (!id.success || !st.success) return BAD;
+  const resRaw = text(fd, "linkedResultId").trim();
+  const linkedResultId = resRaw && uuid.safeParse(resRaw).success ? resRaw : null;
+  const r = await updateCrmFollowup({ followupId: id.data, status: st.data, linkedResultId });
   if (!r.ok) return { message: r.message };
   refresh();
   return { ok: true };

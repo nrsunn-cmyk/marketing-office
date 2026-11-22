@@ -144,6 +144,11 @@ export const LATER_TABLES = [
   // 20261121012000_p4a_execution(묶음 M 에서 007000 → 012000 이름만 바꿈, 실행 건 → 성과. 게시 기록은 P2-g channel_publications 그대로)
   "execution_jobs",
   "execution_results",
+  // 20261123001000_p4_external_channels(외부 채널 연결 · 예약 실행 · 상담 접수 · CRM 후속 작업)
+  "channel_connections",
+  "execution_schedules",
+  "inquiries",
+  "crm_followups",
 ] as const;
 
 export const TABLES = [

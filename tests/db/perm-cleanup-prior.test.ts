@@ -15,7 +15,10 @@ beforeAll(async () => {
 describe("권한 정리 회수 전 기록", () => {
   it("public 표마다 한 행, 회수 전에는 REFERENCES·TRIGGER 가 있었고(Supabase 기본 권한) 지금은 없다", async () => {
     const rows = (await db.query<{ relname: string; had_references: boolean; had_trigger: boolean; had_truncate: boolean }>("select * from app.perm_cleanup_prior order by 1")).rows;
-    const tables = (await db.query<{ relname: string }>("select c.relname from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') order by 1")).rows.map((r) => r.relname);
+    const postCleanupTables = new Set(["channel_connections", "crm_followups", "execution_schedules", "inquiries"]);
+    const tables = (await db.query<{ relname: string }>("select c.relname from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') order by 1")).rows
+      .map((r) => r.relname)
+      .filter((name) => !postCleanupTables.has(name));
     expect(rows.map((r) => r.relname)).toEqual(tables);
     expect(rows.find((r) => r.relname === "clients")).toMatchObject({ had_references: true, had_trigger: true, had_truncate: false });
     const now = (await db.query<{ n: number }>("select count(*)::int as n from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') and (has_table_privilege('authenticated', c.oid, 'REFERENCES') or has_table_privilege('authenticated', c.oid, 'TRIGGER'))")).rows[0].n;

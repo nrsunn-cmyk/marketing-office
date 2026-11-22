@@ -186,10 +186,14 @@ export async function getExecutionBoard(projectId: string): Promise<Result<Execu
 // ─────────────────────────────────────────────
 // 실행 건 쓰기
 // ─────────────────────────────────────────────
-/** 대기열에 올리기(지금은 티스토리 수동 게시·채널 초안만) */
-export async function enqueueExecution(projectId: string, draftId: string): Promise<Result<{ jobId: string }>> {
+/** 대기열에 올리기(티스토리 수동 게시 또는 연결된 외부 채널 crm·search_ad·social_api) */
+export async function enqueueExecution(
+  projectId: string,
+  draftId: string,
+  channel: "tistory_manual" | "crm" | "search_ad" | "social_api" = "tistory_manual",
+): Promise<Result<{ jobId: string }>> {
   const sb = await createSupabaseServerClient();
-  const r = await sb.rpc("enqueue_execution", { p_project_id: projectId, p_source_kind: "channel_draft", p_source_id: draftId, p_channel: "tistory_manual" });
+  const r = await sb.rpc("enqueue_execution", { p_project_id: projectId, p_source_kind: "channel_draft", p_source_id: draftId, p_channel: channel });
   if (r.error) return rpcFail("enqueueExecution", r.error);
   return ok({ jobId: r.data });
 }

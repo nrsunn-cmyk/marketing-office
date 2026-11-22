@@ -20,9 +20,12 @@ import {
   type ExecutionResultView,
 } from "./execution-model";
 
+import type { P4ExternalBoard } from "@/features/execution/channels";
+import { ExternalChannelsPanel, type ExternalExecutionActions } from "./execution-channels-panel";
+
 type Action = (prev: FormState, fd: FormData) => Promise<FormState>;
 /** 서버 동작(actions.ts). 시험에서 넘기지 않으면 단추마다 '아직 서버와 연결되지 않아…' 안내 */
-export interface ExecutionActions {
+export interface ExecutionActions extends ExternalExecutionActions {
   approve?: Action;
   retry?: Action;
   hold?: Action;
@@ -41,7 +44,17 @@ const notConnected: Action = async () => ({ message: "아직 서버와 연결되
  * 시안 execution-queue·tistory-manual·results.html, 진입 P4-ENTRY-HANDOFF 2절 나(#queue · #results · #channels).
  * 티스토리는 자동 게시가 없다: 작업 화면에서 내보내기 → 직접 게시 → 여기서 주소·시각 기록. 외부 API 호출 0, 진행률 막대 없음.
  */
-export function ExecutionView({ board, projectTitle, actions = {} }: { board: ExecutionBoard | null; projectTitle: string; actions?: ExecutionActions }) {
+export function ExecutionView({
+  board,
+  projectTitle,
+  actions = {},
+  externalBoard,
+}: {
+  board: ExecutionBoard | null;
+  projectTitle: string;
+  actions?: ExecutionActions;
+  externalBoard?: P4ExternalBoard | null;
+}) {
   return (
     <>
       <div className={styles.header}>
@@ -92,12 +105,15 @@ export function ExecutionView({ board, projectTitle, actions = {} }: { board: Ex
                 <strong>{c}</strong>
               </p>
               <p className={s.exTags}>
-                <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
+                <span className={s.exTag}>{externalBoard ? "연동 가능" : EX_COPY.channelPreparing}</span>
               </p>
             </li>
           ))}
         </ul>
       </section>
+      {externalBoard !== undefined ? (
+        <ExternalChannelsPanel board={board} externalBoard={externalBoard} actions={actions} notConnected={notConnected} />
+      ) : null}
     </>
   );
 }

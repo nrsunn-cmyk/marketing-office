@@ -7,13 +7,24 @@ import {
   approveExecutionAction,
   archiveExecutionAction,
   archiveExecutionResultAction,
+  cancelScheduleAction,
+  createCrmFollowupAction,
+  createInquiryAction,
+  disconnectChannelConnectionAction,
+  dispatchExternalExecutionAction,
+  enqueueExecutionAction,
   holdExecutionAction,
   rebaseExecutionAction,
   recordTistoryExecutionAction,
   resumeExecutionAction,
   retryExecutionAction,
+  saveChannelConnectionAction,
+  scheduleExecutionAction,
+  syncChannelMetricsAction,
+  updateCrmFollowupAction,
   voidExecutionResultAction,
 } from "@/features/execution/actions";
+import { listP4ExternalBoard, type P4ExternalBoard } from "@/features/execution/channels";
 import { getExecutionBoard } from "@/features/execution/server";
 import { getProject } from "@/features/projects/server";
 import { AppNav } from "../../../_components/app-nav";
@@ -34,6 +45,16 @@ const SERVER_ACTIONS: ExecutionActions = {
   addResult: addExecutionResultAction,
   voidResult: voidExecutionResultAction,
   archiveResult: archiveExecutionResultAction,
+  saveConnection: saveChannelConnectionAction,
+  disconnectConnection: disconnectChannelConnectionAction,
+  dispatchExternal: dispatchExternalExecutionAction,
+  syncMetrics: syncChannelMetricsAction,
+  enqueueChannel: enqueueExecutionAction,
+  scheduleJob: scheduleExecutionAction,
+  cancelSchedule: cancelScheduleAction,
+  createInquiry: createInquiryAction,
+  createFollowup: createCrmFollowupAction,
+  updateFollowup: updateCrmFollowupAction,
 };
 
 /**
@@ -65,13 +86,16 @@ async function ExecutionPageView({ params }: { params: PageProps<"/projects/[pro
   const project = await getProject(projectId);
   if (!project) notFound();
   let board: ExecutionBoard | null = null;
+  let externalBoard: P4ExternalBoard | null = null;
   try {
-    const r = await getExecutionBoard(project.id);
+    const [r, er] = await Promise.all([getExecutionBoard(project.id), listP4ExternalBoard(project.id)]);
     if (r.ok) board = r.data;
     else console.error("[execution]", r.code, r.message);
+    if (er.ok) externalBoard = er.data;
+    else console.error("[execution.external]", er.code, er.message);
   } catch (e) {
     unstable_rethrow(e); // 로그인·업무실 확인의 이동(redirect)은 그대로 통과
     console.error("[execution]", e);
   }
-  return <ExecutionView board={board} projectTitle={project.title} actions={SERVER_ACTIONS} />;
+  return <ExecutionView board={board} projectTitle={project.title} actions={SERVER_ACTIONS} externalBoard={externalBoard} />;
 }

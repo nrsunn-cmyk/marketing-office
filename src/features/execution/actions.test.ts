@@ -15,6 +15,17 @@ const m = vi.hoisted(() => ({
   archiveR: vi.fn(),
   refresh: vi.fn(),
 }));
+vi.mock("./channels", () => ({
+  saveChannelConnection: vi.fn(),
+  disconnectChannelConnection: vi.fn(),
+  dispatchExternalExecution: vi.fn(),
+  syncChannelMetrics: vi.fn(),
+  scheduleExecution: vi.fn(),
+  cancelExecutionSchedule: vi.fn(),
+  createInquiry: vi.fn(),
+  createCrmFollowup: vi.fn(),
+  updateCrmFollowup: vi.fn(),
+}));
 vi.mock("./server", () => ({
   enqueueExecution: (...a: unknown[]) => m.enqueue(...a),
   approveExecution: (...a: unknown[]) => m.approve(...a),
