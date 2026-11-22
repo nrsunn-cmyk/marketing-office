@@ -107,7 +107,7 @@ export function LandingPage() {
               href="/login"
               className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLg}`}
             >
-              내 업무실 열기 (로그인)
+              내 업무실 열기
             </Link>
             <a
               href="#mockup"
