@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
 import { buildStrategyDraft } from "@/domain/strategy";
-import { asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture } from "./harness";
+import { asSetup, asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture } from "./harness";
 
 let db: Db;
 let strategyTpl: string;
@@ -71,7 +71,23 @@ async function setupReviewedDraft(email: string): Promise<{ owner: Fixture; proj
 }
 
 describe("P4 외부 채널 연동 · 성과 수집 · P4B (20261123001000_p4_external_channels)", () => {
-  it("외부 채널 연결 전에는 대기열 거절, 연결 후에는 crm/search_ad/social_api 실행 및 성과 수집(readonly_sync) 성공", async () => {
+  it("브라우저 DB 역할에 외부 실행 및 연동 키 조회 권한을 주지 않는다", async () => {
+    const signatures = [
+      "public.dispatch_external_execution_prepare(uuid, int)",
+      "public.finish_external_execution(uuid, int, boolean, text, text)",
+      "public.get_channel_metrics_credentials(text)",
+    ];
+    for (const role of ["anon", "authenticated"]) {
+      const { allowed } = await one<{ allowed: boolean }>(
+        db,
+        "select bool_or(has_function_privilege($1, signature, 'EXECUTE')) as allowed from unnest($2::text[]) as f(signature)",
+        [role, signatures],
+      );
+      expect(allowed).toBe(false);
+    }
+  });
+
+  it("미연결 채널은 대기열에서 거절하고, 연결 후 DB 내부 실행 전이와 성과 기록은 유지한다", async () => {
     const { owner, projectId, draftId } = await setupReviewedDraft("p4ext-a@example.test");
 
     for (const ch of ["crm", "search_ad", "social_api"]) {
@@ -107,22 +123,28 @@ describe("P4 외부 채널 연동 · 성과 수집 · P4B (20261123001000_p4_ext
 
     await asUser(db, owner.userId, (tx) => tx.query("select public.approve_execution($1, 1)", [jobId]));
 
-    const prep = await asUser(db, owner.userId, async (tx) => {
-      const r = await tx.query<{ p: { blocked: boolean; revision: number; endpoint_url: string; secret_value: string } }>(
-        "select public.dispatch_external_execution_prepare($1, 2) as p",
-        [jobId],
-      );
-      return r.rows[0].p;
-    });
+    // 아래 실행 전이는 DB 내부 동작을 검증한다. 브라우저 호출 권한은 위에서 따로 확인한다.
+    const prep = await asUser(db, owner.userId, (tx) =>
+      asSetup(tx, async () => {
+        const row = await one<{ p: { blocked: boolean; revision: number; endpoint_url: string; secret_value: string } }>(
+          tx,
+          "select public.dispatch_external_execution_prepare($1, 2) as p",
+          [jobId],
+        );
+        return row.p;
+      }),
+    );
     expect(prep.blocked).toBe(false);
     expect(prep.endpoint_url).toBe("https://api.example.test/social_api/dispatch");
     expect(prep.secret_value).toBe("secret-social_api-123");
 
     await asUser(db, owner.userId, (tx) =>
-      tx.query("select public.finish_external_execution($1, $2, true, 'https://sns.example.test/post/1', null)", [
-        jobId,
-        prep.revision,
-      ]),
+      asSetup(tx, () =>
+        tx.query("select public.finish_external_execution($1, $2, true, 'https://sns.example.test/post/1', null)", [
+          jobId,
+          prep.revision,
+        ]),
+      ),
     );
 
     const jobRow = await one<{ status: string; external_url: string }>(
