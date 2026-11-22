@@ -13,6 +13,7 @@ import {
   admin,
   apiPort,
   BUCKET,
+  storedFilePath,
   configApiPort,
   containerProject,
   dbContainer,
@@ -96,8 +97,8 @@ psql(
 // 3) 파일 다시 올리기
 const sb = admin();
 for (const f of manifest.files) {
-  const buf = readFileSync(join(dir, "files", f.key));
-  const { error } = await sb.storage.from(BUCKET).upload(f.key, buf, { contentType: f.mime, upsert: true });
+  const buf = readFileSync(join(dir, "files", storedFilePath(f)));
+  const { error } = await sb.storage.from(f.bucket ?? BUCKET).upload(f.key, buf, { contentType: f.mime, upsert: true });
   if (error) throw new Error(`파일 올리기 실패: ${f.key}: ${error.message}`);
 }
 

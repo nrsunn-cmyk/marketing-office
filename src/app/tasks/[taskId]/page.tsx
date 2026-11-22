@@ -17,6 +17,7 @@ import { DeliveryPanel } from "./delivery-panel";
 import { FunnelSection } from "./funnel-section";
 import { ProductionBriefArea } from "./production-brief-section";
 import { WebCopyArea } from "./web-copy-section";
+import { DesignAssetArea } from "./design-assets-section";
 import wcStyles from "./web-copy.module.css";
 import { QuoteSection } from "./quote-section";
 import { StrategySection } from "./strategy-section";
@@ -122,6 +123,7 @@ async function TaskView({
           <nav className={wcStyles.wcJump} aria-label="제작 단계 바로 가기">
             <a href="#production-brief">공통 제작 브리프</a>
             <a href="#web-copy">홈페이지 구조·문구</a>
+            <a href="#design-assets">디자인 자산 관리</a>
           </nav>
           <StrategySection detail={detail} shown={shown} isCurrent={shown?.id === current?.id} timeZone={workspace.timezone} />
           {/* P2D-FRONT-01: 승인한 전략을 이어받는 퍼널 보드 */}
@@ -153,6 +155,16 @@ async function TaskView({
             }
           >
             <WebCopyArea detail={detail} />
+          </Suspense>
+          {/* P3C-UI-CONNECT-01: P3 셋째 단계 디자인 자산(홈페이지 구조·문구 아래) */}
+          <Suspense
+            fallback={
+              <p className={styles.muted} role="status">
+                디자인 자산을 불러오는 중…
+              </p>
+            }
+          >
+            <DesignAssetArea detail={detail} />
           </Suspense>
         </>
       ) : (

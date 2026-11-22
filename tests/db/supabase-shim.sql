@@ -39,7 +39,7 @@ create table storage.objects (
   bucket_id  text references storage.buckets (id),
   name       text not null,
   owner      uuid,
-  -- 실제 Supabase 처럼 크기·형식을 담는다(size, mimetype). 직접 업로드 확정 RPC 가 대조한다
+  -- 실제 Supabase 처럼 크기·형식을 담는다(size, mimetype). 자료 직접 업로드·P3-c 확정 RPC 가 대조한다
   metadata   jsonb,
   created_at timestamptz default now(),
   unique (bucket_id, name)

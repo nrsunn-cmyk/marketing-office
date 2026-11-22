@@ -1235,10 +1235,10 @@ describe.skipIf(!present)(
         expect((await current(id)).pages[0]!.sections[0]!.citation_ids).toEqual(
           [src],
         );
-        // 직접 지우기는 RLS(select 정책만)에 걸려 0행 — 출처는 남는다
+        // 직접 지우기: 31 이전은 RLS(select 정책만)로 0행, 31 이후는 DELETE 권한 회수(Master O3)로 permission denied — 어느 쪽이든 출처는 남는다
         await asU(a, (tx) =>
           tx.query("delete from public.research_sources where id = $1", [src]),
-        );
+        ).catch((e: Error) => expect(e.message).toMatch(/permission denied/));
         expect(
           await count("select 1 from public.research_sources where id = $1", [
             src,
