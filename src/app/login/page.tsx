@@ -17,7 +17,12 @@ const ERRORS: Record<string, string> = {
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <AuthShell icon="rocket" title="AI 마케팅 업무실" subtitle="업무실 계정(이메일·비밀번호)으로 로그인하세요." tab="login">
+    <AuthShell
+      title={<>AI 마케팅 <em>업무실</em></>}
+      subtitle="업무실 계정(이메일·비밀번호)으로 로그인하세요."
+      tab="login"
+      footer="허용된 이메일 계정으로 안전하게 로그인합니다."
+    >
       <Suspense fallback={null}>
         <LoginStatus searchParams={searchParams} />
       </Suspense>

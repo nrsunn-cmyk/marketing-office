@@ -13,11 +13,10 @@ export const metadata: Metadata = { title: "새 비밀번호 · 마케팅 업무
 export default function ResetPasswordPage() {
   return (
     <AuthShell
-      icon="lock"
       title="새 비밀번호 정하기"
       footer={
         <Link href="/" className={s.link}>
-          업무실로 가기 →
+          업무실로 가기
         </Link>
       }
     >

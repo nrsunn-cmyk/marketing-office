@@ -10,12 +10,11 @@ export const metadata: Metadata = { title: "비밀번호 찾기 · 마케팅 업
 export default function ForgotPasswordPage({ searchParams }: PageProps<"/forgot-password">) {
   return (
     <AuthShell
-      icon="lock"
       title="비밀번호 재설정"
       subtitle="가입된 이메일로 비밀번호 재설정 링크를 보내 드립니다."
       footer={
         <Link href="/login" className={s.link}>
-          ← 로그인 화면으로 돌아가기
+          로그인 화면으로 돌아가기
         </Link>
       }
     >

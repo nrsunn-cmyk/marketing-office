@@ -12,7 +12,6 @@ export const metadata: Metadata = { title: "회원가입 · 마케팅 업무실"
 export default function SignupPage({ searchParams }: PageProps<"/signup">) {
   return (
     <AuthShell
-      icon="rocket"
       title="AI 마케팅 업무실"
       subtitle="새로운 업무실 계정을 만드세요. 허용된 이메일만 가입할 수 있습니다."
       tab="signup"

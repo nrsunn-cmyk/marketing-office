@@ -1,107 +1,143 @@
-/*
- * 인증 화면 — 1안 테크 그리드 & 로열 블루 (사용자 최종 채택, 2026-11-15)
- * AGY 원본: C:\nadaum\Design\login-concepts\tech-grid-theme.css, 인계 Plan/AGY-Handoff-Login-TechGrid-20261115
- * 원본 클래스(.tg-*)를 이 앱의 CSS 모듈로 옮겼다. 색은 이 파일의 지역 변수(--tg-*)로 두고 다크 모드에서 바꾼다.
- */
-
+/* 로그인 2안 — 공개 홈과 같은 테크 그리드, 테마 로고와 중앙 카드 */
 .screen {
-  --tg-canvas: #f8faff;
-  --tg-grid: rgba(224, 231, 255, 0.85);
-  --tg-card: #ffffff;
-  --tg-card-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.08), 0 0 1px rgba(15, 23, 42, 0.12);
-  --tg-heading: #0f172a;
-  --tg-body: #1e293b;
-  --tg-muted: #64748b;
-  --tg-placeholder: #94a3b8;
-  --tg-input-bg: #f8fafc;
-  --tg-input-border: #e2e8f0;
-  --tg-focus: #3b82f6;
-  --tg-pill-bg: #f1f5f9;
-  --tg-pill-active: #ffffff;
-  /* 선택 안 된 탭 글자: 시안 #64748b 는 알약 배경과 대비 4.3:1 이라 AA(4.5:1) 미달 → 한 단계 진하게 */
-  --tg-tab-text: #475569;
-  --tg-primary: #2563eb;
-  --tg-badge-bg: #eff6ff;
-  --tg-badge-border: #dbeafe;
-  --tg-icon-bg: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-  --tg-icon-ring: rgba(199, 210, 254, 0.9);
-  --tg-error-bg: #fef2f2;
-  --tg-error-border: #fecaca;
-  --tg-error-text: #b91c1c;
-  --tg-ok-bg: #f0fdf4;
-  --tg-ok-border: #bbf7d0;
-  --tg-ok-text: #15803d;
+  --tg-canvas: var(--bg-app);
+  --tg-dot: rgba(37, 99, 235, 0.12);
+  --tg-grid: rgba(37, 99, 235, 0.05);
+  --tg-card: var(--bg-surface);
+  --tg-card-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.28);
+  --tg-heading: var(--text-main);
+  --tg-body: var(--text-main);
+  --tg-muted: var(--text-muted);
+  --tg-placeholder: var(--text-muted);
+  --tg-input-bg: var(--bg-app);
+  --tg-input-border: var(--border-strong);
+  --tg-focus: var(--primary-600);
+  --tg-pill-bg: var(--bg-subtle);
+  --tg-pill-active: var(--bg-surface);
+  --tg-tab-text: color-mix(in srgb, var(--text-muted) 85%, var(--text-main));
+  --tg-primary: var(--primary-600);
+  --tg-error-bg: var(--danger-bg);
+  --tg-error-border: var(--danger-border);
+  --tg-error-text: var(--danger-text);
+  --tg-ok-bg: var(--success-bg);
+  --tg-ok-border: var(--success-border);
+  --tg-ok-text: var(--success-text);
+  --tg-logo-light: block;
+  --tg-logo-dark: none;
 
   min-height: 100dvh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
+  flex-direction: column;
   background-color: var(--tg-canvas);
   background-image:
+    radial-gradient(var(--tg-dot) 1px, transparent 1px),
     linear-gradient(to right, var(--tg-grid) 1px, transparent 1px),
     linear-gradient(to bottom, var(--tg-grid) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-size: 24px 24px, 48px 48px, 48px 48px;
 }
 
+[data-theme="dark"] .screen {
+  --tg-dot: rgba(56, 189, 248, 0.1);
+  --tg-grid: rgba(56, 189, 248, 0.04);
+  --tg-logo-light: none;
+  --tg-logo-dark: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .screen {
+    --tg-dot: rgba(56, 189, 248, 0.1);
+    --tg-grid: rgba(56, 189, 248, 0.04);
+    --tg-logo-light: none;
+    --tg-logo-dark: block;
+  }
+}
+
+.header {
+  flex: none;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--tg-card) 86%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.headerInner {
+  max-width: 1240px;
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.screen a.brand,
+.screen a.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.brand img {
+  width: clamp(112px, 36vw, 184px);
+  height: auto;
+}
+
+.logoLight { display: var(--tg-logo-light); }
+.logoDark { display: var(--tg-logo-dark); }
+
+.back { white-space: nowrap; }
+
 .container {
-  width: 100%;
-  max-width: 440px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-/* 위쪽 둥근 사각 아이콘 상자 (로켓·자물쇠) */
-.iconBox {
-  width: 66px;
-  height: 66px;
-  border-radius: 20px;
-  display: grid;
-  place-items: center;
-  color: var(--tg-primary);
-  background: var(--tg-icon-bg);
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.22), 0 0 0 1px var(--tg-icon-ring);
-  margin-bottom: 16px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  background: var(--tg-badge-bg);
-  border: 1px solid var(--tg-badge-border);
-  color: var(--tg-primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  margin-bottom: 12px;
+  justify-content: center;
+  width: 100%;
+  padding: 36px 20px 64px;
 }
 
 .title {
-  margin: 0 0 6px;
-  font-size: 26px;
-  font-weight: 800;
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 900;
   letter-spacing: -0.03em;
   color: var(--tg-heading);
   text-align: center;
 }
 
+.title em {
+  color: var(--tg-primary);
+  font-style: normal;
+}
+
 .subtitle {
-  margin: 0 0 28px;
-  font-size: 14px;
+  margin: 0 0 26px;
+  max-width: 520px;
+  font-size: 15px;
   color: var(--tg-muted);
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .card {
+  position: relative;
   width: 100%;
+  max-width: 440px;
   background: var(--tg-card);
-  border-radius: 24px;
-  padding: 30px 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  padding: 28px;
   box-shadow: var(--tg-card-shadow);
+}
+
+.card::before {
+  position: absolute;
+  inset: 0 24px auto;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, #38bdf8, #2563eb);
+  content: "";
 }
 
 /* 알약형 탭 (로그인 / 회원가입) — 화면 이동 링크 */
@@ -238,23 +274,20 @@
   line-height: 1.5;
 }
 
-/*
- * globals.css 의 다크 링크 색(:root:not(...) a)이 밝은 카드 위를 덮지 않도록 명시도를 높이고 !important 로 보호
- * WCAG AA(4.5:1) 및 AAA(7:1 근접 6.7:1) 고대비 로열 블루 적용 (AUTH-UI-01 대응)
- */
+/* 테마별 링크와 키보드 포커스 */
 .link,
 .screen a.link,
 .screen a:not(.tab) {
   font-size: 12.5px;
   font-weight: 600;
-  color: #1d4ed8 !important;
+  color: var(--tg-primary);
   text-decoration: none;
 }
 
 .link:hover,
 .screen a.link:hover,
 .screen a:not(.tab):hover {
-  color: #1e40af !important;
+  color: var(--tg-primary);
   text-decoration: underline;
 }
 
@@ -396,15 +429,13 @@
   line-height: 1.5;
 }
 
-/* 인증 화면은 1안 레퍼런스(화이트 카드·페일 블루 격자) 원본 기준 밝은 모드로 고정한다 */
-
 @media (max-width: 480px) {
   .card {
     padding: 24px 20px;
     border-radius: 20px;
   }
   .title {
-    font-size: 23px;
+    font-size: 26px;
   }
 }
 
