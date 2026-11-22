@@ -18,6 +18,7 @@ import {
 import { getVideoPlanFor } from "@/features/video-plans/server";
 import { BadgeArchived, BadgeDrafting, BadgeReady, BadgeStale, EmptyBriefArt, P3VideoIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import { fixRequestedIdsFor } from "./qa-fix-flags";
 import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
@@ -118,6 +119,7 @@ export function VideoPlanSection({ boards, readOnly, taskId, actions = {}, fixRe
           <P3VideoIcon className={vp.vpIcon} />
           {VP_COPY.heading}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{VP_COPY.intro}</p>
       </div>
       {boards === null ? (

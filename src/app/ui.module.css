@@ -545,6 +545,14 @@ a.secondaryButton.settingsActive {
   padding: 0;
   margin: 0;
 }
+/* 숫자 카드를 dl/dt/dd 로 쓸 때 브라우저 기본 들여쓰기 없애기(UX F5) */
+.tiles dd {
+  margin: 0;
+}
+/* 보조 카드 2칸(UX F4, AGY DESIGN-UX-F245-01 2절 격자) */
+.tilesPair {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
 
 @media (max-width: 960px) {
   .tiles {

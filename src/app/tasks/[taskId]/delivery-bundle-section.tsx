@@ -15,6 +15,7 @@ import { getDeliveryBundleFor } from "@/features/qa-delivery/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeArchived, BadgeBlocked, BadgeDrafting, BadgeReady, BadgeStale, EmptyExecutionArt, P3BundleIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import f from "./funnel.module.css";
 import db from "./delivery-bundle.module.css";
 import { BriefActionButton } from "./production-brief-buttons";
@@ -111,6 +112,7 @@ export function DeliveryBundleSection({ data, readOnly, taskId, actions = {} }: 
           <P3BundleIcon className={db.dbIcon} />
           {DB_COPY.heading}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{DB_COPY.intro}</p>
         {data && <Badges data={data} />}
       </div>

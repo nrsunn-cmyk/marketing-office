@@ -176,9 +176,9 @@ describe("실행·성과 화면(P4A-UI-01)", () => {
 });
 
 describe("프로젝트 상세 진입(entry.html 2·4번)", () => {
-  it("앵커 다섯(정보 → 작업 → 실행·성과 → 자료 → 외부 출처)", () => {
+  it("앵커 여섯(정보 → 작업 → P3 제작·납품 → 실행·성과 → 자료 → 외부 출처, UX F5)", () => {
     const h = renderToString(createElement(ProjectJumpBar));
-    expect([...h.matchAll(/href="(#[^"]+)"/g)].map((m) => m[1])).toEqual(["#project-info", "#tasks", "#p4-execution", "#project-assets", "#project-sources"]);
+    expect([...h.matchAll(/href="(#[^"]+)"/g)].map((m) => m[1])).toEqual(["#project-info", "#tasks", "#p3-production", "#p4-execution", "#project-assets", "#project-sources"]);
   });
   it("진입 카드: 상태별 건수(분수·% 없음)와 전용 화면 단추 둘, 건수 못 읽으면 단추만", () => {
     const h = renderToString(createElement(ExecutionEntryCard, { projectId: P, counts: { pending: 1, queued: 2, blocked: 1, results: 3 } }));

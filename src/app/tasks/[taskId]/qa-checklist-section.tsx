@@ -7,6 +7,7 @@ import { getQaChecklistFor } from "@/features/qa-delivery/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { P3QaIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import f from "./funnel.module.css";
 import qa from "./qa-checklist.module.css";
 import { QaChecklistBoard, type QaChecklistActions } from "./qa-checklist-editor";
@@ -72,6 +73,7 @@ export function QaChecklistSection({ data, readOnly, taskId, actions = {} }: { d
           <P3QaIcon className={qa.qaIcon} />
           {QA_COPY.heading}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{QA_COPY.intro}</p>
       </div>
       {data === null ? (

@@ -6,6 +6,7 @@ import type { TaskDetail } from "@/features/tasks/server";
 import { archiveWebCopyAction, createWebCopyDocAction, rebaseWebCopyAction, restoreWebCopyVersionAction, saveWebCopyAction } from "@/features/web-copy/actions";
 import { getWebCopyFor, type WebCopyBoard, type WebCopyDocView } from "@/features/web-copy/server";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import { fixRequestedIdsFor } from "./qa-fix-flags";
 import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
@@ -83,6 +84,7 @@ export function WebCopySection({ boards, readOnly, taskId, actions = {}, fixRequ
         <h2 id="web-copy" className={`${styles.subtitle} ${wc.wcTitle}`}>
           {WC_COPY.heading}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{WC_COPY.intro}</p>
       </div>
 

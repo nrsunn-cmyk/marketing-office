@@ -8,6 +8,7 @@ import { getProject } from "@/features/projects/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeArchived, BadgeDrafting, BadgeReady, BadgeStale, EmptyBriefArt, P3PptIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import { fixRequestedIdsFor } from "./qa-fix-flags";
 import { QaFixTag } from "./qa-fix-tag";
 import f from "./funnel.module.css";
@@ -96,6 +97,7 @@ export function PptDeckSection({ boards, readOnly, taskId, actions = {}, fixRequ
           <P3PptIcon className={pp.ppIcon} />
           {PPT_COPY.heading}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{PPT_COPY.intro}</p>
       </div>
       {boards === null ? (

@@ -125,7 +125,7 @@ async function TaskView({
       ) : detail.task.type === "strategy" ? (
         <>
           {/* P3B-UI-CONNECT-01: P3 단계가 둘이 되어 페이지가 길어졌으므로 상단 빠른 이동(AGY P3I-HANDOFF.md 1절 R1) */}
-          <nav className={wcStyles.wcJump} aria-label="제작 단계 바로 가기">
+          <nav id="task-jump" className={wcStyles.wcJump} aria-label="제작 단계 바로 가기">
             <a href="#production-brief">공통 제작 브리프</a>
             <a href="#web-copy">홈페이지 구조·문구</a>
             <a href="#design-assets">디자인 자산 관리</a>

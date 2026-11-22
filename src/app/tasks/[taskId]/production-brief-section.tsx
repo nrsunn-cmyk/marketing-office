@@ -6,6 +6,7 @@ import { getProject } from "@/features/projects/server";
 import { getProductionBriefsFor, type ProductionBriefBoard, type ProductionBriefView } from "@/features/production-brief/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import f from "./funnel.module.css";
 import pb from "./production-brief.module.css";
 import { BriefActionButton } from "./production-brief-buttons";
@@ -155,6 +156,7 @@ function Shell({ count, children }: { count: string | null; children: ReactNode 
           {PB_COPY.heading}
           {count && <span className={styles.badge}>{count}</span>}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{PB_COPY.intro}</p>
       </div>
       {children}

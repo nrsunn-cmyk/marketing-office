@@ -18,6 +18,8 @@ import { listTasks } from "@/features/tasks/server";
 import { getProject } from "@/features/projects/server";
 import { listResearchSources } from "@/features/research-sources/server";
 import { getExecutionBoard } from "@/features/execution/server";
+import { getProjectProductionCounts, type ProjectProductionCounts } from "@/features/production-overview/server";
+import { ProductionEntryCard } from "../../_components/production-overview";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
@@ -25,6 +27,7 @@ import { MobileActionSheet } from "../../_components/mobile-action-sheet";
 import styles from "../../ui.module.css";
 import { ExecutionEntryCard, ProjectJumpBar } from "./execution/execution-entry";
 import { executionCounts } from "./execution/execution-model";
+import { TaskTypeSelect } from "./task-type-select";
 
 export const metadata: Metadata = { title: "프로젝트 · 마케팅 업무실" };
 
@@ -72,6 +75,16 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
   }
 
   // P4A-UI-01: 실행·성과 건수(진입 카드). 실패해도 전용 화면으로 가는 단추는 보인다
+  // UX F5: P3 제작·납품 건수(실패하면 카드에 안내만)
+  let p3Counts: ProjectProductionCounts | null = null;
+  try {
+    const r = await getProjectProductionCounts(project.id);
+    if (r.ok) p3Counts = r.data;
+    else console.error("[project production]", r.code, r.message);
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[project production]", e);
+  }
   let execCounts: ReturnType<typeof executionCounts> | null = null;
   try {
     const r = await getExecutionBoard(project.id);
@@ -171,15 +184,21 @@ async function ProjectView({ params }: { params: PageProps<"/projects/[projectId
           <input type="hidden" name="projectId" value={project.id} />
           <input type="hidden" name="idempotencyKey" value={randomUUID()} />
           <label htmlFor="task-type">새 작업</label>
-          <select id="task-type" name="type" defaultValue="logo_brief">
-            <option value="logo_brief">{TASK_TYPE_LABELS.logo_brief}</option>
-            <option value="quote">{TASK_TYPE_LABELS.quote}</option>
-            {project.kind === "client" && <option value="strategy">{TASK_TYPE_LABELS.strategy}</option>}
-          </select>
+          {/* UX-SCENARIO-AUDIT-01 F3: 마지막으로 고른 유형을 기억(브라우저 저장, 실패하면 로고) */}
+          <TaskTypeSelect
+            fallback="logo_brief"
+            options={[
+              { value: "logo_brief", label: TASK_TYPE_LABELS.logo_brief },
+              { value: "quote", label: TASK_TYPE_LABELS.quote },
+              ...(project.kind === "client" ? [{ value: "strategy", label: TASK_TYPE_LABELS.strategy }] : []),
+            ]}
+          />
         </ActionForm>
         </MobileActionSheet>
       </section>
       {/* P4A-UI-01: 작업 바로 아래 실행·성과 진입(AGY P4-ENTRY-HANDOFF 2절 가 모바일 순서 3번) */}
+      {/* UX F5(AGY DESIGN-UX-F245-01 3절): #tasks 아래 · #p4-execution 바로 위 */}
+      <ProductionEntryCard counts={p3Counts} />
       <ExecutionEntryCard projectId={project.id} counts={execCounts} />
       <div id="project-assets">
         <AssetsPanel owner={{ projectId: project.id }} heading="프로젝트 자료" />

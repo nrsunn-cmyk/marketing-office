@@ -17,6 +17,7 @@ import { getProject } from "@/features/projects/server";
 import type { TaskDetail } from "@/features/tasks/server";
 import { BadgeStale, EmptyAssetsArt, P3AssetsIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
+import { StepBackLink } from "./step-back-link";
 import { fixRequestedIdsFor } from "./qa-fix-flags";
 import f from "./funnel.module.css";
 import da from "./design-assets.module.css";
@@ -100,6 +101,7 @@ export function DesignAssetSection({ boards, readOnly, taskId, actions = {}, fix
           <P3AssetsIcon className={da.daIcon} />
           {DA_COPY.heading}
         </h2>
+        <StepBackLink />
         <p className={`${styles.muted} ${f.keep}`}>{DA_COPY.intro}</p>
       </div>
       {boards === null ? (

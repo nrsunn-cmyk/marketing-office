@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { GENERATOR_LABELS, PROJECT_STATUS_LABELS, TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
 import { getDashboard, type DashboardData } from "@/features/dashboard/server";
+import { getPendingCounts, type PendingCounts } from "@/features/production-overview/server";
 import { todayIn } from "@/features/quotes/server";
 import { requireWorkspace } from "@/server/auth/session";
 import { AppNav } from "../_components/app-nav";
 import { formatDateTimeIn } from "../_components/format-time";
+import { PendingCountCards } from "../_components/production-overview";
 import styles from "../ui.module.css";
 
 /** 처리할 작업은 서버가 최근 수정 순 최대 10개만 가져온다(features/dashboard/server.ts) */
@@ -33,7 +35,7 @@ export default function WorkspacePage() {
 async function WorkspaceOverview() {
   const { user, workspace } = await requireWorkspace();
   const today = todayIn(workspace.timezone);
-  const result = await getDashboard(today);
+  const [result, pending] = await Promise.all([getDashboard(today), getPendingCounts()]);
 
   return (
     <>
@@ -55,7 +57,7 @@ async function WorkspaceOverview() {
           </p>
         </div>
       ) : (
-        <Dashboard data={result.data} today={today} timeZone={workspace.timezone} />
+        <Dashboard data={result.data} today={today} timeZone={workspace.timezone} pending={pending.ok ? pending.data : null} />
       )}
     </>
   );
@@ -108,7 +110,7 @@ function SectionHead({ id, title, count, more }: { id: string; title: string; co
   );
 }
 
-function Dashboard({ data, today, timeZone }: { data: DashboardData; today: string; timeZone: string }) {
+function Dashboard({ data, today, timeZone, pending }: { data: DashboardData; today: string; timeZone: string; pending: PendingCounts | null }) {
   // 카드 안 span 순서(0 = 이름, 1 = 숫자)는 E2E 계약이다. 짧은 뜻 설명(note)은 span 이 아닌 small 로 둔다.
   const tiles: Array<{ label: string; n: number; note: string; help: string; tone: string }> = [
     { label: "진행 중 프로젝트", n: data.counts.openProjects, note: "열린 상태 합계", help: "접수·자료 대기·진행 중·검토 중 프로젝트를 모두 더한 수", tone: styles.toneInfo },
@@ -130,6 +132,8 @@ function Dashboard({ data, today, timeZone }: { data: DashboardData; today: stri
           </li>
         ))}
       </ul>
+
+      <PendingCountCards counts={pending} />
 
       {!data.hasAnyProject ? (
         <section className={styles.section} aria-labelledby="empty">

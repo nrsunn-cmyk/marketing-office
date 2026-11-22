@@ -8,6 +8,7 @@ export function ProjectJumpBar() {
   const items = [
     ["#project-info", "프로젝트 정보"],
     ["#tasks", "작업"],
+    ["#p3-production", "P3 제작·납품"],
     ["#p4-execution", EX_LABELS.entryHeading],
     ["#project-assets", "프로젝트 자료"],
     ["#project-sources", "외부 출처"],
