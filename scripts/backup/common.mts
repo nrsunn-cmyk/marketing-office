@@ -114,6 +114,8 @@ export const LATER_TABLES = [
   "channel_publications",
   // 20261121001000_p3a_production_briefs
   "production_briefs",
+  // 20261121001500_source_upload_direct(자료 파일 직접 업로드 예약, 원래 32번을 운영 순서 H→I→U 에 맞춰 28 다음 이름으로. 파일 자체는 확정된 source_assets 로 백업한다)
+  "source_asset_uploads",
 ] as const;
 
 export const TABLES = [
