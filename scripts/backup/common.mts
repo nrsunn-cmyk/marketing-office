@@ -92,7 +92,7 @@ export function dbContainer(kind: BackupTarget["kind"], env: EnvMap = process.en
  * 백업 대상 public 표 전체 (행 수 비교용). BACKUP-P2-TABLES-01: migration 이 만드는 표를 빠짐없이 둔다.
  * - DB 내보내기(supabase db dump --data-only)는 원래 public 표 전체를 담는다. 이 목록은 행 수 검증 범위다.
  * - 백업·검증 때 DB 의 실제 public 표를 읽어, 이 목록에 없는 표가 있으면 멈춘다(새 migration 이 표를 더했는데 목록을 안 고친 경우).
- * - LATER_TABLES 는 뒤 migration(21 퍼널·22 브리프·24 AI 문구 생성 기록·25 관리자 열람 기록·26 리드마그넷·27 채널 초안·28 제작 브리프)이 만드는 표다. 아직 그 migration 이 없는 DB 에서는 없어도 된다.
+ * - LATER_TABLES 는 뒤 migration(21 퍼널·22 브리프·24 AI 문구 생성 기록·25 관리자 열람 기록·26 리드마그넷·27 채널 초안·28 제작 브리프·29 홈페이지 문서)이 만드는 표다. 아직 그 migration 이 없는 DB 에서는 없어도 된다.
  */
 export const LATER_TABLES = [
   // 20261118001000_p2d_funnel_board
@@ -116,6 +116,9 @@ export const LATER_TABLES = [
   "production_briefs",
   // 20261121001500_source_upload_direct(자료 파일 직접 업로드 예약, 원래 32번을 운영 순서 H→I→U 에 맞춰 28 다음 이름으로. 파일 자체는 확정된 source_assets 로 백업한다)
   "source_asset_uploads",
+  // 20261121002000_p3b_web_copy(판이 문서의 현재 판을 가리키므로 문서·판 순서로 둔다)
+  "web_copy_docs",
+  "web_copy_versions",
 ] as const;
 
 export const TABLES = [
