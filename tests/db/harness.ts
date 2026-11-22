@@ -58,6 +58,22 @@ export async function asUser<T>(db: Db, userId: string | null, fn: (tx: Tx) => P
   });
 }
 
+/**
+ * 준비 데이터를 관리자 권한으로 넣는다(asUser 트랜잭션 안에서 잠깐 역할을 풀었다가 다시 authenticated 로).
+ * 앱에서 정의자 RPC 가 쓰는 표(결과물·버전 등)는 로그인 역할에 쓰기 권한이 없다(PERM-CLEANUP-01). 시험 준비만 이 길로 넣는다.
+ */
+export async function asSetup<T>(tx: Tx, fn: () => Promise<T>): Promise<T> {
+  const before = (await one<{ r: string }>(tx, "select current_user as r")).r;
+  await tx.exec("reset role");
+  // 오류면 트랜잭션이 이미 중단돼 되돌릴 수 없다(어차피 롤백). 성공했을 때만 들어오기 전 역할로 되돌린다
+  const r = await fn();
+  if (before !== (await one<{ r: string }>(tx, "select current_user as r")).r) await tx.exec(`set local role ${before}`);
+  return r;
+}
+
+/** 로그인 역할 직접 쓰기가 권한 단계에서 거절될 때의 문구(PERM-CLEANUP-01 뒤에는 RLS 보다 먼저 막힌다) */
+export const DENIED = /permission denied for table|row-level security/;
+
 /** DB 오류 메시지가 패턴과 맞는지 확인한다. */
 export async function expectDbError(promise: Promise<unknown>, pattern: RegExp): Promise<void> {
   let error: unknown = null;
@@ -86,10 +102,9 @@ export interface Fixture {
 /** 사용자 1명, 업무실 1개, 가상 고객 A/B와 각자의 프로필·프로젝트 (D09 가상 고객 2개). 본인 권한으로 만든다. */
 export async function seedOwner(db: Db, email = "owner@example.test"): Promise<Fixture> {
   const userId = await createUser(db, email);
+  // 업무실은 앱에서 정의자 RPC(setup_workspace)로만 만든다. 로그인 역할에는 workspaces 쓰기 권한이 없다(PERM-CLEANUP-01)
+  const workspaceId = (await one<{ id: string }>(db, "insert into workspaces (owner_user_id, name) values ($1, '내 업무실') returning id", [userId])).id;
   return asUser(db, userId, async (tx) => {
-    const workspaceId = (
-      await one<{ id: string }>(tx, "insert into workspaces (owner_user_id, name) values ($1, '내 업무실') returning id", [userId])
-    ).id;
     const client = async (name: string) =>
       (await one<{ id: string }>(tx, "insert into clients (workspace_id, name) values ($1, $2) returning id", [workspaceId, name])).id;
     const clientA = await client("가상고객A 베이커리");
@@ -156,19 +171,26 @@ export async function createArtifactWithVersion(
   taskId: string,
   type: "logo_brief" | "quote" = "logo_brief",
 ): Promise<{ artifactId: string; versionId: string }> {
-  const artifactId = (
-    await one<{ id: string }>(
-      tx,
-      "insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, $4) returning id",
-      [f.workspaceId, projectId, taskId, type],
-    )
-  ).id;
-  const versionId = await addVersion(tx, f, artifactId, 1);
-  await tx.query("update artifacts set current_draft_version_id = $1 where id = $2", [versionId, artifactId]);
-  return { artifactId, versionId };
+  // 앱에서는 정의자 RPC(record_generation)가 쓰는 표라 준비는 관리자 권한으로 넣는다
+  return asSetup(tx, async () => {
+    const artifactId = (
+      await one<{ id: string }>(
+        tx,
+        "insert into artifacts (workspace_id, project_id, task_id, type) values ($1, $2, $3, $4) returning id",
+        [f.workspaceId, projectId, taskId, type],
+      )
+    ).id;
+    const versionId = await addVersionRaw(tx, f, artifactId, 1);
+    await tx.query("update artifacts set current_draft_version_id = $1 where id = $2", [versionId, artifactId]);
+    return { artifactId, versionId };
+  });
 }
 
 export async function addVersion(tx: Tx, f: Fixture, artifactId: string, version: number): Promise<string> {
+  return asSetup(tx, () => addVersionRaw(tx, f, artifactId, version));
+}
+
+async function addVersionRaw(tx: Tx, f: Fixture, artifactId: string, version: number): Promise<string> {
   return (
     await one<{ id: string }>(
       tx,

@@ -118,7 +118,7 @@ describe("1) 현재 초안이 아닌 버전 직접 승인 + 승인본 포인터 
     const upd = record("1-관찰 A artifacts.approved_version_id = v1", await attempt(db, a.userId, "update artifacts set approved_version_id = $1 where id = $2", [v1, artifactId]));
     expect(ins.allowed).toBe(false);
     expect(ins.code).toBe("42501");
-    expect(ins.message).toMatch(/row-level security policy for table "approvals"/);
+    expect(ins.message).toMatch(/permission denied for table approvals|row-level security policy for table "approvals"/);
     expect(upd.allowed).toBe(false);
     expect(upd.code).toBe("42501");
     expect(upd.message).toMatch(/permission denied for table artifacts/);
@@ -167,7 +167,7 @@ describe("2) 미승인·다른 프로젝트 버전으로 전달 기록", () => {
     );
     expect(o.allowed).toBe(false);
     expect(o.code).toBe("42501");
-    expect(o.message).toMatch(/row-level security policy for table "delivery_records"/);
+    expect(o.message).toMatch(/permission denied for table delivery_records|row-level security policy for table "delivery_records"/);
   });
 
   it("[수정 후 거절] 본인도 프로젝트 B(고객 B)의 버전을 프로젝트 A(고객 A) 전달 기록으로 넣을 수 없다", async () => {
@@ -177,7 +177,7 @@ describe("2) 미승인·다른 프로젝트 버전으로 전달 기록", () => {
     );
     expect(o.allowed).toBe(false);
     expect(o.code).toBe("42501");
-    expect(o.message).toMatch(/row-level security policy for table "delivery_records"/);
+    expect(o.message).toMatch(/permission denied for table delivery_records|row-level security policy for table "delivery_records"/);
   });
 });
 
@@ -206,7 +206,7 @@ describe("3) 승인·감사 기록의 행위자(actor_id) 위조", () => {
     );
     expect(o.allowed).toBe(false);
     expect(o.code).toBe("42501");
-    expect(o.message).toMatch(/ACTOR_MISMATCH/);
+    expect(o.message).toMatch(/permission denied for table approvals|ACTOR_MISMATCH/);
   });
 
   it("[수정 후 거절] 본인도 감사 기록의 actor_id 를 다른 사용자(B)로 넣을 수 없다", async () => {

@@ -89,13 +89,13 @@ test("준비: 본인 업무실·작업·초안(실제 로그인 세션), 다른 
   anon = createClient(url, key, { auth: { persistSession: false } });
 });
 
-test("본인: 승인 기록 직접 insert → 42501(RLS, 정책 없음)", async () => {
+test("본인: 승인 기록 직접 insert → 42501(INSERT 권한 없음, PERM-CLEANUP-01 전에는 RLS 정책 없음)", async () => {
   const r = await owner
     .from("approvals")
     .insert({ workspace_id: workspaceId, artifact_id: artifactId, artifact_version_id: versionId, actor_id: ownerId, decision: "approved" });
   log("본인 approvals insert", r);
   expect(r.error?.code).toBe("42501");
-  expect(r.error?.message).toMatch(/row-level security policy for table "approvals"/);
+  expect(r.error?.message).toMatch(/permission denied for table approvals|row-level security policy for table "approvals"/);
 });
 
 test("본인: 승인본 포인터 직접 update → 42501(열 권한 없음)", async () => {
