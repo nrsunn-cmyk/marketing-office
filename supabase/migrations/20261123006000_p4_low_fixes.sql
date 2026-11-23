@@ -17,6 +17,9 @@ language sql immutable set search_path = '' as $$
      and char_length(p_url) <= 500
      and p_url ~* '^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(/[^?#[:space:]]*)?$'
      and p_url !~ '^https://[0-9.]+(/|$)'
+     -- 호스트의 마지막 라벨이 숫자(10진수·0x 16진수·0 시작 8진수)면 서버(WHATWG URL)가 IPv4 로 해석해 막는다.
+     -- 같은 기준으로 저장 단계에서도 거절한다(예: 0x7f.1 → 127.0.0.1). 0x7f000001.example.com 처럼 끝이 글자면 통과.
+     and regexp_replace(lower(coalesce(substring(p_url from '^https://([^/]+)'), '')), '^.*\.', '') !~ '^(0x[0-9a-f]*|[0-9]+)$'
 $$;
 revoke execute on function app.channel_url_ok(text) from public, anon, authenticated;
 

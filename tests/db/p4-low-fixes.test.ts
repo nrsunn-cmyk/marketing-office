@@ -87,20 +87,27 @@ const URLS: string[] = [
   "ftp://crm.example.test/", "https://xn--bj0bj06e.example.test/", "https://crm.example.test/" + "a".repeat(470),
   "https://crm.example.test/한글", "https://crm.example.test/%20x", "https://1.2.3.4.example.test/", "https://123.example.test/",
   "https://crm.example.test/a/b/",
+  // P4-R7-CONSISTENCY-BACKEND-01: 숫자로 끝나는 호스트(서버가 IPv4 로 해석) — Tester QA-P4-LOW-FIXES-PG17-GAPS-01 사례 포함
+  "https://0x7f.0.0.1/hook", "https://0x7f.1/", "https://127.1/", "https://0177.0.0.1/", "https://example.0x1f/", "https://example.123/",
+  "https://0x7f000001.example.test/", "https://1.2.3.4.nip.example.test/",
 ];
-// 문서화한 근사 차이(DB 가 더 엄격): 잘못된 호스트 모양, 경로 공백, 500자 초과
+// 문서화한 근사 차이(DB 가 더 엄격): 잘못된 호스트 모양, 경로 공백, 500자 초과, 서버가 지워 주는 군더더기, 한글·밑줄 호스트, \@ 혼동 주소
 const DB_STRICTER: string[] = [
   "https://-bad.example.test/", "https://bad-.example.test/", "https://crm..example.test/", "https://crm.example.test/has space",
   "https://crm.example.test/" + "a".repeat(490),
+  "https://crm.example.test:443/hook", "https://crm.example.test/hook?", "https://crm.example.test/hook#",
+  "https://한글.example.test/", "https://crm_x.example.test/", String.raw`https://crm.example.test\@evil.test/`,
 ];
 const urlOk = async (u: string) => (await one<{ ok: boolean }>(db, "select app.channel_url_ok($1) as ok", [u])).ok;
 
 describe("R7 연결 주소 규칙 (006000)", () => {
   it("기준 사례: 반드시 거절·반드시 통과(도구 실수가 조용히 지나가지 않게)", async () => {
-    for (const bad of ["https://localhost/hook", "http://crm.example.test/hook", "https://crm.example.test:8443/hook", "https://crm.example.test/x?y=1", "https://10.0.0.1/"]) {
+    for (const bad of ["https://localhost/hook", "http://crm.example.test/hook", "https://crm.example.test:8443/hook", "https://crm.example.test/x?y=1", "https://10.0.0.1/",
+      "https://0x7f.1/", "https://0x7f.0.0.1/hook", "https://127.1/"]) {
       expect(await urlOk(bad), bad).toBe(false);
     }
     expect(await urlOk("https://crm.example.test/hook")).toBe(true);
+    expect(await urlOk("https://0x7f000001.example.test/")).toBe(true);
   });
 
   it("서버가 막는 주소를 DB 가 통과시키지 않는다(형식 기준 판정 일치)", async () => {
