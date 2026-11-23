@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { CONTACT, CTA, SERVICE_OPTIONS } from "./brand-copy";
 import {
   CONTACT_LIMITS,
+  HONEYPOT_FIELD,
   firstErrorField,
   mergePreset,
   readContactForm,
@@ -29,7 +30,12 @@ export function PresetLink({ preset, className, children }: { preset: readonly s
   );
 }
 
-type Status = { kind: "idle" } | { kind: "pending" } | { kind: "sent" } | { kind: "failed" } | { kind: "not_connected" };
+type Status =
+  | { kind: "idle" }
+  | { kind: "pending" }
+  | { kind: "sent"; refCode: string }
+  | { kind: "failed"; message: string }
+  | { kind: "not_connected" };
 
 const FIELD_ID: Record<ContactField, string> = {
   company_name: "nd-company",
@@ -39,6 +45,8 @@ const FIELD_ID: Record<ContactField, string> = {
   services: "nd-svc-0",
   other_service: "nd-other",
   message: "nd-msg",
+  desired_timeline: "nd-timeline",
+  budget_range: "nd-budget",
   privacy_consent: "nd-consent",
 };
 
@@ -52,6 +60,12 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
   const [errors, setErrors] = useState<ContactErrors>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const formRef = useRef<HTMLFormElement>(null);
+  const moreRef = useRef<HTMLDetailsElement>(null);
+  // 사람 확인: 폼을 그린 시각(서버가 너무 빠른 자동 제출을 거른다). 화면을 그린 뒤 한 번만 정한다
+  const startedAt = useRef<number | null>(null);
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, []);
 
   useEffect(() => {
     const onPreset = (ev: Event) => {
@@ -67,16 +81,24 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
 
   const toggle = (v: string, on: boolean) => setServices((cur) => (on ? mergePreset(cur, [v]) : cur.filter((x) => x !== v)));
 
+  /** 오류 칸으로 초점(접힌 선택 칸의 오류면 먼저 펼친다) */
+  const focusFirst = (found: ContactErrors) => {
+    const first = firstErrorField(found);
+    if (!first) return false;
+    if ((first === "desired_timeline" || first === "budget_range") && moreRef.current) moreRef.current.open = true;
+    requestAnimationFrame(() => document.getElementById(FIELD_ID[first])?.focus());
+    return true;
+  };
+
   async function onSubmit(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
     if (status.kind === "pending") return;
-    const input = readContactForm(new FormData(ev.currentTarget));
+    const fd = new FormData(ev.currentTarget);
+    const input = readContactForm(fd);
     const found = validateContact(input);
     setErrors(found);
-    const first = firstErrorField(found);
-    if (first) {
+    if (focusFirst(found)) {
       setStatus({ kind: "idle" });
-      document.getElementById(FIELD_ID[first])?.focus();
       return;
     }
     if (!submit) {
@@ -85,17 +107,21 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
     }
     setStatus({ kind: "pending" });
     try {
-      const r = await submit(input);
+      const r = await submit(input, { honeypot: String(fd.get(HONEYPOT_FIELD) ?? ""), startedAt: startedAt.current });
       if (r.status === "sent") {
+        // 서버가 저장을 확인했을 때만 성공(입력을 비운다)
         formRef.current?.reset();
         setServices([]);
-        setStatus({ kind: "sent" });
+        setStatus({ kind: "sent", refCode: r.refCode });
       } else {
-        setErrors(r.errors ?? {});
-        setStatus({ kind: "failed" });
+        // 실패·제한·접수 꺼짐: 입력은 그대로, 서버 문구를 보인다
+        const fe = r.errors ?? {};
+        setErrors(fe);
+        focusFirst(fe);
+        setStatus({ kind: "failed", message: r.message || CONTACT.failure });
       }
     } catch {
-      setStatus({ kind: "failed" });
+      setStatus({ kind: "failed", message: CONTACT.failure });
     }
   }
 
@@ -175,19 +201,27 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
         {err("message")}
       </div>
 
-      <details className={s.more}>
+      <details ref={moreRef} className={s.more}>
         <summary>{CONTACT.labels.more}</summary>
         <div className={s.formGrid}>
           <div className={s.field}>
             <label htmlFor="nd-timeline">{CONTACT.labels.timeline}</label>
-            <input id="nd-timeline" name="desired_timeline" className={s.input} maxLength={CONTACT_LIMITS.short} />
+            <input id="nd-timeline" name="desired_timeline" className={s.input} maxLength={CONTACT_LIMITS.short} {...a11y("desired_timeline")} />
+            {err("desired_timeline")}
           </div>
           <div className={s.field}>
             <label htmlFor="nd-budget">{CONTACT.labels.budget}</label>
-            <input id="nd-budget" name="budget_range" className={s.input} maxLength={CONTACT_LIMITS.short} />
+            <input id="nd-budget" name="budget_range" className={s.input} maxLength={CONTACT_LIMITS.short} {...a11y("budget_range")} />
+            {err("budget_range")}
           </div>
         </div>
       </details>
+
+      {/* 자동 입력 방지 숨은 칸: 사람에게 보이지 않고 화면 읽기·탭 순서에서도 빠진다. 값이 있으면 서버가 저장하지 않는다 */}
+      <div className={s.honeypot} aria-hidden="true">
+        <label htmlFor="nd-website">웹사이트</label>
+        <input id="nd-website" name={HONEYPOT_FIELD} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+      </div>
 
       <div className={s.field}>
         <label className={`${s.chip} ${s.consent}`}>
@@ -205,8 +239,14 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
 
       {/* 결과 안내 영역은 늘 두고 글만 바꾼다(화면 읽기 프로그램이 한 번 읽음) */}
       <div role="status" aria-live="polite" aria-atomic="true">
-        {status.kind === "sent" && <p className={s.statusOk}>{CONTACT.success}</p>}
-        {status.kind === "failed" && <p className={s.statusError}>{CONTACT.failure}</p>}
+        {status.kind === "sent" && (
+          <p className={s.statusOk}>
+            {CONTACT.success}
+            <br />
+            {CONTACT.refLabel} <strong>{status.refCode}</strong>
+          </p>
+        )}
+        {status.kind === "failed" && <p className={s.statusError}>{status.message}</p>}
         {status.kind === "not_connected" && <p className={s.statusPreview}>{CONTACT.notConnected}</p>}
       </div>
     </form>

@@ -305,15 +305,6 @@
     transform: translateY(-8px);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .mobius {
-    animation: none;
-  }
-  .btn:hover,
-  .serviceCard:hover {
-    transform: none;
-  }
-}
 
 /* SECTION 02 SERVICES · 04 WORKS */
 .grid3 {
@@ -688,5 +679,33 @@
   }
   .btn {
     padding: 10px 16px;
+  }
+}
+
+/* 자동 입력 방지 숨은 칸(화면 밖, 크기 1px, 사람에게 안 보임) */
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/*
+ * 움직임 줄이기(3안 8번): 파일 맨 끝에 둬서 같은 특이도의 .serviceCard:hover·.btn:hover 를 확실히 덮는다
+ * (Tester QA-NADAUM-BRAND-CONCEPT3-01 F1: 앞에 있으면 translateY·전환이 남았음)
+ */
+@media (prefers-reduced-motion: reduce) {
+  .mobius {
+    animation: none;
+  }
+  .btn,
+  .serviceCard {
+    transition: none;
+  }
+  .btn:hover,
+  .serviceCard:hover {
+    transform: none;
   }
 }

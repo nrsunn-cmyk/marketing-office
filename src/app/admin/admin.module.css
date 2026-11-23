@@ -284,3 +284,115 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/*
+ * NADAUM-BRAND-CONNECT-01 /admin/inquiries — 3안 좌우 분할(목록 1.4fr · 상세 0.6fr), 1100px 이하 세로 쌓기(CONCEPT-3-FINAL-SPEC 2번)
+ */
+.inqSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .inqSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.inqDetail {
+  position: sticky;
+  top: 88px;
+}
+@media (max-width: 1100px) {
+  .inqDetail {
+    position: static;
+  }
+}
+
+.detailBox {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.detailList {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.detailList > div {
+  display: grid;
+  gap: 2px;
+}
+.detailList dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+.detailList dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 사용자가 적은 글자: 방향 제어 문자(U+202E 등)가 주변 화면을 뒤집지 않게 격리(Master 체크포인트 msg_42e0cb4bfd3a) */
+.userText {
+  unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+}
+.userBlock {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.urlNote {
+  display: block;
+  font-size: var(--font-size-xs);
+}
+
+.rowSelected td {
+  background: var(--bg-hover);
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+.statusPill[data-status="new"] {
+  border-color: var(--theme-badge-border);
+  background: var(--theme-badge-bg);
+  color: var(--theme-badge-text);
+}
+.statusPill[data-status="contacted"],
+.statusPill[data-status="quoted"] {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 목록 칸 안 둘째 줄(접수 시각·담당자) */
+.subLine {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+/* 좌우 분할 왼쪽 칸의 표는 칸 폭에 맞춘다(관리자 기본 표 최소 720px 대신) */
+@media (min-width: 641px) {
+  .inqSplit .tableWrap table {
+    min-width: 0;
+  }
+}

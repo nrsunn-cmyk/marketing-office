@@ -32,12 +32,14 @@ describe("관리자 나다움 테마", () => {
     expect(readFileSync(join(root, "src/app/admin/layout.tsx"), "utf8")).not.toMatch(/features\/admin|isAdmin|supabase/);
   });
 
-  it("관리자 머리: 나다움 로고(alt NADAUM)와 '관리자 · 읽기 전용' 배지, 탭·제목·읽기 전용 안내는 그대로", () => {
+  it("관리자 머리: 나다움 로고(alt NADAUM)와 '관리자 콘솔' 배지(AGY msg_ed6cda9e89ef), 탭 6개(공개 상담 포함)·제목·기존 읽기 전용 안내", () => {
     const h = renderToString(createElement(AdminHeader, { current: "/admin/p4", title: "P4 실행 현황", lead: "설명" }));
     expect(h).toMatch(/<img[^>]*alt="NADAUM"[^>]*src="\/brand\/nadaum\/nadaum-logo\.svg"|src="\/brand\/nadaum\/nadaum-logo\.svg"[^>]*alt="NADAUM"/);
-    expect(h).toContain("관리자 · 읽기 전용");
+    expect(h).toContain("관리자 콘솔");
+    expect(h).not.toContain("관리자 · 읽기 전용");
+    expect(h).toContain('href="/admin/inquiries"');
     expect(h).toContain('aria-current="page"');
-    expect((h.match(/href="\/admin/g) ?? []).length).toBe(5);
+    expect((h.match(/href="\/admin/g) ?? []).length).toBe(6);
     expect(h).toContain("운영 상태를 보기만 하는 화면입니다.");
   });
 

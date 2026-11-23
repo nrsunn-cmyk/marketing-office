@@ -34,15 +34,19 @@ const TABS = [
   { href: "/admin/audit", label: "감사 기록" },
   { href: "/admin/p3", label: "P3 진행 현황" },
   { href: "/admin/p4", label: "P4 실행 현황" },
+  { href: "/admin/inquiries", label: "공개 상담" },
 ] as const;
 
-export function AdminHeader({ current, title, lead }: { current: (typeof TABS)[number]["href"]; title: string; lead: string }) {
+/** 기존 관리자 화면 공통 안내(읽기 전용). 공개 상담 화면은 자기 안내를 넘긴다(AGY 확정 msg_ed6cda9e89ef) */
+const READONLY_NOTICE = "운영 상태를 보기만 하는 화면입니다. 가입자 정보 수정·삭제·비밀번호 초기화는 여기서 할 수 없습니다. 이 화면을 열 때마다 열람 기록이 남습니다.";
+
+export function AdminHeader({ current, title, lead, notice = READONLY_NOTICE }: { current: (typeof TABS)[number]["href"]; title: string; lead: string; notice?: string }) {
   return (
     <>
       {/* NADAUM-BRAND-ADMIN-THEME-01: 관리자 머리에 나다움 로고(어두운 배경 전용 흰 로고) */}
       <p className={`${ad.kicker} ${ad.brandBar}`}>
         <Image src="/brand/nadaum/nadaum-logo.svg" alt="NADAUM" width={116} height={22} unoptimized className={ad.brandLogo} />
-        <span className={ad.adminPill}>관리자 · 읽기 전용</span>
+        <span className={ad.adminPill}>관리자 콘솔</span>
       </p>
       <nav aria-label="관리자 화면">
         <ul className={ad.tabs}>
@@ -58,7 +62,7 @@ export function AdminHeader({ current, title, lead }: { current: (typeof TABS)[n
       <h1 className={styles.title}>{title}</h1>
       <p className={styles.muted}>{lead}</p>
       <p className={`${styles.notice} ${ad.readonly}`} role="note">
-        운영 상태를 보기만 하는 화면입니다. 가입자 정보 수정·삭제·비밀번호 초기화는 여기서 할 수 없습니다. 이 화면을 열 때마다 열람 기록이 남습니다.
+        {notice}
       </p>
     </>
   );

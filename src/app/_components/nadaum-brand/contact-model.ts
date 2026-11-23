@@ -17,13 +17,23 @@ export interface ContactInput {
   privacy_consent: boolean;
 }
 
-export type ContactField = "company_name" | "contact_name" | "phone" | "services" | "other_service" | "message" | "reference_url" | "privacy_consent";
+export type ContactField =
+  | "company_name"
+  | "contact_name"
+  | "phone"
+  | "services"
+  | "other_service"
+  | "message"
+  | "reference_url"
+  | "desired_timeline"
+  | "budget_range"
+  | "privacy_consent";
 export type ContactErrors = Partial<Record<ContactField, string>>;
 
 export const CONTACT_LIMITS = { company: 80, name: 40, phone: 30, other: 80, message: 2000, url: 300, short: 80 } as const;
 
 /** 검사 순서 = 화면 순서(첫 오류 칸으로 초점을 옮길 때 쓴다) */
-export const FIELD_ORDER: ContactField[] = ["company_name", "contact_name", "phone", "reference_url", "services", "other_service", "message", "privacy_consent"];
+export const FIELD_ORDER: ContactField[] = ["company_name", "contact_name", "phone", "reference_url", "services", "other_service", "message", "desired_timeline", "budget_range", "privacy_consent"];
 
 const isService = (v: string): v is ServiceOption => (SERVICE_OPTIONS as readonly string[]).includes(v);
 
@@ -86,10 +96,19 @@ export function mergePreset(current: readonly string[], preset: readonly string[
 }
 
 /**
- * 제출 결과. 서버 연결(Backend 3B·4단계)은 submit 함수로 주입한다.
- * - 'sent': 서버가 저장을 확인한 경우에만 → 성공 문구
- * - 'failed': 저장 실패 → 입력 보존·재시도 안내
+ * 제출 결과. 서버 연결(NADAUM-BRAND-CONNECT-01, Backend 51913d4 submitPublicInquiryFromRequest)은 submit 함수로 주입한다.
+ * - 'sent': 서버가 저장을 확인한 경우에만 → 성공 문구 + 접수 번호
+ * - 'failed': validation(칸별 오류)·rate_limited·unavailable·error → 서버 문구, 입력 보존
  * - 주입이 없으면 'not_connected' → 미리보기 안내(가짜 성공 금지)
  */
-export type ContactSubmitResult = { status: "sent" } | { status: "failed"; errors?: ContactErrors };
-export type ContactSubmit = (input: ContactInput) => Promise<ContactSubmitResult>;
+export type ContactFailReason = "validation" | "rate_limited" | "unavailable" | "error";
+export type ContactSubmitResult = { status: "sent"; refCode: string } | { status: "failed"; reason: ContactFailReason; message: string; errors?: ContactErrors };
+/** 사람 확인용 값: honeypot = 숨은 칸 값(사람은 비움), startedAt = 폼을 그린 시각(ms) */
+export interface ContactSubmitMeta {
+  honeypot: string;
+  startedAt: number | null;
+}
+export type ContactSubmit = (input: ContactInput, meta: ContactSubmitMeta) => Promise<ContactSubmitResult>;
+
+/** 자동 입력 방지 숨은 칸 이름(사람에게 보이지 않고 탭 순서에서 빠짐) */
+export const HONEYPOT_FIELD = "website";

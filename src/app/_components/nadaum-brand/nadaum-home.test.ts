@@ -109,6 +109,12 @@ describe("나다움브랜드 공개 화면", () => {
     expect(t).not.toContain(CONTACT.notConnected);
     expect(html).toMatch(/role="status" aria-live="polite" aria-atomic="true"><\/div>/);
     expect(html).not.toContain('id="nd-other"'); // '기타'를 고르기 전에는 한 줄 칸 없음
+    // 자동 입력 방지 숨은 칸: 화면 읽기에서 숨기고 탭 순서에서 뺀다
+    const hp = html.match(/<div class="honeypot" aria-hidden="true">[\s\S]*?<\/div>/)?.[0] ?? "";
+    const hpInput = hp.match(/<input [^>]*>/)?.[0] ?? "";
+    expect(hpInput).toContain('name="website"');
+    expect(hpInput).toContain('tabindex="-1"');
+    expect(hpInput.toLowerCase()).toContain('autocomplete="off"');
   });
 
   it("장식 이미지(뫼비우스·카드)는 대체 텍스트를 비우고, 로고 링크에는 이름이 있다", () => {
@@ -119,8 +125,8 @@ describe("나다움브랜드 공개 화면", () => {
 
   it("/ 연결: 새 화면을 그리고, 기존 업무실 소개 파일은 그대로 보존된다", () => {
     const page = readFileSync(join(process.cwd(), "src/app/(brand)/page.tsx"), "utf8");
-    expect(page).toContain("<NadaumHome />");
-    expect(page).not.toMatch(/submit=/); // 접수 서버 연결 전: 성공 경로 없음
+    // NADAUM-BRAND-CONNECT-01: 접수 서버 동작 연결(저장 확인 때만 성공)
+    expect(page).toContain("<NadaumHome submit={submitNadaumInquiry} />");
     expect(readFileSync(join(process.cwd(), "src/app/_components/landing-page.tsx"), "utf8")).toContain("export function LandingPage");
     // 나다움 파비콘은 / 묶음 폴더에만(루트 icon.svg 는 업무실·관리자용 그대로)
     expect(existsSync(join(process.cwd(), "src/app/page.tsx"))).toBe(false);
