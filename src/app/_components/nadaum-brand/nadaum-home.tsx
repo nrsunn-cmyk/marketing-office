@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { CTA, FAQ, FOOTER, HERO, HOOK, NAV, SERVICES, STATEMENT, WORKS, WORK_STATUS_LABEL } from "./brand-copy";
+import Link from "next/link";
+import { CTA, FAQ, FOOTER, HERO, HOOK, NAV, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN, STATEMENT, WORKS, WORK_STATUS_LABEL } from "./brand-copy";
 import { ContactForm, PresetLink } from "./brand-contact";
 import { FaqAccordion } from "./brand-faq";
 import type { ContactSubmit } from "./contact-model";
@@ -180,7 +181,15 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
             <span>{FOOTER.name}</span>
             <span>{FOOTER.phone}</span>
           </div>
-          <span>{FOOTER.copyright}</span>
+          <div className={s.footerEnd}>
+            <span>{FOOTER.copyright}</span>
+            {/* 업무실 진입은 머리글이 아니라 푸터 보조 링크 하나로(AGY PRIVACY-CONSENT-SPEC-01 2절) */}
+            {SHOW_FOOTER_WORKSPACE_LOGIN && (
+              <Link href={FOOTER.loginHref} prefetch={false} className={s.footerLogin}>
+                {FOOTER.login}
+              </Link>
+            )}
+          </div>
         </div>
       </footer>
     </div>

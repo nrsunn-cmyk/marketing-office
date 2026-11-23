@@ -89,6 +89,9 @@ export const FAQ = {
   ],
 } as const;
 
+/** 공개 상담 개인정보 보유 기간. 주인님 최종 확인 때 이 한 줄만 바꾼다(바꾸면 Backend 동의 판 번호도 함께 올림) */
+export const PRIVACY_RETENTION = "접수일로부터 1년";
+
 export const CONTACT = {
   eyebrow: "START A PROJECT",
   title: "당신의 브랜드, 다음 장면은 무엇인가요?",
@@ -104,7 +107,7 @@ export const CONTACT = {
     more: "희망 일정 · 예산 (선택)",
     timeline: "희망 일정 (선택)",
     budget: "예산 (선택)",
-    consent: "개인정보 수집·이용에 동의합니다 (상담 확인 및 연락 목적)",
+    consent: "개인정보 수집·이용에 동의합니다 (필수)",
   },
   placeholders: {
     company: "예: 스튜디오 나다움",
@@ -123,11 +126,23 @@ export const CONTACT = {
   /** 접수 서버가 아직 연결되지 않은 미리보기(가짜 성공 금지, 5절 '테스트용 모드는 명시적으로 구분') — 문구 AGY 확인 대상 */
   notConnected: "미리보기 화면입니다. 상담 접수 서버가 아직 연결되지 않아 신청은 전송되지 않았습니다. 입력하신 내용은 그대로 남아 있습니다.",
   errorSummary: "입력 내용을 확인해 주세요.",
+  /** 개인정보 보호법 제15조 제2항 고지 4요소(AGY PRIVACY-CONSENT-SPEC-01 1절). 동의 칸 바로 아래 늘 펼쳐 보인다 */
+  privacy: [
+    { term: "수집·이용 목적", desc: "프로젝트 상담 확인, 견적 안내 및 회신 연락" },
+    { term: "수집 항목", desc: "(필수) 업체명, 담당자 이름, 연락처, 요청 서비스, 요청 내용 / (선택) 참고 URL, 희망 일정, 예상 예산" },
+    { term: "보유·이용 기간", desc: `${PRIVACY_RETENTION} 보관 후 파기 (관계 법령에 따라 보존이 필요한 경우 해당 기간 보관)` },
+    { term: "동의 거부 권리 및 불이익", desc: "개인정보 수집·이용 동의를 거부할 수 있으며, 거부 시 상담 신청 접수가 제한됩니다." },
+  ],
 } as const;
+
+/** 푸터 보조 링크 '업무실 로그인'(/login) 노출 여부. 숨기려면 false 한 줄(AGY PRIVACY-CONSENT-SPEC-01 2절) */
+export const SHOW_FOOTER_WORKSPACE_LOGIN = true;
 
 export const FOOTER = {
   name: "NADAUM BRAND",
   /** 8절 미확정: 실제 번호가 확정될 때까지 자리 표시 그대로(번호를 지어내지 않음) */
   phone: "전화: [전화번호 직접 입력 예정]",
   copyright: "© NADAUM BRAND",
+  login: "업무실 로그인",
+  loginHref: "/login",
 } as const;

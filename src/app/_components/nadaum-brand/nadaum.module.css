@@ -527,6 +527,33 @@
   max-width: 100%;
   word-break: keep-all;
 }
+/* 개인정보 고지 4요소 카드(AGY PRIVACY-CONSENT-SPEC-01 1절: #0C1320·12px·13px/1.55, 본문 #C5CBD8·제목 #F1F3F8) */
+.privacyNotice {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0c1320;
+  color: #c5cbd8;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.privacyNotice dt {
+  display: inline;
+  color: #f1f3f8;
+  font-weight: 700;
+}
+.privacyNotice dt::after {
+  content: ": ";
+}
+.privacyNotice dd {
+  display: inline;
+  margin: 0;
+}
 .more > summary {
   min-height: var(--nd-touch-min);
   display: inline-flex;
@@ -602,6 +629,30 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 14px;
+}
+.footerEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+}
+/* 업무실 로그인 보조 링크(2절: 12px·#9CA3B8, 호버 #F1F3F8+밑줄, 44px 터치, 라일락 초점선) */
+.footerLogin {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--nd-touch-min);
+  font-size: 12px;
+}
+:root .root.root a.footerLogin {
+  color: #9ca3b8;
+}
+:root .root.root a.footerLogin:hover {
+  color: #f1f3f8;
+  text-decoration: underline;
+}
+:root .root.root a.footerLogin:focus-visible {
+  outline: 2px solid #b67af5;
+  outline-offset: 2px;
 }
 .footerLogo {
   height: 20px;

@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("./nadaum.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
 const { NadaumHome } = await import("./nadaum-home");
-const { CONTACT, CTA, FAQ, SERVICE_OPTIONS, SERVICES } = await import("./brand-copy");
+const { CONTACT, CTA, FAQ, FOOTER, PRIVACY_RETENTION, SERVICE_OPTIONS, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN } = await import("./brand-copy");
 
 const html = renderToString(createElement(NadaumHome)).replaceAll("<!-- -->", "");
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ");
@@ -121,6 +121,27 @@ describe("나다움브랜드 공개 화면", () => {
     expect(html).toMatch(/aria-label="NADAUM 맨 위로"/);
     expect(html).toMatch(/alt=""[^>]*src="\/brand\/nadaum\/mobius-3d\.png"|src="\/brand\/nadaum\/mobius-3d\.png"[^>]*alt=""/);
     expect(count(/src="\/brand\/nadaum\/service-[a-z-]+\.png"/g)).toBe(3);
+  });
+
+  it("개인정보 고지 4요소(목적·항목·보유 기간·거부 권리)를 동의 칸 아래 늘 보이고 aria-describedby 로 잇는다", () => {
+    const box = html.match(/<input[^>]*id="nd-consent"[^>]*>/)?.[0] ?? "";
+    expect(box).toContain('aria-describedby="nd-privacy"');
+    expect(t).toContain("개인정보 수집·이용에 동의합니다 (필수)");
+    const dl = html.match(/<dl id="nd-privacy"[^>]*>[\s\S]*?<\/dl>/)?.[0] ?? "";
+    for (const term of ["수집·이용 목적", "수집 항목", "보유·이용 기간", "동의 거부 권리 및 불이익"]) expect(dl).toContain(`<dt>${term}</dt>`);
+    expect(PRIVACY_RETENTION).toBe("접수일로부터 1년");
+    expect(text(dl)).toContain(`${PRIVACY_RETENTION} 보관 후 파기`);
+    expect(text(dl)).toContain("거부 시 상담 신청 접수가 제한됩니다");
+  });
+
+  it("푸터 보조 링크 '업무실 로그인'은 /login 하나(머리글에는 없음)", () => {
+    expect(SHOW_FOOTER_WORKSPACE_LOGIN).toBe(true);
+    const links = html.match(/<a [^>]*href="\/login"[^>]*>[^<]*<\/a>/g) ?? [];
+    expect(links).toHaveLength(1);
+    expect(links[0]).toContain(`>${FOOTER.login}</a>`);
+    expect(links[0]).toContain("footerLogin");
+    const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
+    expect(header).not.toContain('href="/login"');
   });
 
   it("/ 연결: 새 화면을 그리고, 기존 업무실 소개 파일은 그대로 보존된다", () => {

@@ -225,10 +225,27 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
 
       <div className={s.field}>
         <label className={`${s.chip} ${s.consent}`}>
-          <input id="nd-consent" type="checkbox" name="privacy_consent" required {...a11y("privacy_consent")} />
+          <input
+            id="nd-consent"
+            type="checkbox"
+            name="privacy_consent"
+            required
+            aria-invalid={errors.privacy_consent ? true : undefined}
+            aria-describedby={errors.privacy_consent ? "nd-privacy nd-consent-err" : "nd-privacy"}
+          />
           {CONTACT.labels.consent}
         </label>
+        {/* 오류 문구는 체크박스 바로 아래(안내 카드보다 먼저) */}
         {err("privacy_consent")}
+        {/* 개인정보 보호법 제15조 제2항 고지 4요소: 동의 전에 바로 읽히도록 늘 펼쳐 두고 동의 칸과 aria-describedby 로 잇는다 */}
+        <dl id="nd-privacy" className={s.privacyNotice}>
+          {CONTACT.privacy.map((p) => (
+            <div key={p.term}>
+              <dt>{p.term}</dt>
+              <dd>{p.desc}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       <div>
