@@ -297,6 +297,8 @@
   min-height: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
+  /* Tester F1(AGY 채택): 861~1023px 두 열에서 타일이 세로로 길어질 때 오른쪽 고리가 잘리지 않게 살짝 오른쪽 기준 */
+  object-position: 54% center;
 }
 
 /* SECTION 02 SERVICES · 04 WORKS */
