@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { EXECUTION_LIMITS } from "@/domain/execution";
+import type { P4ExternalBoard } from "@/features/execution/channels";
 import type { ExecutionBoard, ExecutionJobView, ExecutionResultView } from "./execution-model";
 
 /** P4A-UI-01 실행·성과 화면 상태별(서버 보기 모양의 가짜 데이터, 외부 API 없음) */
@@ -18,6 +19,7 @@ vi.mock("./execution.module.css", () => ({ default: new Proxy({}, { get: (_t, k)
 vi.mock("../../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
 const { ExecutionView } = await import("./execution-view");
+const { EX_LABELS } = await import("./execution-model");
 const { ExecutionEntryCard, ProjectJumpBar } = await import("./execution-entry");
 
 const P = "pppppppp-pppp-4ppp-8ppp-000000000001";
@@ -88,7 +90,10 @@ describe("실행·성과 화면(P4A-UI-01)", () => {
   it("모든 상태: 앵커 셋(#queue·#results·#channels)·돌아가기, 준비 중 채널 셋, 진행률 막대·% 막대 없음, 자동 게시 단추 없음", () => {
     for (const k of Object.keys(STATES)) {
       const h = render(k);
-      for (const a of ['href="#queue"', 'href="#results"', 'href="#channels"', 'id="channels"']) expect(h, `${k} ${a}`).toContain(a);
+      for (const a of ['href="#queue"', 'href="#channels"', 'id="channels"']) expect(h, `${k} ${a}`).toContain(a);
+      // UX-EXEC-JUMP-FRONT-01: 성과 구획이 없는 불러오기 실패에서는 #results 링크도 없다(없는 곳을 가리키지 않음)
+      if (STATES[k].board) expect(h, k).toContain('href="#results"');
+      else expect(h, k).not.toContain('href="#results"');
       expect(h, k).not.toMatch(/<progress|role="progressbar"/);
       expect(text(h), k).not.toMatch(/자동 게시하기|지금 게시/);
       expect(count(h, /준비 중 \(외부 채널은 아직 연결되지 않았습니다\)/g), k).toBeGreaterThanOrEqual(3);
@@ -219,4 +224,35 @@ it.runIf(Boolean(process.env.EX_HARNESS))("화면 점검용 HTML 쓰기", () => 
     join(out, "진입카드.html"),
     page(renderToString(createElement(ProjectJumpBar)) + renderToString(createElement(ExecutionEntryCard, { projectId: P, counts: { pending: 1, queued: 2, blocked: 1, results: 3 } }))),
   );
+});
+
+describe("UX-EXEC-JUMP-FRONT-01 바로가기 막대와 외부 연동 구획", () => {
+  const conn = (status: "connected" | "disconnected") =>
+    ({ id: "c1", channel: "crm", status, accountLabel: "회사 CRM", endpointUrl: "https://e", metricsUrl: "https://m", monthlyBudgetWon: 100000, perRunLimitWon: 5000, lastCheckedAt: null, lastErrorCode: null }) as P4ExternalBoard["connections"][number];
+  const ext = (status: "connected" | "disconnected"): P4ExternalBoard => ({ connections: [conn(status)], schedules: [], inquiries: [], followups: [] });
+  const CASES: Record<string, { b: ExecutionBoard | null; e: P4ExternalBoard | null | undefined; jumps: string[] }> = {
+    "외부 연동 없음(undefined)": { b: board(), e: undefined, jumps: ["queue", "results", "channels"] },
+    "외부 연동 불러오기 실패(null)": { b: board(), e: null, jumps: ["queue", "results", "channels", "external-channels-setup"] },
+    "외부 연동 · 미연결": { b: board(), e: ext("disconnected"), jumps: ["queue", "results", "external-channels-setup", "p4b-ops"] },
+    "외부 연동 · 연결됨": { b: board(), e: ext("connected"), jumps: ["queue", "results", "external-channels-setup", "external-dispatch", "p4b-ops"] },
+    "대기열 실패 · 외부 연동 연결됨": { b: null, e: ext("connected"), jumps: ["queue", "external-channels-setup"] },
+  };
+  const jumpsOf = (h: string) => [...(h.match(/<nav aria-label="실행 화면 바로 가기">[\s\S]*?<\/nav>/)?.[0] ?? "").matchAll(/href="#([a-z0-9-]+)"/g)].map((m) => m[1]);
+  const sectionsOf = (h: string) => [...h.matchAll(/<h2 id="([a-z0-9-]+)"/g)].map((m) => m[1]);
+
+  for (const [k, c] of Object.entries(CASES)) {
+    it(`${k}: 막대 링크 = 실제 구획(순서 그대로), 없는 곳을 가리키지 않음`, () => {
+      const h = renderToString(createElement(ExecutionView, { board: c.b, projectTitle: "나다음 리뉴얼", externalBoard: c.e })).replaceAll("<!-- -->", "");
+      expect(jumpsOf(h)).toEqual(c.jumps);
+      expect(sectionsOf(h)).toEqual(c.jumps);
+    });
+  }
+
+  it("외부 연동을 불러왔으면 '준비 중인 외부 채널' 구획·링크가 없고(설정 구획과 중복 방지), AGY 막대 이름을 쓴다", () => {
+    const h = text(renderToString(createElement(ExecutionView, { board: board(), projectTitle: "나다음 리뉴얼", externalBoard: ext("connected") })));
+    expect(h).not.toContain(EX_LABELS.channelsHeading);
+    expect(h).not.toContain(EX_LABELS.jumpChannels);
+    expect(h).not.toContain("연동 가능");
+    for (const l of ["외부 채널 설정", "외부 채널 실행", "예약·상담·CRM"]) expect(h).toContain(l);
+  });
 });

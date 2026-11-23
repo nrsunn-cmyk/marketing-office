@@ -51,6 +51,10 @@ export const EX_LABELS = {
   jumpQueue: "실행 대기열 · 수동 게시",
   jumpResults: "성과 기록 · 수동 입력",
   jumpChannels: "준비 중인 채널",
+  // UX-EXEC-JUMP-FRONT-01: 외부 연동 구획 바로가기(AGY msg_ca29bb39f260, 구획 제목과 맞춤)
+  jumpSetup: "외부 채널 설정",
+  jumpDispatch: "외부 채널 실행",
+  jumpP4b: "예약·상담·CRM",
   firstSource: "1차 입력: P2-g 티스토리 초안",
   channelLine: (key: string) => `채널: 티스토리 수동 게시 · 멱등 키: ${key}`,
   matchOk: "지문 일치",

@@ -56,6 +56,17 @@ export function ExecutionView({
   actions?: ExecutionActions;
   externalBoard?: P4ExternalBoard | null;
 }) {
+  // UX-EXEC-JUMP-FRONT-01(AGY msg_ca29bb39f260): 외부 연동을 불러왔으면 '준비 중인 외부 채널' 구획과 그 링크를 빼고(아래 설정 구획과 중복),
+  // 바로가기 막대는 실제로 그려지는 외부 구획과 1:1로 맞춘다(조건은 execution-channels-panel.tsx 와 같다).
+  const showPreparing = !externalBoard;
+  const externalJumps: [string, string][] =
+    externalBoard === undefined
+      ? []
+      : [
+          ["#external-channels-setup", EX_LABELS.jumpSetup],
+          ...(board && externalBoard?.connections.some((c) => c.status === "connected") ? [["#external-dispatch", EX_LABELS.jumpDispatch] as [string, string]] : []),
+          ...(board && externalBoard ? [["#p4b-ops", EX_LABELS.jumpP4b] as [string, string]] : []),
+        ];
   return (
     <>
       <div className={styles.header}>
@@ -72,12 +83,21 @@ export function ExecutionView({
           <li>
             <a href="#queue">{EX_LABELS.jumpQueue}</a>
           </li>
-          <li>
-            <a href="#results">{EX_LABELS.jumpResults}</a>
-          </li>
-          <li>
-            <a href="#channels">{EX_LABELS.jumpChannels}</a>
-          </li>
+          {board && (
+            <li>
+              <a href="#results">{EX_LABELS.jumpResults}</a>
+            </li>
+          )}
+          {showPreparing && (
+            <li>
+              <a href="#channels">{EX_LABELS.jumpChannels}</a>
+            </li>
+          )}
+          {externalJumps.map(([href, label]) => (
+            <li key={href}>
+              <a href={href}>{label}</a>
+            </li>
+          ))}
         </ul>
       </nav>
       {board === null ? (
@@ -95,23 +115,25 @@ export function ExecutionView({
           <Results board={board} actions={actions} />
         </>
       )}
-      <section className={`${styles.section} ${s.exSection}`} aria-labelledby="channels">
-        <h2 id="channels" className={styles.subtitle}>
-          {EX_LABELS.channelsHeading}
-        </h2>
-        <ul className={s.exList}>
-          {EX_LABELS.channels.map((c) => (
-            <li key={c} className={s.exCard}>
-              <p>
-                <strong>{c}</strong>
-              </p>
-              <p className={s.exTags}>
-                <span className={s.exTag}>{externalBoard ? "연동 가능" : EX_COPY.channelPreparing}</span>
-              </p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {showPreparing && (
+        <section className={`${styles.section} ${s.exSection}`} aria-labelledby="channels">
+          <h2 id="channels" className={styles.subtitle}>
+            {EX_LABELS.channelsHeading}
+          </h2>
+          <ul className={s.exList}>
+            {EX_LABELS.channels.map((c) => (
+              <li key={c} className={s.exCard}>
+                <p>
+                  <strong>{c}</strong>
+                </p>
+                <p className={s.exTags}>
+                  <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {externalBoard !== undefined ? (
         <ExternalChannelsPanel board={board} externalBoard={externalBoard} actions={actions} notConnected={notConnected} />
       ) : null}
