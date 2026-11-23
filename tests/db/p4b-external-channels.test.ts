@@ -1,15 +1,35 @@
+import { createHmac, randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { STRATEGY_TEMPLATE_VERSION } from "@/contracts/p2-strategy";
 import { buildStrategyDraft } from "@/domain/strategy";
-import { asSetup, asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture } from "./harness";
+import { asUser, createDb, expectDbError, newKey, one, seedOwner, type Db, type Fixture } from "./harness";
 
 let db: Db;
 let strategyTpl: string;
+let signingKey: string;
 
 beforeAll(async () => {
   db = await createDb();
   strategyTpl = (await one<{ id: string }>(db, "select id from templates where key = $1", [STRATEGY_TEMPLATE_VERSION])).id;
+  signingKey = (await one<{ value: string }>(db, "select value from app.server_secrets where name = 'p4_channel_signing'")).value;
 }, 60_000);
+
+function proof(action: string, userId: string, data: object) {
+  const payload = JSON.stringify(data);
+  const at = Date.now();
+  const nonce = randomUUID();
+  const signature = createHmac("sha256", signingKey).update(["p4", action, userId, at, nonce, payload].join("|")).digest("hex");
+  return { action, payload, at, nonce, signature };
+}
+
+async function serverCall<T>(userId: string, p: ReturnType<typeof proof>): Promise<T> {
+  const row = await asUser(db, userId, (tx) => one<{ result: T }>(
+    tx,
+    "select public.p4_server_channel_call($1, $2, $3, $4, $5) as result",
+    [p.action, p.payload, p.at, p.nonce, p.signature],
+  ));
+  return row.result;
+}
 
 async function setupReviewedDraft(email: string): Promise<{ owner: Fixture; projectId: string; draftId: string }> {
   const owner = await seedOwner(db, email);
@@ -76,6 +96,7 @@ describe("P4 외부 채널 연동 · 성과 수집 · P4B (20261123001000_p4_ext
       "public.dispatch_external_execution_prepare(uuid, int)",
       "public.finish_external_execution(uuid, int, boolean, text, text)",
       "public.get_channel_metrics_credentials(text)",
+      "public.sync_channel_result(uuid, uuid, text, numeric, text, numeric, numeric, text, date, date)",
     ];
     for (const role of ["anon", "authenticated"]) {
       const { allowed } = await one<{ allowed: boolean }>(
@@ -85,6 +106,21 @@ describe("P4 외부 채널 연동 · 성과 수집 · P4B (20261123001000_p4_ext
       );
       expect(allowed).toBe(false);
     }
+  });
+
+  it("서버 증명은 사용자와 요청에 묶이고 한 번만 쓸 수 있다", async () => {
+    const owner = await seedOwner(db, "p4-proof-owner@example.test");
+    const other = await seedOwner(db, "p4-proof-other@example.test");
+    await asUser(db, owner.userId, (tx) => tx.query(
+      "select public.upsert_channel_connection('crm', '시험 계정', 'https://example.test/dispatch', 'https://example.test/metrics', 0, 0, 'synthetic-key')",
+    ));
+
+    const signed = proof("metrics", owner.userId, { channel: "crm" });
+    await expectDbError(serverCall(owner.userId, { ...signed, signature: "" }), /BAD_SIGNATURE/);
+    await expectDbError(serverCall(other.userId, signed), /BAD_SIGNATURE/);
+    await expectDbError(serverCall(owner.userId, { ...signed, payload: '{"channel":"social_api"}' }), /BAD_SIGNATURE/);
+    expect((await serverCall<{ secret_value: string }>(owner.userId, signed)).secret_value).toBe("synthetic-key");
+    await expectDbError(serverCall(owner.userId, signed), /이미 사용된 서버 연동 서명/);
   });
 
   it("미연결 채널은 대기열에서 거절하고, 연결 후 DB 내부 실행 전이와 성과 기록은 유지한다", async () => {
@@ -123,29 +159,16 @@ describe("P4 외부 채널 연동 · 성과 수집 · P4B (20261123001000_p4_ext
 
     await asUser(db, owner.userId, (tx) => tx.query("select public.approve_execution($1, 1)", [jobId]));
 
-    // 아래 실행 전이는 DB 내부 동작을 검증한다. 브라우저 호출 권한은 위에서 따로 확인한다.
-    const prep = await asUser(db, owner.userId, (tx) =>
-      asSetup(tx, async () => {
-        const row = await one<{ p: { blocked: boolean; revision: number; endpoint_url: string; secret_value: string } }>(
-          tx,
-          "select public.dispatch_external_execution_prepare($1, 2) as p",
-          [jobId],
-        );
-        return row.p;
-      }),
+    const prep = await serverCall<{ blocked: boolean; revision: number; endpoint_url: string; secret_value: string }>(
+      owner.userId, proof("prepare", owner.userId, { jobId, revision: 2 }),
     );
     expect(prep.blocked).toBe(false);
     expect(prep.endpoint_url).toBe("https://api.example.test/social_api/dispatch");
     expect(prep.secret_value).toBe("secret-social_api-123");
 
-    await asUser(db, owner.userId, (tx) =>
-      asSetup(tx, () =>
-        tx.query("select public.finish_external_execution($1, $2, true, 'https://sns.example.test/post/1', null)", [
-          jobId,
-          prep.revision,
-        ]),
-      ),
-    );
+    await serverCall(owner.userId, proof("finish", owner.userId, {
+      jobId, revision: prep.revision, success: true, externalUrl: "https://sns.example.test/post/1",
+    }));
 
     const jobRow = await one<{ status: string; external_url: string }>(
       db,
@@ -154,13 +177,10 @@ describe("P4 외부 채널 연동 · 성과 수집 · P4B (20261123001000_p4_ext
     );
     expect(jobRow).toEqual({ status: "succeeded", external_url: "https://sns.example.test/post/1" });
 
-    const resId = await asUser(db, owner.userId, async (tx) => {
-      const r = await tx.query<{ id: string }>(
-        "select public.sync_channel_result($1, $2, 'SNS 노출수', 1240, 'count', null, null, 'SNS API 자동 수집', '2026-11-22', '2026-11-23') as id",
-        [projectId, jobId],
-      );
-      return r.rows[0].id;
-    });
+    const resId = await serverCall<string>(owner.userId, proof("recordMetric", owner.userId, {
+      projectId, executionJobId: jobId, metricName: "SNS 노출수", value: 1240, unit: "count",
+      sourceNote: "SNS API 자동 수집", periodStart: "2026-11-22", periodEnd: "2026-11-23",
+    }));
     const resRow = await one<{ collection_mode: string; value: string }>(
       db,
       "select collection_mode, value::text from public.execution_results where id = $1",

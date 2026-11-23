@@ -4,6 +4,7 @@ import { executionErrorFromDb, toStepResult, type ExecutionStepResult } from "@/
 import { requireWorkspace } from "@/server/auth/session";
 import { fail, ok, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { approvedChannelEndpoint, configuredSigningKey, signedChannelCall } from "./channel-boundary";
 
 export type ExternalChannelKey = "crm" | "search_ad" | "social_api";
 
@@ -170,6 +171,10 @@ export async function saveChannelConnection(input: {
   secretKey?: string;
 }): Promise<Result<{ id: string }>> {
   await requireWorkspace();
+  if (!approvedChannelEndpoint(input.channel, "dispatch", input.endpointUrl)
+    || (input.metricsUrl && !approvedChannelEndpoint(input.channel, "metrics", input.metricsUrl))) {
+    return fail("VALIDATION", "서버에 승인된 외부 연동 주소를 입력해 주세요.");
+  }
   const supabase = await createSupabaseServerClient();
   const { data, error } = await (supabase as unknown as RpcCaller).rpc("upsert_channel_connection", {
     p_channel: input.channel,
@@ -196,13 +201,14 @@ export async function dispatchExternalExecution(
   jobId: string,
   expectedRevision: number,
 ): Promise<Result<ExecutionStepResult>> {
-  await requireWorkspace();
+  const { user } = await requireWorkspace();
+  const key = configuredSigningKey();
+  if (!key) return fail("ERROR", "외부 채널 실행을 사용할 수 없습니다.");
   const supabase = await createSupabaseServerClient();
   const rpc = supabase as unknown as RpcCaller;
-  const prepRes = await rpc.rpc("dispatch_external_execution_prepare", {
-    p_job_id: jobId,
-    p_expected_revision: expectedRevision,
-  });
+  const prepRes = await rpc.rpc("p4_server_channel_call", signedChannelCall(
+    "prepare", user.userId, { jobId, revision: expectedRevision }, key,
+  ));
   if (prepRes.error) return rpcErr("dispatchExternalExecution.prepare", prepRes.error);
 
   const prep = prepRes.data as {
@@ -210,7 +216,7 @@ export async function dispatchExternalExecution(
     step?: unknown;
     job_id?: string;
     revision?: number;
-    channel?: string;
+    channel?: ExternalChannelKey;
     idempotency_key?: string;
     payload?: unknown;
     endpoint_url?: string;
@@ -224,8 +230,14 @@ export async function dispatchExternalExecution(
   let errorCode: string | null = null;
 
   try {
-    const res = await fetch(String(prep.endpoint_url), {
+    const endpoint = prep.channel && approvedChannelEndpoint(prep.channel, "dispatch", prep.endpoint_url ?? "");
+    if (!endpoint) {
+      errorCode = "destination_not_allowed";
+      throw new Error(errorCode);
+    }
+    const res = await fetch(endpoint, {
       method: "POST",
+      redirect: "error",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${String(prep.secret_value ?? "")}`,
@@ -255,16 +267,12 @@ export async function dispatchExternalExecution(
       errorCode = `http_${res.status}`;
     }
   } catch (err) {
-    errorCode = err instanceof Error && err.name === "TimeoutError" ? "timeout" : "network_error";
+    errorCode ??= err instanceof Error && err.name === "TimeoutError" ? "timeout" : "network_error";
   }
 
-  const finRes = await rpc.rpc("finish_external_execution", {
-    p_job_id: jobId,
-    p_expected_revision: Number(prep.revision ?? expectedRevision),
-    p_success: success,
-    p_external_url: externalUrl,
-    p_error_code: errorCode,
-  });
+  const finRes = await rpc.rpc("p4_server_channel_call", signedChannelCall("finish", user.userId, {
+    jobId, revision: Number(prep.revision ?? expectedRevision), success, externalUrl, errorCode,
+  }, key));
   if (finRes.error) return rpcErr("dispatchExternalExecution.finish", finRes.error);
   const step = toStepResult(finRes.data);
   if (!success) {
@@ -289,18 +297,23 @@ export async function syncChannelMetrics(
   channel: ExternalChannelKey,
   executionJobId: string | null = null,
 ): Promise<Result<{ syncedCount: number }>> {
-  await requireWorkspace();
+  const { user } = await requireWorkspace();
+  const key = configuredSigningKey();
+  if (!key) return fail("ERROR", "외부 성과 가져오기를 사용할 수 없습니다.");
   const supabase = await createSupabaseServerClient();
   const rpc = supabase as unknown as RpcCaller;
 
-  const credRes = await rpc.rpc("get_channel_metrics_credentials", { p_channel: channel });
+  const credRes = await rpc.rpc("p4_server_channel_call", signedChannelCall("metrics", user.userId, { channel }, key));
   if (credRes.error) return rpcErr("syncChannelMetrics.creds", credRes.error);
 
   const cred = credRes.data as { metrics_url: string; secret_value: string; account_label: string };
+  const endpoint = approvedChannelEndpoint(channel, "metrics", cred.metrics_url);
+  if (!endpoint) return fail("VALIDATION", "서버에 승인된 외부 성과 주소가 필요합니다.");
   let rawItems: unknown[] = [];
   try {
-    const res = await fetch(cred.metrics_url, {
+    const res = await fetch(endpoint, {
       method: "GET",
+      redirect: "error",
       headers: {
         Authorization: `Bearer ${cred.secret_value}`,
         Accept: "application/json",
@@ -319,18 +332,12 @@ export async function syncChannelMetrics(
     const parsed = syncMetricItemSchema.safeParse(item);
     if (!parsed.success) continue;
     const v = parsed.data;
-    const r = await rpc.rpc("sync_channel_result", {
-      p_project_id: projectId,
-      p_execution_job_id: executionJobId,
-      p_metric_name: v.metricName,
-      p_value: v.value,
-      p_unit: v.unit,
-      p_numerator: v.numerator ?? null,
-      p_denominator: v.denominator ?? null,
-      p_source_note: v.sourceNote ?? `${EXTERNAL_CHANNEL_META[channel].label} (${cred.account_label}) 자동 수집`,
-      p_period_start: v.periodStart,
-      p_period_end: v.periodEnd,
-    });
+    const r = await rpc.rpc("p4_server_channel_call", signedChannelCall("recordMetric", user.userId, {
+      projectId, executionJobId, metricName: v.metricName, value: v.value, unit: v.unit,
+      numerator: v.numerator ?? null, denominator: v.denominator ?? null,
+      sourceNote: v.sourceNote ?? `${EXTERNAL_CHANNEL_META[channel].label} (${cred.account_label}) 자동 수집`,
+      periodStart: v.periodStart, periodEnd: v.periodEnd,
+    }, key));
     if (!r.error) syncedCount++;
   }
   if (syncedCount === 0) {
