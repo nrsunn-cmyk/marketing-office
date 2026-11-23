@@ -169,8 +169,12 @@ describe("열람 기록 보호·회수", () => {
               has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth
          from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname like 'admin\\_%' order by 1`,
     )).rows;
-    // admin_p3_progress 는 ADMIN-P3-01(migration 30), admin_p4_execution 은 ADMIN-P4-01(묶음 M 20261121013000)에서 더했다
-    expect(fns.map((f) => f.name)).toEqual(["admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_p3_progress", "admin_p4_execution", "admin_usage_summary", "admin_whoami"]);
+    // admin_p3_progress 는 ADMIN-P3-01(migration 30), admin_p4_execution 은 ADMIN-P4-01(묶음 M 20261121013000),
+    // admin_*public_inquir* 3개는 NADAUM-BRAND-BACKEND-01(20261123010000)에서 더했다
+    expect(fns.map((f) => f.name)).toEqual([
+      "admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_list_public_inquiries", "admin_p3_progress", "admin_p4_execution",
+      "admin_public_inquiry_counts", "admin_set_public_inquiry_status", "admin_usage_summary", "admin_whoami",
+    ]);
     for (const f of fns) expect(f).toEqual({ name: f.name, secdef: true, cfg: ['search_path=""'], anon: false, auth: true });
     // app 보조 함수 5개(트리거 함수 포함)는 로그인·익명·public 모두 실행 불가
     const helpers = (await db.query<{ name: string; anon: boolean; auth: boolean }>(
