@@ -230,6 +230,9 @@ begin
   -- 3-3) 제출 제한(같은 접속자는 한 줄로 세워 동시 요청으로 넘지 못하게)
   perform pg_advisory_xact_lock(hashtext('public_inquiry_client:' || p_client_hash));
   perform pg_advisory_xact_lock(hashtext('public_inquiry_phone:' || digits));
+  -- 전체 시간당 한도도 동시 요청으로 넘지 않게 전역 잠금(Tester QA-NADAUM-BRAND-BACKEND-01 F1).
+  -- 잠금 순서는 언제나 접속자 → 전화 → 전역(교착 없음). 시간당 60건 규모라 한 줄로 세우는 비용은 작다.
+  perform pg_advisory_xact_lock(hashtext('public_inquiry_global'));
   select count(*) into n from public.public_inquiries p where p.client_hash = p_client_hash and p.created_at > v_at - interval '10 minutes';
   if n >= app.public_inquiry_limit('per_client_10min') then
     raise exception 'RATE_LIMITED: 잠시 후 다시 시도해 주세요' using errcode = 'P0001';

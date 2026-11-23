@@ -32,10 +32,11 @@ export const PUBLIC_INQUIRY_LIMITS = { company: 80, name: 40, phone: 30, other: 
 /** 상담 상태(관리자). 순서 = 처리 흐름 */
 export const PUBLIC_INQUIRY_STATUSES = ["new", "contacted", "quoted", "closed"] as const;
 export type PublicInquiryStatus = (typeof PUBLIC_INQUIRY_STATUSES)[number];
+/** 표시 이름은 AGY 확정값(NADAUM-BRAND-BACKEND-01 r2, AGY Master 대행 msg_f89f42ede19c) */
 export const PUBLIC_INQUIRY_STATUS_LABELS: Record<PublicInquiryStatus, string> = {
-  new: "새 접수",
+  new: "신규",
   contacted: "연락함",
-  quoted: "견적 보냄",
+  quoted: "견적 발송",
   closed: "종료",
 };
 export const isPublicInquiryStatus = (v: unknown): v is PublicInquiryStatus =>

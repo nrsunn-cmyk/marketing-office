@@ -194,6 +194,22 @@ describe("제출 제한", () => {
     await expectDbError(submit({ phone: "(010)5000-0001" }), /RATE_LIMITED: 같은 연락처/);
   });
 
+  it("잠금 순서: 접속자 → 전화 → 전역, 전역 잠금이 전체 건수 세기보다 앞(F1 r2, 동시성 자체는 PG17 Tester 재검)", async () => {
+    const src = (await one<{ s: string }>(
+      db,
+      "select prosrc as s from pg_proc where oid = 'public.submit_public_inquiry(text, text, bigint, uuid, text)'::regprocedure",
+    )).s;
+    const at = (needle: string) => src.indexOf(needle);
+    const client = at("'public_inquiry_client:'");
+    const phone = at("'public_inquiry_phone:'");
+    const global = at("'public_inquiry_global'");
+    const globalCount = at("interval '1 hour'");
+    expect(client).toBeGreaterThan(0);
+    expect(phone).toBeGreaterThan(client);
+    expect(global).toBeGreaterThan(phone);
+    expect(globalCount).toBeGreaterThan(global);
+  });
+
   it("전체: 1시간 60건까지 — 별도 DB, 서명 키가 없으면 NOT_CONFIGURED", async () => {
     const own = await createDb();
     const ownKey = (await one<{ v: string }>(own, "select value as v from app.server_secrets where name = 'public_inquiry_signing'")).v;

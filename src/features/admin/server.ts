@@ -338,7 +338,7 @@ export async function listAdminPublicInquiries(
   return ok({ rows, next: rows.length === limit && last ? { beforeCreated: last.createdAt, beforeId: last.id } : null });
 }
 
-/** 상태별 개수(새 접수·연락함·견적 보냄·종료 순서, 없는 상태도 0) */
+/** 상태별 개수(신규·연락함·견적 발송·종료 순서, 없는 상태도 0) */
 export async function countAdminPublicInquiries(): Promise<Result<Record<PublicInquiryStatus, number>>> {
   const sb = await publicInquiryRpc();
   const { data, error } = await sb.rpc("admin_public_inquiry_counts");

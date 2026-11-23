@@ -161,6 +161,10 @@ describe("contract", () => {
     const bad = normalizePublicInquiryInput({ ...input(), services: ["해킹"], reference_url: "ftp://x" });
     expect(Object.keys(validatePublicInquiry(bad)).sort()).toEqual(["reference_url", "services"]);
   });
+  it("상태 표시 이름은 AGY 확정값(r2)", async () => {
+    const { PUBLIC_INQUIRY_STATUS_LABELS } = await import("./contract");
+    expect(PUBLIC_INQUIRY_STATUS_LABELS).toEqual({ new: "신규", contacted: "연락함", quoted: "견적 발송", closed: "종료" });
+  });
   it("serviceLabel: 코드 → 표시값", () => {
     expect(serviceLabel("ad_image")).toBe("광고·상품 이미지");
     expect(serviceLabel("unknown")).toBe("unknown");
