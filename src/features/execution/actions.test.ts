@@ -77,7 +77,7 @@ describe("실행 건 동작", () => {
     };
     for (const [reason, msg] of Object.entries(msgs)) {
       m.approve.mockResolvedValueOnce(stepOk({ status: "blocked_mismatch", blockReason: reason }));
-      expect(await A.approveExecutionAction({}, fd({ jobId: J, revision: "3" }))).toEqual({ message: msg });
+      expect(await A.approveExecutionAction({}, fd({ jobId: J, revision: "3" }))).toEqual({ message: msg, tone: "warn" });
     }
     expect(m.refresh).toHaveBeenCalledTimes(4);
     for (const revision of ["0", "x", "2147483648"]) expect(await A.approveExecutionAction({}, fd({ jobId: J, revision }))).toEqual({ message: "잘못된 요청입니다." });
@@ -104,7 +104,23 @@ describe("실행 건 동작", () => {
     m.record.mockResolvedValueOnce(stepOk({ status: "succeeded", alreadyDone: true }));
     expect(await A.recordTistoryExecutionAction({}, fd({ jobId: J, revision: "3", url: "https://a.tistory.com/1", publishedAt: "2026-11-20T03:55" }))).toEqual({ ok: true, message: "이미 기록이 끝난 실행 건입니다. 기존 결과를 그대로 유지합니다." });
     m.record.mockResolvedValueOnce(stepOk({ status: "blocked_mismatch", blockReason: "content_changed" }));
-    expect((await A.recordTistoryExecutionAction({}, fd({ jobId: J, revision: "3", url: "https://a", publishedAt: "x" }))).message).toContain("승인 이후 초안 내용이 바뀌었습니다.");
+    const blocked = await A.recordTistoryExecutionAction({}, fd({ jobId: J, revision: "3", url: "https://a", publishedAt: "x" }));
+    expect(blocked.message).toContain("승인 이후 초안 내용이 바뀌었습니다.");
+    expect(blocked).toMatchObject({ tone: "warn" });
+    expect(blocked.ok).toBeUndefined();
+  });
+
+  it("경고 톤은 막힘 결과에만: 성공·이미 끝남·서버 오류·형식 거절에는 tone 이 없다(기존 성공·오류 표시 유지)", async () => {
+    m.approve.mockResolvedValueOnce(stepOk());
+    m.record.mockResolvedValueOnce(stepOk({ status: "succeeded", alreadyDone: true }));
+    m.retry.mockResolvedValueOnce({ ok: false, code: "INVALID_TRANSITION", message: "이미 끝난 실행 건은 다시 할 수 없습니다." });
+    const states = [
+      await A.approveExecutionAction({}, fd({ jobId: J, revision: "3" })),
+      await A.recordTistoryExecutionAction({}, fd({ jobId: J, revision: "3", url: "https://a.tistory.com/1", publishedAt: "2026-11-20T03:55" })),
+      await A.retryExecutionAction({}, fd({ jobId: J, revision: "3" })),
+      await A.holdExecutionAction({}, fd({ jobId: "x", revision: "3" })),
+    ];
+    for (const st of states) expect(st).not.toHaveProperty("tone");
   });
 });
 
