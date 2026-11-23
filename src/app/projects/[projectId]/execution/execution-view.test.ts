@@ -253,6 +253,9 @@ describe("UX-EXEC-JUMP-FRONT-01 바로가기 막대와 외부 연동 구획", ()
     expect(h).not.toContain(EX_LABELS.channelsHeading);
     expect(h).not.toContain(EX_LABELS.jumpChannels);
     expect(h).not.toContain("연동 가능");
+    // 대기열 머리 '준비 중' 태그도 뺀다(AGY msg_a00e8d11a62d). 옆 '1차 입력' 태그는 유지
+    expect(h).not.toContain("아직 연결되지 않았습니다");
+    expect(h).toContain(EX_LABELS.firstSource);
     for (const l of ["외부 채널 설정", "외부 채널 실행", "예약·상담·CRM"]) expect(h).toContain(l);
   });
 });

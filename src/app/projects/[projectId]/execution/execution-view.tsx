@@ -111,7 +111,7 @@ export function ExecutionView({
         </section>
       ) : (
         <>
-          <Queue board={board} actions={actions} />
+          <Queue board={board} actions={actions} showPreparing={showPreparing} />
           <Results board={board} actions={actions} />
         </>
       )}
@@ -141,7 +141,7 @@ export function ExecutionView({
   );
 }
 
-function Queue({ board, actions }: { board: ExecutionBoard; actions: ExecutionActions }) {
+function Queue({ board, actions, showPreparing }: { board: ExecutionBoard; actions: ExecutionActions; showPreparing: boolean }) {
   const { queue, history } = splitJobs(board.jobs);
   return (
     <section className={`${styles.section} ${s.exSection}`} aria-labelledby="queue">
@@ -153,7 +153,8 @@ function Queue({ board, actions }: { board: ExecutionBoard; actions: ExecutionAc
         <p className={styles.muted}>{EX_COPY.intro}</p>
         <p className={s.exTags}>
           <span className={`${s.exTag} ${s.exTag_info}`}>{EX_LABELS.firstSource}</span>
-          <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
+          {/* 외부 연동을 불러왔으면 '아직 연결되지 않았습니다' 태그를 뺀다(AGY msg_a00e8d11a62d, 연결 상태는 외부 채널 설정 배지로) */}
+          {showPreparing && <span className={s.exTag}>{EX_COPY.channelPreparing}</span>}
         </p>
         {!board.canWrite && (
           <p className={styles.notice} role="note">
