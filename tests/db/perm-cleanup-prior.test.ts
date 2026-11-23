@@ -15,7 +15,8 @@ beforeAll(async () => {
 describe("권한 정리 회수 전 기록", () => {
   it("public 표마다 한 행, 회수 전에는 REFERENCES·TRIGGER 가 있었고(Supabase 기본 권한) 지금은 없다", async () => {
     const rows = (await db.query<{ relname: string; had_references: boolean; had_trigger: boolean; had_truncate: boolean }>("select * from app.perm_cleanup_prior order by 1")).rows;
-    const postCleanupTables = new Set(["channel_connections", "crm_followups", "execution_schedules", "inquiries"]);
+    // 권한 정리(20261121014000) 뒤에 생긴 표: P4 외부 채널(001000), 나다움 공개 상담(010000)
+    const postCleanupTables = new Set(["channel_connections", "crm_followups", "execution_schedules", "inquiries", "public_inquiries"]);
     const tables = (await db.query<{ relname: string }>("select c.relname from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p') order by 1")).rows
       .map((r) => r.relname)
       .filter((name) => !postCleanupTables.has(name));

@@ -2,6 +2,12 @@ import "server-only";
 import { cache } from "react";
 import { fail, ok, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import {
+  isPublicInquiryStatus,
+  serviceLabel,
+  type AdminPublicInquiry,
+  type PublicInquiryStatus,
+} from "@/features/public-inquiries/contract";
 
 /**
  * ADMIN-IMPL-01: 관리자 페이지 1단계(읽기 전용) 서버 함수. 설계 Plan/Claude-Backend-20261118/ADMIN-DESIGN-01.md.
@@ -273,4 +279,104 @@ export async function getAdminP4Execution(limit = 200): Promise<Result<AdminP4Ex
       lastActivityAt: r.last_activity_at,
     })),
   );
+}
+
+// ─────────────────────────────────────────────
+// ⑥ 나다움 공개 상담(NADAUM-BRAND-BACKEND-01, migration 20261123010000). P4 문의와 별개.
+//    관리자만(아니면 NOT_FOUND). 열람·변경마다 DB 가 admin_access_log 를 남긴다(개인정보 없이).
+//    화면(Front)은 /admin/inquiries 후보에서 아래 세 함수만 쓴다. 참고 URL 은 글자로만 보여 준다(링크 금지).
+// ─────────────────────────────────────────────
+type PublicInquiryRpc = {
+  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+};
+const publicInquiryRpc = async () => (await createSupabaseServerClient()) as unknown as PublicInquiryRpc;
+
+export interface AdminPublicInquiryCursor {
+  beforeCreated: string;
+  beforeId: string;
+}
+
+/** 공개 상담 목록(최신 순, 쪽당 limit 최대 200). status 를 주면 그 상태만 */
+export async function listAdminPublicInquiries(
+  opts: { status?: PublicInquiryStatus; limit?: number; before?: AdminPublicInquiryCursor } = {},
+): Promise<Result<{ rows: AdminPublicInquiry[]; next: AdminPublicInquiryCursor | null }>> {
+  if (opts.status !== undefined && !isPublicInquiryStatus(opts.status)) return fail("VALIDATION", "알 수 없는 상담 상태입니다.");
+  const limit = Math.min(200, Math.max(1, Math.trunc(opts.limit ?? 50)));
+  const sb = await publicInquiryRpc();
+  const { data, error } = await sb.rpc("admin_list_public_inquiries", {
+    p_status: opts.status ?? null,
+    p_limit: limit,
+    p_before_created: opts.before?.beforeCreated ?? null,
+    p_before_id: opts.before?.beforeId ?? null,
+  });
+  if (error) return rpcFail("listAdminPublicInquiries", error);
+  const rows: AdminPublicInquiry[] = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const services = Array.isArray(r.services) ? (r.services as unknown[]).map(String) : [];
+    const opt = (v: unknown) => (v === null || v === undefined ? null : String(v));
+    return {
+      id: String(r.id),
+      refCode: String(r.ref_code),
+      createdAt: String(r.created_at),
+      status: (isPublicInquiryStatus(r.status) ? r.status : "new") as PublicInquiryStatus,
+      companyName: String(r.company_name),
+      contactName: String(r.contact_name),
+      phone: String(r.phone),
+      services,
+      serviceLabels: services.map(serviceLabel),
+      otherService: opt(r.other_service),
+      message: String(r.message),
+      referenceUrl: opt(r.reference_url),
+      desiredTimeline: opt(r.desired_timeline),
+      budgetRange: opt(r.budget_range),
+      privacyConsentAt: String(r.privacy_consent_at),
+      consentVersion: String(r.consent_version),
+      statusChangedAt: opt(r.status_changed_at),
+      updatedAt: String(r.updated_at),
+    };
+  });
+  const last = rows.at(-1);
+  return ok({ rows, next: rows.length === limit && last ? { beforeCreated: last.createdAt, beforeId: last.id } : null });
+}
+
+/** 상태별 개수(새 접수·연락함·견적 보냄·종료 순서, 없는 상태도 0) */
+export async function countAdminPublicInquiries(): Promise<Result<Record<PublicInquiryStatus, number>>> {
+  const sb = await publicInquiryRpc();
+  const { data, error } = await sb.rpc("admin_public_inquiry_counts");
+  if (error) return rpcFail("countAdminPublicInquiries", error);
+  const out: Record<PublicInquiryStatus, number> = { new: 0, contacted: 0, quoted: 0, closed: 0 };
+  for (const r of (data ?? []) as Array<{ status?: unknown; total?: unknown }>) {
+    if (isPublicInquiryStatus(r.status)) out[r.status] = Number(r.total ?? 0);
+  }
+  return ok(out);
+}
+
+/**
+ * 상태 변경. expectedStatus = 화면이 보고 있던 상태. 그사이 다른 관리자가 바꿨으면 CONFLICT(새로 고침 안내).
+ * 같은 상태로 바꾸면 아무것도 바꾸지 않고 성공.
+ */
+export async function setAdminPublicInquiryStatus(input: {
+  id: string;
+  status: PublicInquiryStatus;
+  expectedStatus: PublicInquiryStatus;
+}): Promise<Result<{ status: PublicInquiryStatus; statusChangedAt: string | null; updatedAt: string }>> {
+  if (!isPublicInquiryStatus(input.status) || !isPublicInquiryStatus(input.expectedStatus)) return fail("VALIDATION", "알 수 없는 상담 상태입니다.");
+  if (!/^[0-9a-f-]{36}$/i.test(input.id)) return fail("NOT_FOUND", "상담 접수를 찾을 수 없습니다.");
+  const sb = await publicInquiryRpc();
+  const { data, error } = await sb.rpc("admin_set_public_inquiry_status", {
+    p_id: input.id,
+    p_status: input.status,
+    p_expected_status: input.expectedStatus,
+  });
+  if (error) {
+    if (/^\s*CONFLICT:/.test(error.message)) return fail("CONFLICT", "다른 관리자가 먼저 상태를 바꿨습니다. 새로 고친 뒤 다시 시도해 주세요.");
+    if (/^\s*NOT_FOUND:/.test(error.message)) return fail("NOT_FOUND", "상담 접수를 찾을 수 없습니다.");
+    return rpcFail("setAdminPublicInquiryStatus", error);
+  }
+  const row = (Array.isArray(data) ? data[0] : data) as { status?: unknown; status_changed_at?: unknown; updated_at?: unknown } | undefined;
+  if (!row || !isPublicInquiryStatus(row.status)) return fail("ERROR", "관리자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  return ok({
+    status: row.status,
+    statusChangedAt: row.status_changed_at === null || row.status_changed_at === undefined ? null : String(row.status_changed_at),
+    updatedAt: String(row.updated_at),
+  });
 }

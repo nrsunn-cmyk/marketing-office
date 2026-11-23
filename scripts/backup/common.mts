@@ -149,6 +149,8 @@ export const LATER_TABLES = [
   "execution_schedules",
   "inquiries",
   "crm_followups",
+  // 20261123010000_public_inquiries(NADAUM-BRAND-BACKEND-01 나다움 공개 상담 — P4 inquiries 와 별개, 연락처 포함이라 백업 파일 보관 주의)
+  "public_inquiries",
 ] as const;
 
 export const TABLES = [
