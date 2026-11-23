@@ -2,6 +2,8 @@
 export interface FormState {
   ok?: boolean;
   message?: string;
+  /** 'warn': 실패 오류가 아니라 안전 보호로 막힌 결과(경고 색·role=status, AGY P4A-HANDOFF 1절 3번) */
+  tone?: "warn";
   errors?: Partial<Record<string, string>>;
 }
 

@@ -73,7 +73,7 @@ export function ActionForm({
         </ul>
       )}
       {state.message && (
-        <p className={state.ok ? styles.notice : styles.error} role={state.ok ? "status" : "alert"}>
+        <p className={state.tone === "warn" ? styles.warnNotice : state.ok ? styles.notice : styles.error} role={state.ok || state.tone === "warn" ? "status" : "alert"}>
           {state.message}
         </p>
       )}
