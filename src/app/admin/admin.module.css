@@ -1,5 +1,114 @@
 /* 관리자 페이지(ADMIN-UI-01). 색·간격은 토큰만, 누르는 곳은 44px(공용 .touchPage·.touchLink 규격) */
 
+/*
+ * NADAUM-BRAND-ADMIN-THEME-01 나다움 브랜드 다크 테마(관리자 화면에서만).
+ * 값: AGY Design/nadaum-ui-20261123/tokens-nadaum-brand.css. layout.tsx 의 <div data-theme="dark" class=theme> 에 건다.
+ * [data-theme="dark"](0,1,0) 토큰 위에 덮으려고 .theme[data-theme="dark"](0,2,0)로 쓴다.
+ * 대비: 본문 #F7F8FB/#101927 16.61:1, 보조 #CBD5E1/#101927 11.88:1, 링크 라일락 #B67AF5/#101927 5.96:1,
+ *       라일락 단추·활성 탭 글자 #06070C/#B67AF5 6.80:1(흰 글자 금지)
+ */
+.theme[data-theme="dark"] {
+  --bg-app: #06070c;
+  --bg-surface: #101927;
+  --bg-subtle: #131c2e;
+  --bg-hover: #1b2740;
+
+  --border-subtle: #26324a;
+  --border-strong: #3b4865;
+
+  --text-main: #f7f8fb;
+  --text-muted: #cbd5e1;
+  --text-muted-strong: #cbd5e1;
+  --text-dim: #94a3b8;
+  --text-on-primary: #06070c;
+
+  --primary-50: #101927;
+  --primary-100: #131c2e;
+  --primary-600: #b67af5;
+  --primary-700: #c593f7;
+
+  --theme-primary-gradient: linear-gradient(135deg, #c79bff 0%, #b67af5 100%);
+  --theme-primary-shadow: 0 4px 14px rgba(182, 122, 245, 0.25);
+  --theme-badge-bg: rgba(182, 122, 245, 0.16);
+  --theme-badge-border: rgba(182, 122, 245, 0.4);
+  --theme-badge-text: #e3cdfd;
+  --header-nav-bg: #06070c;
+  --header-nav-text: #f7f8fb;
+  --header-nav-border: #26324a;
+
+  --info-bg: rgba(86, 206, 216, 0.12);
+  --info-border: rgba(86, 206, 216, 0.45);
+  --info-text: #b7eef2;
+
+  --border-focus: #56ced8;
+  --focus-ring-color: #56ced8;
+
+  color-scheme: dark;
+  flex: 1;
+  min-height: 100dvh;
+  /* 3안 스페이셜 벤토(AGY CONCEPT-3-FINAL-SPEC 1번): 24px 청록 도트 그리드는 페이지 바탕에만. 표·카드 면은 불투명 --bg-surface(#101927) */
+  background-color: var(--bg-app);
+  background-image:
+    radial-gradient(rgba(86, 206, 216, 0.16) 1px, transparent 1px),
+    radial-gradient(840px 420px at 85% 4%, rgba(182, 122, 245, 0.16), transparent 62%);
+  background-size:
+    24px 24px,
+    100% 100%;
+  color: var(--text-main);
+}
+
+/*
+ * 탭 글자색: 전역 링크 색 규칙([data-theme="dark"] a 0,1,1 · OS 다크의 :root:not([data-theme="light"]) a 0,2,1)이
+ * .tab·.tabActive(0,1,0)를 이겨 활성 탭 글자가 배경과 같은 색(라일락 위 라일락)이 되던 문제를 관리자 안에서 바로잡는다
+ * (기존 다크 모드에도 있던 문제). :root 를 붙여 0,3,0 으로 올린다.
+ */
+:root .theme .tab {
+  color: var(--text-main);
+}
+:root .theme .tabActive,
+:root .theme .tabActive:hover {
+  color: var(--text-on-primary);
+}
+/* 키보드 초점: 청록 2px 외곽선 + 2px 간격(3안 3번) */
+.theme :focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+/* 공용 머리글 메뉴 글자는 테마별 고정값(!important)이라 관리자 안에서 밝은 보조색으로 맞춘다(#CBD5E1/#131C2E 11:1 이상) */
+:root .theme.theme [class*="navLink"] {
+  color: #cbd5e1 !important;
+}
+:root .theme.theme [class*="navLink"]:hover {
+  color: #f7f8fb !important;
+}
+
+/* 관리자 머리: 나다움 로고 + '관리자 · 읽기 전용' */
+.brandBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.brandLogo {
+  height: 22px;
+  width: auto;
+  display: block;
+}
+
+.adminPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--theme-badge-border);
+  background: var(--theme-badge-bg);
+  color: var(--theme-badge-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
 .kicker {
   margin: 0;
 }

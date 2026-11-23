@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -38,8 +39,10 @@ const TABS = [
 export function AdminHeader({ current, title, lead }: { current: (typeof TABS)[number]["href"]; title: string; lead: string }) {
   return (
     <>
-      <p className={ad.kicker}>
-        <span className={`${styles.pill} ${styles.pillNeutral}`}>관리자 · 읽기 전용</span>
+      {/* NADAUM-BRAND-ADMIN-THEME-01: 관리자 머리에 나다움 로고(어두운 배경 전용 흰 로고) */}
+      <p className={`${ad.kicker} ${ad.brandBar}`}>
+        <Image src="/brand/nadaum/nadaum-logo.svg" alt="NADAUM" width={116} height={22} unoptimized className={ad.brandLogo} />
+        <span className={ad.adminPill}>관리자 · 읽기 전용</span>
       </p>
       <nav aria-label="관리자 화면">
         <ul className={ad.tabs}>
