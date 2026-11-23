@@ -37,12 +37,12 @@ export const SERVICES = {
   title: "필요한 제작, 나다움에서 한 번에.",
   /**
    * 홈페이지 제작이 첫 카드. preset: 카드를 누르면 상담 폼에서 추가로 고를 서비스(기존 선택과 합침, 방문자가 바꿀 수 있음).
-   * AI 영상·비주얼은 폼에 같은 항목이 없어 영상·비주얼 두 개(AGY NADAUM-BRAND-ASSETS-HANDOFF 3절). image: AGY 1차 대체 SVG(장식)
+   * AI 영상·비주얼은 폼에 같은 항목이 없어 영상·비주얼 두 개(AGY NADAUM-BRAND-ASSETS-HANDOFF 3절). image: 3안 v2 자체 3D PNG 960x600(장식, 카드 제목이 이름을 대신함)
    */
   cards: [
-    { title: "홈페이지 제작", desc: "브랜드를 보여주는 가장 중요한 첫 화면.", preset: ["홈페이지 제작"], image: "/brand/nadaum/card-website.svg" },
-    { title: "상세페이지 제작", desc: "상품의 매력을 구매 이유로 바꾸는 화면.", preset: ["상세페이지 제작"], image: "/brand/nadaum/card-detail-page.svg" },
-    { title: "AI 영상·비주얼", desc: "시선을 끌고 기억에 남는 브랜드 콘텐츠.", preset: ["쇼츠·릴스 영상", "광고·상품 이미지"], image: "/brand/nadaum/card-ai-visual.svg" },
+    { title: "홈페이지 제작", desc: "브랜드를 보여주는 가장 중요한 첫 화면.", preset: ["홈페이지 제작"], image: "/brand/nadaum/service-website.png" },
+    { title: "상세페이지 제작", desc: "상품의 매력을 구매 이유로 바꾸는 화면.", preset: ["상세페이지 제작"], image: "/brand/nadaum/service-detail.png" },
+    { title: "AI 영상·비주얼", desc: "시선을 끌고 기억에 남는 브랜드 콘텐츠.", preset: ["쇼츠·릴스 영상", "광고·상품 이미지"], image: "/brand/nadaum/service-ai-video.png" },
   ] satisfies { title: string; desc: string; preset: ServiceOption[]; image: string }[],
   more: "로고·브랜딩, 쇼츠·릴스, 광고·상품 이미지, SNS 콘텐츠도 함께 상담할 수 있습니다.",
 } as const;

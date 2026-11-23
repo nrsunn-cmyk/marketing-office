@@ -280,30 +280,23 @@
   gap: 12px;
   margin-top: 28px;
 }
+/* 3안 v2: 자체 3D 이미지가 타일을 꽉 채운다(여백 없음, 넘치는 부분은 둥근 모서리 안에서 잘림) */
 .heroVisual {
   display: flex;
-  align-items: center;
-  justify-content: center;
   min-width: 0;
+  overflow: hidden;
   border-radius: 24px;
   border: 1px solid rgba(86, 206, 216, 0.34);
-  padding: 28px;
-  background: radial-gradient(circle at 50% 50%, rgba(86, 206, 216, 0.22), rgba(182, 122, 245, 0.12) 48%, var(--nd-tile) 76%);
+  background: #080c16;
 }
+/* 한 열(좁은 화면)에서는 16:10, 두 열에서는 글 타일 높이만큼 늘어나 cover 로 채운다 */
 .mobius {
+  display: block;
   width: 100%;
-  max-width: 480px;
   height: auto;
-  animation: ndFloat 7s ease-in-out infinite;
-}
-@keyframes ndFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
+  min-height: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
 }
 
 /* SECTION 02 SERVICES · 04 WORKS */
@@ -340,7 +333,9 @@
 .cardImg {
   width: 100%;
   height: auto;
-  aspect-ratio: 480 / 280;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #090d16;
   border-radius: 14px;
   border: 1px solid var(--nd-border-default);
   display: block;
@@ -697,9 +692,6 @@
  * (Tester QA-NADAUM-BRAND-CONCEPT3-01 F1: 앞에 있으면 translateY·전환이 남았음)
  */
 @media (prefers-reduced-motion: reduce) {
-  .mobius {
-    animation: none;
-  }
   .btn,
   .serviceCard {
     transition: none;

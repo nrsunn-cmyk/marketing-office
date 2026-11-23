@@ -72,8 +72,8 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
                 </div>
               </div>
               <div className={s.heroVisual} aria-hidden="true">
-                {/* AGY 1차 대체 SVG(워터마크 없는 자체 자산). 최종 3D 이미지가 오면 같은 경로로 교체 */}
-                <Image src="/brand/nadaum/mobius-hero.svg" alt="" width={640} height={380} unoptimized loading="eager" className={s.mobius} />
+                {/* 3안 v2 자체 3D 이미지(AGY 제작, 워터마크 없음). 16:10 으로 타일을 꽉 채운다 */}
+                <Image src="/brand/nadaum/mobius-3d.png" alt="" width={960} height={600} unoptimized loading="eager" className={s.mobius} />
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
                 <li key={c.title} className={i === 0 ? s.featuredItem : undefined}>
                   {/* 3안: 첫 카드(홈페이지 제작)를 넓게 강조 */}
                   <PresetLink preset={c.preset} className={`${s.card} ${s.serviceCard}${i === 0 ? ` ${s.featured}` : ""}`}>
-                    <Image src={c.image} alt="" width={480} height={280} unoptimized className={s.cardImg} />
+                    <Image src={c.image} alt="" width={960} height={600} unoptimized className={s.cardImg} />
                     <h3 className={s.cardTitle}>{c.title}</h3>
                     <p className={s.cardDesc}>{c.desc}</p>
                   </PresetLink>

@@ -119,8 +119,8 @@ describe("나다움브랜드 공개 화면", () => {
 
   it("장식 이미지(뫼비우스·카드)는 대체 텍스트를 비우고, 로고 링크에는 이름이 있다", () => {
     expect(html).toMatch(/aria-label="NADAUM 맨 위로"/);
-    expect(html).toMatch(/alt=""[^>]*src="\/brand\/nadaum\/mobius-hero\.svg"|src="\/brand\/nadaum\/mobius-hero\.svg"[^>]*alt=""/);
-    expect(count(/src="\/brand\/nadaum\/card-[a-z-]+\.svg"/g)).toBe(3);
+    expect(html).toMatch(/alt=""[^>]*src="\/brand\/nadaum\/mobius-3d\.png"|src="\/brand\/nadaum\/mobius-3d\.png"[^>]*alt=""/);
+    expect(count(/src="\/brand\/nadaum\/service-[a-z-]+\.png"/g)).toBe(3);
   });
 
   it("/ 연결: 새 화면을 그리고, 기존 업무실 소개 파일은 그대로 보존된다", () => {
