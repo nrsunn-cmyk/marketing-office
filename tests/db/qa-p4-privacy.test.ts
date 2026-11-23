@@ -189,32 +189,50 @@ describe.skipIf(!present)(
       expect(bad).toEqual([]);
     });
 
-    // F1(Tester, 낮음~중간): app.mask_phone 은 8자 이상이면 앞 3자리 + 뒤 4자리를 보인다. 8~9자 번호(대표번호 15881234, 지역 없는 1234-5678 등)는
-    //   숫자 대부분이 드러난다(휴대전화 010-****-5678 처럼 가운데 4자리는 가려야 함). 기대: 가려진 숫자 4개 이상. 고쳐지면 it.fails → it.
-    it.fails(
-      "F1 전화번호 마스킹: 어떤 길이든 가운데 숫자를 4개 이상 가림",
-      async () => {
-        const report: string[] = [];
-        for (const p of [
-          "15881234",
-          "1234-5678",
-          "0212345678",
-          "010-1234-5678",
-        ]) {
-          const id = await newInquiry(a, "번호 합성", p, "");
-          const r = (await masked(a, a.projectA)).find((x) => x.id === id)!;
-          const digits = p.replace(/\D/g, "");
-          const shown = r.masked_phone.replace(/\D/g, "");
-          if (digits.length - shown.length < 4)
-            report.push(
-              `${p} → ${r.masked_phone}(${digits.length - shown.length}/${digits.length} 가림)`,
-            );
-          report.push(
-            `${p} → ${r.masked_phone}(${shown.length}/${digits.length} 드러남)`,
-          );
-        }
-        expect(report).toEqual([]);
-      },
-    );
+    // F1(QA-P4-PRIVACY-DELTA-01 F2 → Backend a3958c0 수정): 전화번호 가림 인수 조건.
+    //   숫자 1~7자리 = 숫자 하나도 안 보임 / 8자리 이상 = 숫자 4개 이상 가림, 보이는 숫자는 실제 앞·뒤 숫자 그대로 / 휴대전화 11자리 = 010-****-5678.
+    //   (QA-P4-PHONE-MASK-01: 예전 판정식은 무조건 report.push 가 남아 고쳐도 늘 실패하던 시험 결함 — 고침)
+    it("F1 전화번호 마스킹: 7자리 이하 숫자 0 노출, 8자리 이상 4개 이상 가림, 보이는 숫자는 실제 앞·뒤", async () => {
+      const report: string[] = [];
+      const gen = (n: number) =>
+        Array.from({ length: n }, (_, k) => String((k * 7 + 3) % 10)).join("");
+      const inputs = [
+        ...Array.from({ length: 20 }, (_, i) => gen(i + 1)),
+        "15881234",
+        "1234-5678",
+        "0212345678",
+        "02-123-4567",
+        "010 1234 5678",
+        "+82 10-1234-5678",
+        "010-1234-5678 내선 99",
+        "０１０-１２３４-５６７８",
+        "전화 없음",
+        "---",
+      ];
+      for (const p of inputs) {
+        const id = await newInquiry(a, "번호 합성", p, "");
+        const r = (await masked(a, a.projectA)).find((x) => x.id === id)!;
+        const digits = p.replace(/[^0-9]/g, "");
+        const m = r.masked_phone;
+        const shown = m.replace(/[^0-9]/g, "");
+        const [head, tail] = m.includes("****")
+          ? m.split("****").map((x) => x.replace(/[^0-9]/g, ""))
+          : [shown, ""];
+        if (digits.length <= 7 && shown.length > 0)
+          report.push(`${p} → ${m}: 7자리 이하인데 숫자 노출`);
+        if (digits.length >= 8 && digits.length - shown.length < 4)
+          report.push(`${p} → ${m}: ${digits.length - shown.length}개만 가림`);
+        if (shown.length && !(digits.startsWith(head) && digits.endsWith(tail)))
+          report.push(`${p} → ${m}: 보이는 숫자가 실제 앞·뒤와 다름`);
+        if (m.includes(p) && p.length >= 4 && /\d/.test(p))
+          report.push(`${p} → ${m}: 원문 그대로 포함`);
+      }
+      const mobile = await newInquiry(a, "휴대", "010-1234-5678", "");
+      expect(
+        (await masked(a, a.projectA)).find((x) => x.id === mobile)!
+          .masked_phone,
+      ).toBe("010-****-5678");
+      expect(report).toEqual([]);
+    });
   },
 );
