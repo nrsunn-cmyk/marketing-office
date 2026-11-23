@@ -1,0 +1,214 @@
+"use client";
+
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { CONTACT, CTA, SERVICE_OPTIONS } from "./brand-copy";
+import {
+  CONTACT_LIMITS,
+  firstErrorField,
+  mergePreset,
+  readContactForm,
+  validateContact,
+  type ContactErrors,
+  type ContactField,
+  type ContactSubmit,
+} from "./contact-model";
+import s from "./nadaum.module.css";
+
+/** 서비스 카드 → 상담 폼 미리 선택 신호(카드와 폼은 서로 다른 구획이라 브라우저 이벤트로 잇는다) */
+const PRESET_EVENT = "nadaum:contact-preset";
+
+/**
+ * 서비스 카드 전체 링크(#contact). 누르면 폼에 해당 서비스를 더해 고른다(기존 선택 유지, 방문자가 바꿀 수 있음).
+ * 스크립트가 없어도 #contact 로는 이동한다.
+ */
+export function PresetLink({ preset, className, children }: { preset: readonly string[]; className?: string; children: ReactNode }) {
+  return (
+    <a href="#contact" className={className} onClick={() => window.dispatchEvent(new CustomEvent(PRESET_EVENT, { detail: [...preset] }))}>
+      {children}
+    </a>
+  );
+}
+
+type Status = { kind: "idle" } | { kind: "pending" } | { kind: "sent" } | { kind: "failed" } | { kind: "not_connected" };
+
+const FIELD_ID: Record<ContactField, string> = {
+  company_name: "nd-company",
+  contact_name: "nd-name",
+  phone: "nd-phone",
+  reference_url: "nd-url",
+  services: "nd-svc-0",
+  other_service: "nd-other",
+  message: "nd-msg",
+  privacy_consent: "nd-consent",
+};
+
+/**
+ * SECTION 07 CONTACT 통합 상담 폼.
+ * - submit 이 없으면(접수 서버 미연결 미리보기) 제출해도 성공으로 보이지 않고 미리보기 안내만 띄운다
+ * - 실패·미연결이면 입력을 그대로 둔다(칸을 비우지 않음). 성공 문구는 서버 저장 확인('sent') 뒤에만
+ */
+export function ContactForm({ submit }: { submit?: ContactSubmit }) {
+  const [services, setServices] = useState<string[]>([]);
+  const [errors, setErrors] = useState<ContactErrors>({});
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const onPreset = (ev: Event) => {
+      const preset = (ev as CustomEvent<string[]>).detail ?? [];
+      setServices((cur) => mergePreset(cur, preset));
+      setErrors((e) => ({ ...e, services: undefined }));
+      // 이동 뒤 키보드 초점을 폼 첫 칸으로(화면은 #contact 위치 그대로)
+      requestAnimationFrame(() => document.getElementById(FIELD_ID.company_name)?.focus({ preventScroll: true }));
+    };
+    window.addEventListener(PRESET_EVENT, onPreset);
+    return () => window.removeEventListener(PRESET_EVENT, onPreset);
+  }, []);
+
+  const toggle = (v: string, on: boolean) => setServices((cur) => (on ? mergePreset(cur, [v]) : cur.filter((x) => x !== v)));
+
+  async function onSubmit(ev: FormEvent<HTMLFormElement>) {
+    ev.preventDefault();
+    if (status.kind === "pending") return;
+    const input = readContactForm(new FormData(ev.currentTarget));
+    const found = validateContact(input);
+    setErrors(found);
+    const first = firstErrorField(found);
+    if (first) {
+      setStatus({ kind: "idle" });
+      document.getElementById(FIELD_ID[first])?.focus();
+      return;
+    }
+    if (!submit) {
+      setStatus({ kind: "not_connected" });
+      return;
+    }
+    setStatus({ kind: "pending" });
+    try {
+      const r = await submit(input);
+      if (r.status === "sent") {
+        formRef.current?.reset();
+        setServices([]);
+        setStatus({ kind: "sent" });
+      } else {
+        setErrors(r.errors ?? {});
+        setStatus({ kind: "failed" });
+      }
+    } catch {
+      setStatus({ kind: "failed" });
+    }
+  }
+
+  const err = (f: ContactField) =>
+    errors[f] ? (
+      <p id={`${FIELD_ID[f]}-err`} className={s.fieldError}>
+        {errors[f]}
+      </p>
+    ) : null;
+  const a11y = (f: ContactField) => ({ "aria-invalid": errors[f] ? true : undefined, "aria-describedby": errors[f] ? `${FIELD_ID[f]}-err` : undefined });
+  const hasErrors = Object.values(errors).some(Boolean);
+  const other = services.includes("기타");
+
+  return (
+    <form ref={formRef} className={s.contactBox} onSubmit={onSubmit} noValidate aria-labelledby="contact-title">
+      <div>
+        <span className={s.eyebrow}>{CONTACT.eyebrow}</span>
+        <h2 id="contact-title" className={s.secTitle}>
+          {CONTACT.title}
+        </h2>
+        <p className={s.lead}>{CONTACT.desc}</p>
+      </div>
+
+      {hasErrors && (
+        <p className={s.errorSummary} role="alert">
+          {CONTACT.errorSummary}
+        </p>
+      )}
+
+      <div className={s.formGrid}>
+        <div className={s.field}>
+          <label htmlFor="nd-company">{CONTACT.labels.company}</label>
+          <input id="nd-company" name="company_name" className={s.input} required maxLength={CONTACT_LIMITS.company} autoComplete="organization" placeholder={CONTACT.placeholders.company} {...a11y("company_name")} />
+          {err("company_name")}
+        </div>
+        <div className={s.field}>
+          <label htmlFor="nd-name">{CONTACT.labels.name}</label>
+          <input id="nd-name" name="contact_name" className={s.input} required maxLength={CONTACT_LIMITS.name} autoComplete="name" placeholder={CONTACT.placeholders.name} {...a11y("contact_name")} />
+          {err("contact_name")}
+        </div>
+        <div className={s.field}>
+          <label htmlFor="nd-phone">{CONTACT.labels.phone}</label>
+          <input id="nd-phone" name="phone" type="tel" inputMode="tel" className={s.input} required maxLength={CONTACT_LIMITS.phone} autoComplete="tel" placeholder={CONTACT.placeholders.phone} {...a11y("phone")} />
+          {err("phone")}
+        </div>
+        <div className={s.field}>
+          <label htmlFor="nd-url">{CONTACT.labels.url}</label>
+          <input id="nd-url" name="reference_url" type="url" inputMode="url" className={s.input} maxLength={CONTACT_LIMITS.url} placeholder={CONTACT.placeholders.url} {...a11y("reference_url")} />
+          {err("reference_url")}
+        </div>
+      </div>
+
+      <fieldset className={s.fieldset} aria-describedby={errors.services ? "nd-svc-0-err" : undefined}>
+        <legend className={s.legend}>{CONTACT.labels.services}</legend>
+        <div className={s.chipGroup}>
+          {SERVICE_OPTIONS.map((o, i) => (
+            <label key={o} className={s.chip}>
+              <input id={`nd-svc-${i}`} type="checkbox" name="services" value={o} checked={services.includes(o)} onChange={(e) => toggle(o, e.currentTarget.checked)} />
+              {o}
+            </label>
+          ))}
+        </div>
+        {err("services")}
+      </fieldset>
+
+      {other && (
+        <div className={s.field}>
+          <label htmlFor="nd-other">{CONTACT.labels.other}</label>
+          <input id="nd-other" name="other_service" className={s.input} required maxLength={CONTACT_LIMITS.other} placeholder={CONTACT.placeholders.other} {...a11y("other_service")} />
+          {err("other_service")}
+        </div>
+      )}
+
+      <div className={s.field}>
+        <label htmlFor="nd-msg">{CONTACT.labels.message}</label>
+        <textarea id="nd-msg" name="message" className={`${s.input} ${s.textarea}`} required maxLength={CONTACT_LIMITS.message} placeholder={CONTACT.placeholders.message} {...a11y("message")} />
+        {err("message")}
+      </div>
+
+      <details className={s.more}>
+        <summary>{CONTACT.labels.more}</summary>
+        <div className={s.formGrid}>
+          <div className={s.field}>
+            <label htmlFor="nd-timeline">{CONTACT.labels.timeline}</label>
+            <input id="nd-timeline" name="desired_timeline" className={s.input} maxLength={CONTACT_LIMITS.short} />
+          </div>
+          <div className={s.field}>
+            <label htmlFor="nd-budget">{CONTACT.labels.budget}</label>
+            <input id="nd-budget" name="budget_range" className={s.input} maxLength={CONTACT_LIMITS.short} />
+          </div>
+        </div>
+      </details>
+
+      <div className={s.field}>
+        <label className={`${s.chip} ${s.consent}`}>
+          <input id="nd-consent" type="checkbox" name="privacy_consent" required {...a11y("privacy_consent")} />
+          {CONTACT.labels.consent}
+        </label>
+        {err("privacy_consent")}
+      </div>
+
+      <div>
+        <button type="submit" className={`${s.btn} ${s.btnPrimary}`} aria-disabled={status.kind === "pending" ? true : undefined}>
+          {CTA.submit}
+        </button>
+      </div>
+
+      {/* 결과 안내 영역은 늘 두고 글만 바꾼다(화면 읽기 프로그램이 한 번 읽음) */}
+      <div role="status" aria-live="polite" aria-atomic="true">
+        {status.kind === "sent" && <p className={s.statusOk}>{CONTACT.success}</p>}
+        {status.kind === "failed" && <p className={s.statusError}>{CONTACT.failure}</p>}
+        {status.kind === "not_connected" && <p className={s.statusPreview}>{CONTACT.notConnected}</p>}
+      </div>
+    </form>
+  );
+}

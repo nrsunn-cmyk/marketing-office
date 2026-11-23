@@ -84,7 +84,8 @@ test("본인: 비밀번호 로그인 → 처음 설정 → 첫 화면", async ({
   await expect(page.getByText(OWNER, { exact: true })).toBeVisible();
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("고객 자료는 단 한 번 입력");
+  // NADAUM-BRAND-FRONT-01: '/'는 나다움브랜드 공개 홍보 화면(로그인해도 같은 공개 화면, 대시보드 없음)
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("나다움을 발견하고");
   await expect(page.getByRole("list", { name: "현황 숫자" })).toHaveCount(0);
 
   await page.goto("/setup");
@@ -95,17 +96,22 @@ test("본인: 비밀번호 로그인 → 처음 설정 → 첫 화면", async ({
   }
 });
 
-test("비로그인 '/'는 공개 랜딩(200)이고 로그인·가입으로 갈 수 있으며, 보호 경로는 로그인으로 보낸다", async ({ page }) => {
+test("비로그인 '/'는 공개 홍보 화면(200)이고 로그인·가입 주소는 그대로 열리며, 보호 경로는 로그인으로 보낸다", async ({ page }) => {
   // LANDING-FIX-01 E1: 7411d5b 부터 '/'만 공개(proxy.ts). 데이터 화면은 그대로 보호한다
   const res = await page.goto("/");
   expect(res?.status()).toBe(200);
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("고객 자료는 단 한 번 입력");
+  // NADAUM-BRAND-FRONT-01: '/'는 나다움브랜드 공개 홍보 화면. 머리글은 서비스·작업물·상담하기(업무실 진입 노출 위치는 출시 전 결정)
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("나다움을 발견하고");
+  await expect(page.getByRole("banner").getByRole("link", { name: "상담하기" })).toHaveAttribute("href", "#contact");
   // LANDING-FIX-01-R1 T-a: 비로그인 '/'에 대시보드(현황 숫자·기준 시각)가 새어 나오지 않는다
   await expect(page.getByRole("list", { name: "현황 숫자" })).toHaveCount(0);
   await expect(page.getByText(/^기준 시각:/)).toHaveCount(0);
-  await expect(page.getByRole("banner").getByRole("link", { name: "로그인" })).toHaveAttribute("href", "/login");
-  await expect(page.getByRole("banner").getByRole("link", { name: "무료 시작하기" })).toHaveAttribute("href", "/signup");
+  for (const path of ["/login", "/signup"]) {
+    const r = await page.goto(path);
+    expect(r?.status(), path).toBe(200);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+  }
   for (const path of ["/workspace", "/projects", "/clients", "/settings"]) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/login$/);

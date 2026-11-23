@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" width="640" height="380" role="img" aria-labelledby="t d">
+  <title id="t">NADAUM 뫼비우스 리본 비주얼</title>
+  <desc id="d">라일락과 청록 빛이 교차하는 나다움 자체 제작 뫼비우스 리본 벡터 자산</desc>
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#B67AF5" stop-opacity="0.32" />
+      <stop offset="55%" stop-color="#56CED8" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#101927" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="ribbonMain" x1="70" y1="60" x2="570" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B67AF5" />
+      <stop offset="35%" stop-color="#E0B3FF" />
+      <stop offset="68%" stop-color="#56CED8" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+    <linearGradient id="ribbonSpec" x1="90" y1="80" x2="550" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F7F8FB" stop-opacity="0.72" />
+      <stop offset="50%" stop-color="#56CED8" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#B67AF5" stop-opacity="0.6" />
+    </linearGradient>
+  </defs>
+  <ellipse cx="320" cy="195" rx="280" ry="145" fill="url(#glow)" />
+  <path d="M92 190C92 98 205 84 320 190C435 296 548 282 548 190C548 98 435 84 320 190C205 296 92 282 92 190Z" fill="none" stroke="url(#ribbonMain)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.92" />
+  <path d="M92 190C92 98 205 84 320 190C435 296 548 282 548 190" fill="none" stroke="url(#ribbonSpec)" stroke-width="8" stroke-linecap="round" />
+  <path d="M548 190C548 98 435 84 320 190C205 296 92 282 92 190" fill="none" stroke="#F7F8FB" stroke-width="2.5" stroke-opacity="0.38" stroke-linecap="round" />
+</svg>
