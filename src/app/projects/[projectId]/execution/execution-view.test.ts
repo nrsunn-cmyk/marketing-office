@@ -257,5 +257,20 @@ describe("UX-EXEC-JUMP-FRONT-01 바로가기 막대와 외부 연동 구획", ()
     expect(h).not.toContain("아직 연결되지 않았습니다");
     expect(h).toContain(EX_LABELS.firstSource);
     for (const l of ["외부 채널 설정", "외부 채널 실행", "예약·상담·CRM"]) expect(h).toContain(l);
+    // G6(AGY msg_979029ebaf58): 성과 구획 머리 '자동 수집: 준비 중' 태그도 뺀다
+    expect(h).not.toContain("자동 수집: 준비 중");
+  });
+
+  it("G6 성과 머리 태그는 외부 연동이 없거나 조회 실패면 유지, 자동 수집 성과 배지는 '자동 수집'(준비 중 아님)", () => {
+    for (const e of [undefined, null]) {
+      const t = text(renderToString(createElement(ExecutionView, { board: board(), projectTitle: "나다음 리뉴얼", externalBoard: e })));
+      expect(t, String(e)).toContain("자동 수집: 준비 중 (수동 입력만)");
+    }
+    const b = board({ results: [result(1), result(2, { collectionMode: "readonly_sync" })] });
+    const t = text(renderToString(createElement(ExecutionView, { board: b, projectTitle: "나다음 리뉴얼", externalBoard: ext("connected") })));
+    expect(t).toContain(` ${EX_LABELS.manualBadge} `);
+    expect(EX_LABELS.syncBadge).toBe("자동 수집");
+    expect(t).toMatch(/ 자동 수집 /);
+    expect(t).not.toContain("읽기 전용 수집)");
   });
 });

@@ -112,7 +112,7 @@ export function ExecutionView({
       ) : (
         <>
           <Queue board={board} actions={actions} showPreparing={showPreparing} />
-          <Results board={board} actions={actions} />
+          <Results board={board} actions={actions} showPreparing={showPreparing} />
         </>
       )}
       {showPreparing && (
@@ -291,7 +291,7 @@ function JobCard({ j, canWrite, actions }: { j: ExecutionJobView; canWrite: bool
   );
 }
 
-function Results({ board, actions }: { board: ExecutionBoard; actions: ExecutionActions }) {
+function Results({ board, actions, showPreparing }: { board: ExecutionBoard; actions: ExecutionActions; showPreparing: boolean }) {
   const list = board.results;
   return (
     <section className={`${styles.section} ${s.exSection}`} aria-labelledby="results">
@@ -299,9 +299,12 @@ function Results({ board, actions }: { board: ExecutionBoard; actions: Execution
         {ER_COPY.heading}
       </h2>
       <p className={styles.muted}>{ER_COPY.intro}</p>
-      <p className={s.exTags}>
-        <span className={s.exTag}>{EX_LABELS.autoSyncPreparing}</span>
-      </p>
+      {/* G6(AGY msg_979029ebaf58): 외부 연동을 불러왔으면 '자동 수집: 준비 중' 태그를 뺀다(외부 성과 자동 수집 기능과 모순 방지) */}
+      {showPreparing && (
+        <p className={s.exTags}>
+          <span className={s.exTag}>{EX_LABELS.autoSyncPreparing}</span>
+        </p>
+      )}
       {!board.canWrite && (
         <p className={styles.notice} role="note">
           {EX_COPY.noPermission}
