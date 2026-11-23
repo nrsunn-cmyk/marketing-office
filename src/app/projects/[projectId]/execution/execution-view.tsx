@@ -3,6 +3,7 @@ import type { FormState } from "../../../_components/form-state";
 import { ActionForm } from "../../../_components/action-form";
 import styles from "../../../ui.module.css";
 import s from "./execution.module.css";
+import { QueueActionForm, QueueAlert } from "./queue-alert";
 import {
   ER_COPY,
   EX_COPY,
@@ -125,60 +126,63 @@ function Queue({ board, actions }: { board: ExecutionBoard; actions: ExecutionAc
       <h2 id="queue" className={styles.subtitle}>
         {EX_COPY.heading}
       </h2>
-      <p className={styles.muted}>{EX_COPY.intro}</p>
-      <p className={s.exTags}>
-        <span className={`${s.exTag} ${s.exTag_info}`}>{EX_LABELS.firstSource}</span>
-        <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
-      </p>
-      {!board.canWrite && (
-        <p className={styles.notice} role="note">
-          {EX_COPY.noPermission}
+      {/* P4-ALERT-FRONT-01: 막힘 경고는 폼 밖 대기열 머리 live 영역에 한 번(queue-alert.tsx) */}
+      <QueueAlert>
+        <p className={styles.muted}>{EX_COPY.intro}</p>
+        <p className={s.exTags}>
+          <span className={`${s.exTag} ${s.exTag_info}`}>{EX_LABELS.firstSource}</span>
+          <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
         </p>
-      )}
-      {/* 티스토리 기본 경로 3단계(자동 게시 없음, tistory-manual.html) */}
-      <details>
-        <summary>{EX_LABELS.manualSteps}</summary>
-        <ol className={s.exSteps}>
-          <li>{EX_LABELS.step1}</li>
-          <li>{EX_LABELS.step2}</li>
-          <li>{`${EX_LABELS.step3}: ${EX_COPY.recordBtn}`}</li>
-        </ol>
-        <p className={styles.muted}>{EX_LABELS.noApi}</p>
-      </details>
-      {queue.length === 0 ? (
-        <div className={styles.emptyState}>
-          <strong>{EX_COPY.emptyTitle}</strong>
-          <p className={styles.muted}>{EX_COPY.emptyDesc}</p>
-        </div>
-      ) : (
-        <ul className={s.exList}>
-          {queue.map((j) => (
-            <JobCard key={j.id} j={j} canWrite={board.canWrite} actions={actions} />
-          ))}
-        </ul>
-      )}
-      {history.length > 0 && (
-        <>
-          <h3 className={styles.subtitle}>{EX_LABELS.historyHeading}</h3>
-          <p className={styles.muted}>{EX_LABELS.historyHint}</p>
+        {!board.canWrite && (
+          <p className={styles.notice} role="note">
+            {EX_COPY.noPermission}
+          </p>
+        )}
+        {/* 티스토리 기본 경로 3단계(자동 게시 없음, tistory-manual.html) */}
+        <details>
+          <summary>{EX_LABELS.manualSteps}</summary>
+          <ol className={s.exSteps}>
+            <li>{EX_LABELS.step1}</li>
+            <li>{EX_LABELS.step2}</li>
+            <li>{`${EX_LABELS.step3}: ${EX_COPY.recordBtn}`}</li>
+          </ol>
+          <p className={styles.muted}>{EX_LABELS.noApi}</p>
+        </details>
+        {queue.length === 0 ? (
+          <div className={styles.emptyState}>
+            <strong>{EX_COPY.emptyTitle}</strong>
+            <p className={styles.muted}>{EX_COPY.emptyDesc}</p>
+          </div>
+        ) : (
           <ul className={s.exList}>
-            {history.map((j) => (
+            {queue.map((j) => (
               <JobCard key={j.id} j={j} canWrite={board.canWrite} actions={actions} />
             ))}
           </ul>
-        </>
-      )}
+        )}
+        {history.length > 0 && (
+          <>
+            <h3 className={styles.subtitle}>{EX_LABELS.historyHeading}</h3>
+            <p className={styles.muted}>{EX_LABELS.historyHint}</p>
+            <ul className={s.exList}>
+              {history.map((j) => (
+                <JobCard key={j.id} j={j} canWrite={board.canWrite} actions={actions} />
+              ))}
+            </ul>
+          </>
+        )}
+      </QueueAlert>
     </section>
   );
 }
 
 function Step({ action, j, label, variant = "secondary", children }: { action?: Action; j: ExecutionJobView; label: string; variant?: "primary" | "secondary"; children?: React.ReactNode }) {
   return (
-    <ActionForm action={action ?? notConnected} submitLabel={label} variant={variant} className={s.exInline}>
+    <QueueActionForm action={action ?? notConnected} submitLabel={label} variant={variant} className={s.exInline}>
       <input type="hidden" name="jobId" value={j.id} />
       <input type="hidden" name="revision" value={j.revision} />
       {children}
-    </ActionForm>
+    </QueueActionForm>
   );
 }
 
@@ -232,7 +236,7 @@ function JobCard({ j, canWrite, actions }: { j: ExecutionJobView; canWrite: bool
       {can.record && (
         <details open>
           <summary>{EX_COPY.recordBtn}</summary>
-          <ActionForm action={actions.record ?? notConnected} submitLabel={EX_COPY.recordBtn}>
+          <QueueActionForm action={actions.record ?? notConnected} submitLabel={EX_COPY.recordBtn}>
             <input type="hidden" name="jobId" value={j.id} />
             <input type="hidden" name="revision" value={j.revision} />
             <div className={s.exGrid2}>
@@ -249,7 +253,7 @@ function JobCard({ j, canWrite, actions }: { j: ExecutionJobView; canWrite: bool
               <label htmlFor={`${headId}-note`}>{EX_LABELS.note}</label>
               <input id={`${headId}-note`} name="note" type="text" />
             </div>
-          </ActionForm>
+          </QueueActionForm>
         </details>
       )}
       {can.archive && (

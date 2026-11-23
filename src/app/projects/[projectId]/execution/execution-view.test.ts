@@ -162,6 +162,20 @@ describe("실행·성과 화면(P4A-UI-01)", () => {
     expect(count(h, /<summary>이 성과 보관<\/summary>/g)).toBe(1); // 취소 행은 보관 가능, 보관 행은 없음
   });
 
+  it("막힘 알림 영역(P4-ALERT-FRONT-01): 대기열 제목 바로 아래·목록 위 한 곳, 처음엔 비어 있고 카드의 막힘 원인(role=note)은 그대로", () => {
+    for (const k of Object.keys(STATES).filter((x) => STATES[x].board)) {
+      const h = render(k);
+      const head = h.indexOf('<h2 id="queue"');
+      const region = h.indexOf('<div role="status" aria-live="polite" aria-atomic="true" data-queue-alert=""></div>');
+      expect(head, k).toBeGreaterThan(-1);
+      expect(region, k).toBeGreaterThan(head);
+      expect(h.slice(head, region), k).not.toMatch(/<ul|<li/);
+      expect(h.split("data-queue-alert").length - 1, k).toBe(1);
+    }
+    const all = Object.keys(STATES).map(render).join("");
+    expect(all).toMatch(/class="exWarn" role="note"/);
+  });
+
   it("불러오기 실패: 알림", () => {
     const h = render("불러오기실패");
     expect(h).toContain('role="alert"');
