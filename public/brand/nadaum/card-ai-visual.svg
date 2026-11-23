@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" width="480" height="280" role="img" aria-labelledby="t d">
+  <title id="t">AI 영상·비주얼 서비스 비주얼</title>
+  <desc id="d">카메라 렌즈와 네온 광채로 AI 영상과 비주얼 제작을 표현한 벡터 일러스트</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="480" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#121E32" />
+      <stop offset="100%" stop-color="#06070C" />
+    </linearGradient>
+    <radialGradient id="lens" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#56CED8" stop-opacity="0.85" />
+      <stop offset="48%" stop-color="#B67AF5" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#101927" stop-opacity="0.95" />
+    </radialGradient>
+  </defs>
+  <rect width="480" height="280" rx="18" fill="url(#bg)" />
+  <circle cx="240" cy="140" r="88" fill="#101927" stroke="rgba(247,248,251,0.2)" stroke-width="2" />
+  <circle cx="240" cy="140" r="64" fill="url(#lens)" stroke="rgba(86,206,216,0.5)" stroke-width="2" />
+  <circle cx="240" cy="140" r="28" fill="#06070C" stroke="#B67AF5" stroke-width="2" />
+  <polygon points="233,128 255,140 233,152" fill="#F7F8FB" />
+</svg>

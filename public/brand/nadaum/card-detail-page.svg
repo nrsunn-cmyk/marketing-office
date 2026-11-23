@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" width="480" height="280" role="img" aria-labelledby="t d">
+  <title id="t">상세페이지 제작 서비스 비주얼</title>
+  <desc id="d">상품 하이라이트와 구매 전환 구조를 표현한 벡터 일러스트</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="480" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#171B30" />
+      <stop offset="100%" stop-color="#090D16" />
+    </linearGradient>
+    <linearGradient id="acc" x1="120" y1="50" x2="360" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B67AF5" />
+      <stop offset="100%" stop-color="#56CED8" />
+    </linearGradient>
+  </defs>
+  <rect width="480" height="280" rx="18" fill="url(#bg)" />
+  <rect x="116" y="34" width="248" height="212" rx="14" fill="#101927" stroke="rgba(182,122,245,0.34)" stroke-width="1.5" />
+  <rect x="140" y="56" width="92" height="114" rx="10" fill="rgba(182,122,245,0.16)" stroke="url(#acc)" stroke-width="1.5" />
+  <circle cx="186" cy="113" r="24" fill="url(#acc)" fill-opacity="0.65" />
+  <rect x="248" y="64" width="92" height="12" rx="6" fill="#F7F8FB" fill-opacity="0.9" />
+  <rect x="248" y="86" width="72" height="8" rx="4" fill="#CBD5E1" fill-opacity="0.55" />
+  <rect x="248" y="104" width="84" height="8" rx="4" fill="#CBD5E1" fill-opacity="0.35" />
+  <rect x="248" y="136" width="92" height="28" rx="14" fill="url(#acc)" />
+  <rect x="140" y="188" width="60" height="36" rx="8" fill="rgba(247,248,251,0.06)" />
+  <rect x="210" y="188" width="60" height="36" rx="8" fill="rgba(247,248,251,0.06)" />
+  <rect x="280" y="188" width="60" height="36" rx="8" fill="rgba(247,248,251,0.06)" />
+</svg>
