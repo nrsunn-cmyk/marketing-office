@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
@@ -112,10 +112,18 @@ describe("나다움브랜드 공개 화면", () => {
   });
 
   it("/ 연결: 새 화면을 그리고, 기존 업무실 소개 파일은 그대로 보존된다", () => {
-    const page = readFileSync(join(process.cwd(), "src/app/page.tsx"), "utf8");
+    const page = readFileSync(join(process.cwd(), "src/app/(brand)/page.tsx"), "utf8");
     expect(page).toContain("<NadaumHome />");
     expect(page).not.toMatch(/submit=/); // 접수 서버 연결 전: 성공 경로 없음
     expect(readFileSync(join(process.cwd(), "src/app/_components/landing-page.tsx"), "utf8")).toContain("export function LandingPage");
+    // 나다움 파비콘은 / 묶음 폴더에만(루트 icon.svg 는 업무실·관리자용 그대로)
+    expect(existsSync(join(process.cwd(), "src/app/page.tsx"))).toBe(false);
+    const brandIcon = readFileSync(join(process.cwd(), "src/app/(brand)/icon.svg"), "utf8");
+    expect(brandIcon).toBe(readFileSync(join(process.cwd(), "public/brand/nadaum/nadaum-favicon.svg"), "utf8"));
+    expect(readFileSync(join(process.cwd(), "src/app/icon.svg"), "utf8")).not.toBe(brandIcon);
+    // 공유 이미지도 / 에만(AGY nadaum-og-1200x630.png, 루트 opengraph-image.png 는 그대로)
+    expect(existsSync(join(process.cwd(), "src/app/(brand)/opengraph-image.png"))).toBe(true);
+    expect(existsSync(join(process.cwd(), "src/app/opengraph-image.png"))).toBe(true);
   });
 });
 
