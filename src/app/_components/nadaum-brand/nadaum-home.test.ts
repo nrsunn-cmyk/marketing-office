@@ -61,7 +61,13 @@ describe("나다움브랜드 공개 화면", () => {
     const pos = SERVICES.cards.map((c) => t.indexOf(c.title + " "));
     expect(SERVICES.cards.map((c) => c.title)).toEqual(["홈페이지 제작", "상세페이지 제작", "AI 영상·비주얼"]);
     expect(pos.every((p) => p > 0)).toBe(true);
-    expect(count(/class="card serviceCard"/g)).toBe(3);
+    expect(count(/class="card serviceCard( featured)?"/g)).toBe(3);
+    // 3안 스페이셜 벤토: 첫 카드(홈페이지 제작)만 강조, 서비스 목록은 전용 3단 격자, 히어로는 글·비주얼 두 타일, 후킹·브랜드 한 줄은 배너
+    expect(count(/class="card serviceCard featured"/g)).toBe(1);
+    expect(html.indexOf("card serviceCard featured")).toBeLessThan(html.indexOf("상세페이지 제작"));
+    expect(html).toContain('class="grid3 serviceGrid"');
+    expect(html).toMatch(/class="heroBento"><div class="heroText">/);
+    expect(count(/class="banner"/g)).toBe(2);
     expect(t).toContain(SERVICES.more);
     // AI 영상·비주얼 → 영상·비주얼 두 개 미리 선택(AGY 인계 3절), 모두 폼의 7종 안
     expect(SERVICES.cards[2].preset).toEqual(["쇼츠·릴스 영상", "광고·상품 이미지"]);

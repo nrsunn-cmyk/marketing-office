@@ -6,7 +6,7 @@ import type { ContactSubmit } from "./contact-model";
 import s from "./nadaum.module.css";
 
 /**
- * NADAUM-BRAND-FRONT-01 나다움브랜드 공개 홍보 화면(/).
+ * NADAUM-BRAND-FRONT-01 나다움브랜드 공개 홍보 화면(/). 배치는 3안 스페이셜 벤토(NADAUM-BRAND-CONCEPT3-FRONT-01, CONCEPT-3-FINAL-SPEC 4~9).
  * 기획서(DOCX) 3절 순서: 헤더 → 첫 화면 → 서비스 → 후킹 → 작업물 → 브랜드 한 줄 → FAQ → 상담 → 푸터.
  * 색·간격은 AGY tokens-nadaum-brand.css 를 이 화면 안(.root)에만 둔다(업무실·관리자 화면에 번지지 않음).
  * 기존 마케팅 업무실 소개(landing-page.tsx)는 그대로 보존하고, / 연결만 이 화면으로 바꾼다.
@@ -52,7 +52,8 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
         {/* SECTION 01 HERO */}
         <section id="top" className={s.section} aria-labelledby="hero-title">
           <div className={s.container}>
-            <div className={s.heroPanel}>
+            {/* 3안 스페이셜 벤토: 글 타일 + 비주얼 타일(모바일은 글이 먼저) */}
+            <div className={s.heroBento}>
               <div className={s.heroText}>
                 <span className={s.eyebrow}>{HERO.eyebrow}</span>
                 <h1 id="hero-title" className={s.heroTitle}>
@@ -87,10 +88,11 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
                 {SERVICES.title}
               </h2>
             </div>
-            <ul className={s.grid3}>
-              {SERVICES.cards.map((c) => (
-                <li key={c.title}>
-                  <PresetLink preset={c.preset} className={`${s.card} ${s.serviceCard}`}>
+            <ul className={`${s.grid3} ${s.serviceGrid}`}>
+              {SERVICES.cards.map((c, i) => (
+                <li key={c.title} className={i === 0 ? s.featuredItem : undefined}>
+                  {/* 3안: 첫 카드(홈페이지 제작)를 넓게 강조 */}
+                  <PresetLink preset={c.preset} className={`${s.card} ${s.serviceCard}${i === 0 ? ` ${s.featured}` : ""}`}>
                     <Image src={c.image} alt="" width={480} height={280} unoptimized className={s.cardImg} />
                     <h3 className={s.cardTitle}>{c.title}</h3>
                     <p className={s.cardDesc}>{c.desc}</p>
@@ -103,13 +105,15 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
         </section>
 
         {/* SECTION 03 MID-PAGE HOOK — 상담 단추를 두지 않는다 */}
-        <section className={s.statement} aria-labelledby="hook-title">
+        <section className={s.section} aria-labelledby="hook-title">
           <div className={s.container}>
-            <span className={s.eyebrow}>{HOOK.eyebrow}</span>
-            <h2 id="hook-title" className={s.statementTitle}>
-              {HOOK.title}
-            </h2>
-            <p className={`${s.lead} ${s.center}`}>{HOOK.desc}</p>
+            <div className={s.banner}>
+              <span className={s.eyebrow}>{HOOK.eyebrow}</span>
+              <h2 id="hook-title" className={s.statementTitle}>
+                {HOOK.title}
+              </h2>
+              <p className={`${s.lead} ${s.center}`}>{HOOK.desc}</p>
+            </div>
           </div>
         </section>
 
@@ -137,12 +141,14 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
         </section>
 
         {/* SECTION 05 BRAND STATEMENT — 설명 없이 한 문장 */}
-        <section className={s.statement} aria-labelledby="statement-title">
+        <section className={s.section} aria-labelledby="statement-title">
           <div className={s.container}>
-            <span className={s.eyebrow}>{STATEMENT.eyebrow}</span>
-            <h2 id="statement-title" className={s.statementTitle}>
-              {STATEMENT.title}
-            </h2>
+            <div className={s.banner}>
+              <span className={s.eyebrow}>{STATEMENT.eyebrow}</span>
+              <h2 id="statement-title" className={s.statementTitle}>
+                {STATEMENT.title}
+              </h2>
+            </div>
           </div>
         </section>
 

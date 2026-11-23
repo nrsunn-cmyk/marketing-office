@@ -39,10 +39,18 @@
   min-height: 100dvh;
   color: var(--nd-text-white);
   line-height: 1.6;
-  background:
-    radial-gradient(900px 520px at 78% 8%, rgba(182, 122, 245, 0.22), transparent 60%),
-    radial-gradient(700px 460px at 18% 14%, rgba(86, 206, 216, 0.14), transparent 62%),
-    var(--nd-bg-black);
+  /* 3안 스페이셜 벤토: 24px 청록 도트 그리드는 바탕에만, 글이 놓이는 면은 불투명 */
+  --nd-tile: #101927;
+  --nd-tile-border: rgba(247, 248, 251, 0.16);
+  --nd-tile-featured: #272744; /* 라일락 14% 를 #101927 위에 섞은 불투명 색 */
+  --nd-tile-cyan: #182f3c; /* 청록 12% 를 #101927 위에 섞은 불투명 색 */
+  background-color: var(--nd-bg-black);
+  background-image:
+    radial-gradient(rgba(86, 206, 216, 0.16) 1px, transparent 1px),
+    radial-gradient(840px 420px at 85% 4%, rgba(182, 122, 245, 0.2), transparent 62%);
+  background-size:
+    24px 24px,
+    100% 100%;
 }
 
 /* 전역 a 색 규칙(:root:not([data-theme]) a, 우선순위 0,2,1)보다 강하게: 이 화면의 링크는 글자색을 따른다 */
@@ -146,8 +154,9 @@
   display: inline-flex;
   align-items: center;
   padding: 0 14px;
-  border-radius: var(--nd-radius-pill);
+  border-radius: 12px;
   border: 1px solid var(--nd-border-strong);
+  background: var(--nd-tile);
   color: var(--nd-text-muted);
   font-size: 14px;
   font-weight: 700;
@@ -194,9 +203,11 @@
   background: var(--nd-cta-bg);
   color: var(--nd-cta-text);
 }
+/* 3안 7번: 보조 버튼은 각진 12px + 테두리 0.28, 주 CTA 는 필 라일락 */
 .btnOutline {
   border-color: var(--nd-border-strong);
-  background: rgba(16, 25, 39, 0.55);
+  border-radius: 12px;
+  background: var(--nd-tile);
 }
 .btn[aria-disabled="true"] {
   opacity: 0.7;
@@ -210,9 +221,11 @@
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
-  border-radius: var(--nd-radius-pill);
-  border: 1px solid var(--nd-border-subtle);
+  width: fit-content; /* flex 세로 타일 안에서 늘어나지 않게 */
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(86, 206, 216, 0.36);
+  background: rgba(86, 206, 216, 0.14);
   color: var(--nd-accent-cyan);
   font-size: 12px;
   font-weight: 700;
@@ -237,23 +250,21 @@
   word-break: keep-all;
 }
 
-/* SECTION 01 HERO */
-.heroPanel {
-  background:
-    radial-gradient(640px 420px at 78% 45%, rgba(182, 122, 245, 0.24), transparent 65%),
-    radial-gradient(500px 360px at 65% 65%, rgba(86, 206, 216, 0.18), transparent 65%),
-    var(--nd-bg-navy);
-  border: 1px solid var(--nd-border-subtle);
-  border-radius: 28px;
-  padding: 56px 48px;
+/* SECTION 01 HERO — 3안: 글 타일 + 비주얼 타일 */
+.heroBento {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  align-items: center;
-  gap: 36px;
-  overflow: hidden;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 18px;
 }
 .heroText {
   min-width: 0;
+  background: var(--nd-tile);
+  border: 1px solid var(--nd-tile-border);
+  border-radius: 24px;
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .heroTitle {
   font-size: clamp(30px, 4.2vw, 52px);
@@ -274,6 +285,10 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
+  border-radius: 24px;
+  border: 1px solid rgba(86, 206, 216, 0.34);
+  padding: 28px;
+  background: radial-gradient(circle at 50% 50%, rgba(86, 206, 216, 0.22), rgba(182, 122, 245, 0.12) 48%, var(--nd-tile) 76%);
 }
 .mobius {
   width: 100%;
@@ -378,11 +393,13 @@
 }
 
 /* SECTION 03 · 05 */
-.statement {
+/* 3안: 배너 벤토(불투명 라일락→청록) */
+.banner {
   text-align: center;
-  padding: 72px 0;
-  border-top: 1px solid var(--nd-border-default);
-  border-bottom: 1px solid var(--nd-border-default);
+  padding: 46px 28px;
+  border-radius: 24px;
+  border: 1px solid var(--nd-border-subtle);
+  background: linear-gradient(90deg, var(--nd-tile-featured), var(--nd-tile-cyan));
 }
 .statementTitle {
   font-size: clamp(26px, 3.4vw, 42px);
@@ -435,10 +452,10 @@
 
 /* SECTION 07 CONTACT */
 .contactBox {
-  background: var(--nd-bg-navy);
-  border: 1px solid var(--nd-border-subtle);
+  background: var(--nd-tile);
+  border: 1px solid rgba(86, 206, 216, 0.34);
   border-radius: 24px;
-  padding: 36px;
+  padding: 34px;
   display: grid;
   gap: 20px;
   max-width: 860px;
@@ -474,7 +491,7 @@
   width: 100%;
   min-height: var(--nd-touch-min);
   padding: 10px 14px;
-  border-radius: var(--nd-radius-input);
+  border-radius: 10px;
   border: 1px solid var(--nd-border-strong);
   background: var(--nd-bg-black);
   color: var(--nd-text-white);
@@ -497,7 +514,7 @@
 .chip {
   min-height: var(--nd-touch-min);
   padding: 8px 14px;
-  border-radius: var(--nd-radius-pill);
+  border-radius: 10px;
   border: 1px solid var(--nd-border-strong);
   background: var(--nd-bg-black);
   display: inline-flex;
@@ -510,12 +527,13 @@
 .chip input {
   width: 18px;
   height: 18px;
-  accent-color: var(--nd-accent-lilac);
+  accent-color: var(--nd-accent-cyan);
   flex: none;
 }
+/* 3안 6번: 선택은 청록 배경·테두리 + 체크박스 자체를 그대로 보인다(색만으로 상태 전달 금지) */
 .chip:has(input:checked) {
-  border-color: var(--nd-accent-lilac);
-  background: rgba(182, 122, 245, 0.18);
+  border-color: var(--nd-accent-cyan);
+  background: rgba(86, 206, 216, 0.16);
 }
 .consent {
   border-radius: 12px;
@@ -605,21 +623,49 @@
   display: block;
 }
 
+/* 3안 4번: 서비스 벤토 3단 반응형 — >1100px 1.35fr 1fr 1fr / 641~1100px 2열(홈페이지 제작 전체 폭) / ≤640px 1열 */
+.grid3.serviceGrid {
+  grid-template-columns: 1.35fr 1fr 1fr;
+}
+.card.featured {
+  border-color: rgba(182, 122, 245, 0.42);
+  background: linear-gradient(160deg, var(--nd-tile-featured), var(--nd-tile) 55%);
+}
+@media (max-width: 1100px) {
+  .grid3.serviceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid3.serviceGrid > .featuredItem {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 860px) {
-  .heroPanel {
+  .heroBento {
     grid-template-columns: 1fr;
-    padding: 32px 22px;
   }
   .grid3,
   .formGrid {
     grid-template-columns: 1fr;
   }
-  .contactBox {
-    padding: 24px 18px;
-  }
-  .section,
-  .statement {
+  .section {
     padding: 56px 0;
+  }
+}
+
+/* 3안 5번: 320~640px 상담 벤토 18px, 히어로 타일 22px */
+@media (max-width: 640px) {
+  .grid3.serviceGrid {
+    grid-template-columns: 1fr;
+  }
+  .heroText {
+    padding: 22px;
+  }
+  .contactBox {
+    padding: 18px;
+  }
+  .banner {
+    padding: 32px 18px;
   }
 }
 
