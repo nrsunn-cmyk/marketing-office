@@ -1,4 +1,4 @@
-// P4-R3-LIMITS-BACKEND-01: 문의·후속 작업·예약 개수 한도와 보관 함수(20261123006000, 합성 데이터)
+// P4-LOW-FIXES-R3-BACKEND-01 (007000): 문의·후속 작업·예약 개수 한도와 보관 함수(합성 데이터)
 import { beforeAll, describe, expect, it } from "vitest";
 import { asUser, createDb, expectDbError, one, seedOwner, type Db, type Fixture } from "./harness";
 
@@ -39,7 +39,7 @@ const schedule = (f: Fixture, jobId: string) =>
 const cancel = (f: Fixture, scheduleId: string) =>
   asUser(db, f.userId, (tx) => tx.query("select public.cancel_execution_schedule($1)", [scheduleId]));
 
-describe("P4 R3 한도 (20261123006000)", () => {
+describe("P4 R3 한도 (20261123007000)", () => {
   it("한도 숫자는 한 곳(app.p4_r3_limit)에 있고, 로그인·익명 역할은 직접 부를 수 없다", async () => {
     expect(await limit("inquiries_per_project")).toBe(500);
     expect(await limit("followups_per_inquiry")).toBe(20);
@@ -165,7 +165,7 @@ describe("P4 R3 한도 (20261123006000)", () => {
     const { executionErrorFromDb } = await import("@/domain/execution");
     expect(executionErrorFromDb("LIMIT_REACHED: 문의는 프로젝트당 500개까지입니다. 끝난 문의를 보관한 뒤 다시 등록해 주세요")).toEqual({
       code: "VALIDATION",
-      message: "문의는 프로젝트당 500개까지입니다. 끝난 문의를 보관한 뒤 다시 등록해 주세요.",
+      message: "문의는 프로젝트당 500개까지입니다. 끝난 문의를 보관한 뒤 다시 등록해 주세요",
     });
   });
 });

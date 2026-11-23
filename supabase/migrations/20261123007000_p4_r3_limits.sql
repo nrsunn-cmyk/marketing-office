@@ -1,4 +1,5 @@
--- P4-R3-LIMITS-BACKEND-01: 문의·후속 작업·예약 개수 한도(R3)와 보관 함수
+-- P4-LOW-FIXES-R3-BACKEND-01 (007000): 문의·후속 작업·예약 개수 한도(R3)와 보관 함수
+-- create_inquiry 는 006000(R4 출처 확인) 판에 한도·잠금만 더한다. 이 파일을 되돌려도 R4 는 남는다(rollback_007000 이 006000 판으로 되돌림).
 -- 설계: Plan/Claude-Backend-20261123/P4-R3-LIMITS-DESIGN-01.md (L1~L4, L6, D2 (가)안)
 --   L1 문의: 프로젝트당 보관 안 된 것 기준 상한
 --   L2 후속 작업: 문의당 보관 안 된 것 기준 상한
@@ -91,8 +92,24 @@ begin
   if not found then
     raise exception 'INVALID_TRANSITION: 활성 프로젝트에만 문의를 등록할 수 있습니다' using errcode = 'P0001';
   end if;
-  if p_source_kind not in ('lead_magnet', 'web_copy_contact', 'manual') then
+  -- 출처 확인은 006000(R4) 판과 같다
+  if p_source_kind is null or p_source_kind not in ('lead_magnet', 'web_copy_contact', 'manual') then
     raise exception 'VALIDATION: 알 수 없는 접수 출처입니다' using errcode = '22023';
+  end if;
+  if p_source_kind = 'manual' then
+    if p_source_id is not null then
+      raise exception 'VALIDATION: 직접 등록한 문의에는 출처를 지정할 수 없습니다' using errcode = '22023';
+    end if;
+  elsif p_source_id is null then
+    raise exception 'VALIDATION: 접수 출처를 지정해 주세요' using errcode = '22023';
+  elsif p_source_kind = 'lead_magnet' and not exists (
+    select 1 from public.lead_magnets m where m.id = p_source_id and m.workspace_id = ws and m.project_id = p_project_id
+  ) then
+    raise exception 'NOT_FOUND: 같은 프로젝트의 리드 마그넷만 출처로 지정할 수 있습니다' using errcode = 'P0002';
+  elsif p_source_kind = 'web_copy_contact' and not exists (
+    select 1 from public.web_copy_docs w where w.id = p_source_id and w.workspace_id = ws and w.project_id = p_project_id
+  ) then
+    raise exception 'NOT_FOUND: 같은 프로젝트의 웹 문구 문서만 출처로 지정할 수 있습니다' using errcode = 'P0002';
   end if;
   if char_length(nm) < 1 or char_length(nm) > 80 then
     raise exception 'VALIDATION: 문의자 이름은 1~80자여야 합니다' using errcode = '22023';
