@@ -61,10 +61,10 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const formRef = useRef<HTMLFormElement>(null);
   const moreRef = useRef<HTMLDetailsElement>(null);
-  // 사람 확인: 폼을 그린 시각(서버가 너무 빠른 자동 제출을 거른다). 화면을 그린 뒤 한 번만 정한다
-  const startedAt = useRef<number | null>(null);
+  // 사람 확인: 폼을 그린 뒤 지난 시간(서버가 너무 빠른 자동 제출을 거른다). PC 시계와 무관한 단조 시계로 잰다
+  const mountedAt = useRef<number | null>(null);
   useEffect(() => {
-    startedAt.current = Date.now();
+    mountedAt.current = performance.now();
   }, []);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export function ContactForm({ submit }: { submit?: ContactSubmit }) {
     }
     setStatus({ kind: "pending" });
     try {
-      const r = await submit(input, { honeypot: String(fd.get(HONEYPOT_FIELD) ?? ""), startedAt: startedAt.current });
+      const r = await submit(input, { honeypot: String(fd.get(HONEYPOT_FIELD) ?? ""), elapsedMs: mountedAt.current === null ? null : Math.round(performance.now() - mountedAt.current) });
       if (r.status === "sent") {
         // 서버가 저장을 확인했을 때만 성공(입력을 비운다)
         formRef.current?.reset();

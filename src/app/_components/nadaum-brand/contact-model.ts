@@ -103,10 +103,14 @@ export function mergePreset(current: readonly string[], preset: readonly string[
  */
 export type ContactFailReason = "validation" | "rate_limited" | "unavailable" | "error";
 export type ContactSubmitResult = { status: "sent"; refCode: string } | { status: "failed"; reason: ContactFailReason; message: string; errors?: ContactErrors };
-/** 사람 확인용 값: honeypot = 숨은 칸 값(사람은 비움), startedAt = 폼을 그린 시각(ms) */
+/**
+ * 사람 확인용 값: honeypot = 숨은 칸 값(사람은 비움), elapsedMs = 폼을 그린 뒤 지난 시간(ms, 브라우저 단조 시계).
+ * 브라우저 시각(startedAt)을 보내면 사용자 PC 시계가 서버보다 빠를 때 정상 제출이 거절된다(Backend 검토 V1) →
+ * 지난 시간만 보내고 서버 동작이 서버 시계로 시작 시각을 계산한다.
+ */
 export interface ContactSubmitMeta {
   honeypot: string;
-  startedAt: number | null;
+  elapsedMs: number | null;
 }
 export type ContactSubmit = (input: ContactInput, meta: ContactSubmitMeta) => Promise<ContactSubmitResult>;
 
