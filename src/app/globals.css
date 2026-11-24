@@ -67,3 +67,13 @@ p {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
+
+/*
+ * MOBILE-FOCUS-SCROLL-PAD-01(Tester QA-MOBILE-SMOKE-01 F1, WCAG 2.2 2.4.11): 휴대폰 폭에서 Tab 으로 옮긴 초점이
+ * 아래 고정 앱 메뉴에 가리지 않게, 브라우저가 초점을 스크롤해 보일 때 아래쪽에 메뉴만큼 여유를 둔다.
+ */
+@media (max-width: 768px) {
+  html {
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-bottom-nav-clearance));
+  }
+}
