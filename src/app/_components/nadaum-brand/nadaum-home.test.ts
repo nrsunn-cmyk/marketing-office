@@ -8,8 +8,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("./nadaum.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
 const { NadaumHome } = await import("./nadaum-home");
-const { BRAND_INDEXABLE, CONTACT, CTA, FAQ, FOOTER, PHONE_PLACEHOLDER, PRIVACY_RETENTION, SERVICE_OPTIONS, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN, WORKS } = await import("./brand-copy");
+const { BRAND_INDEXABLE, CONTACT, CTA, FAQ, FOOTER, PHONE_PLACEHOLDER, PRIVACY_RETENTION, SERVICE_OPTIONS, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN } = await import("./brand-copy");
 const { brandRobots } = await import("./brand-seo");
+const { PORTFOLIO_ITEMS, hasVerifiedWorks } = await import("./portfolio-data");
 
 const html = renderToString(createElement(NadaumHome)).replaceAll("<!-- -->", "");
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ");
@@ -176,7 +177,8 @@ describe("검색 노출 A안 2단계(NADAUM-BRAND-INDEX-FLAG-01)", () => {
 
   it("켜려면 대표 전화번호와 실제 사례가 먼저 채워져 있어야 한다(조건 없이 켜면 실패)", () => {
     const phoneReady = !FOOTER.phone.includes(PHONE_PLACEHOLDER);
-    const worksReady = WORKS.items.some((w) => w.status !== "preparing");
+    // 실제 사례(공개 허락)가 1건 이상(NADAUM-PORTFOLIO-WORKS-FRONT-01, AGY PORTFOLIO-WORKS-SPEC-01 1절)
+    const worksReady = hasVerifiedWorks(PORTFOLIO_ITEMS);
     if (BRAND_INDEXABLE) expect({ phoneReady, worksReady }).toEqual({ phoneReady: true, worksReady: true });
     else expect(FOOTER.phone).toBe(`전화: ${PHONE_PLACEHOLDER}`); // 지금 화면 글자는 그대로
   });
