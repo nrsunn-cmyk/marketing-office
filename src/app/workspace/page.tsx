@@ -2,12 +2,19 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { GENERATOR_LABELS, PROJECT_STATUS_LABELS, TASK_STATUS_LABELS, TASK_TYPE_LABELS } from "@/domain/state/labels";
 import { getDashboard, type DashboardData } from "@/features/dashboard/server";
-import { getPendingCounts, type PendingCounts } from "@/features/production-overview/server";
+import {
+  getOverviewCrmFollowups,
+  getOverviewWaitingProjects,
+  getPendingCounts,
+  type OverviewCrmFollowupSummary,
+  type OverviewWaitingProjects,
+  type PendingCounts,
+} from "@/features/production-overview/server";
 import { todayIn } from "@/features/quotes/server";
 import { requireWorkspace } from "@/server/auth/session";
 import { AppNav } from "../_components/app-nav";
 import { formatDateTimeIn } from "../_components/format-time";
-import { PendingCountCards } from "../_components/production-overview";
+import { FollowupDueCard, PendingCountCards } from "../_components/production-overview";
 import styles from "../ui.module.css";
 
 /** 처리할 작업은 서버가 최근 수정 순 최대 10개만 가져온다(features/dashboard/server.ts) */
@@ -35,7 +42,8 @@ export default function WorkspacePage() {
 async function WorkspaceOverview() {
   const { user, workspace } = await requireWorkspace();
   const today = todayIn(workspace.timezone);
-  const [result, pending] = await Promise.all([getDashboard(today), getPendingCounts()]);
+  // UX G1·G4(UX-G1-G4-FRONT-01): 대기 프로젝트 바로가기·CRM 후속 기한도 함께 읽는다(Backend 948f7aa). 실패해도 화면 전체는 그대로
+  const [result, pending, waiting, followups] = await Promise.all([getDashboard(today), getPendingCounts(), getOverviewWaitingProjects(), getOverviewCrmFollowups(today)]);
 
   return (
     <>
@@ -57,7 +65,14 @@ async function WorkspaceOverview() {
           </p>
         </div>
       ) : (
-        <Dashboard data={result.data} today={today} timeZone={workspace.timezone} pending={pending.ok ? pending.data : null} />
+        <Dashboard
+          data={result.data}
+          today={today}
+          timeZone={workspace.timezone}
+          pending={pending.ok ? pending.data : null}
+          waiting={waiting.ok ? waiting.data : null}
+          followups={followups.ok ? followups.data : null}
+        />
       )}
     </>
   );
@@ -110,7 +125,21 @@ function SectionHead({ id, title, count, more }: { id: string; title: string; co
   );
 }
 
-function Dashboard({ data, today, timeZone, pending }: { data: DashboardData; today: string; timeZone: string; pending: PendingCounts | null }) {
+function Dashboard({
+  data,
+  today,
+  timeZone,
+  pending,
+  waiting,
+  followups,
+}: {
+  data: DashboardData;
+  today: string;
+  timeZone: string;
+  pending: PendingCounts | null;
+  waiting: OverviewWaitingProjects | null;
+  followups: OverviewCrmFollowupSummary | null;
+}) {
   // 카드 안 span 순서(0 = 이름, 1 = 숫자)는 E2E 계약이다. 짧은 뜻 설명(note)은 span 이 아닌 small 로 둔다.
   const tiles: Array<{ label: string; n: number; note: string; help: string; tone: string }> = [
     { label: "진행 중 프로젝트", n: data.counts.openProjects, note: "열린 상태 합계", help: "접수·자료 대기·진행 중·검토 중 프로젝트를 모두 더한 수", tone: styles.toneInfo },
@@ -133,7 +162,7 @@ function Dashboard({ data, today, timeZone, pending }: { data: DashboardData; to
         ))}
       </ul>
 
-      <PendingCountCards counts={pending} />
+      <PendingCountCards counts={pending} waiting={waiting} />
 
       {!data.hasAnyProject ? (
         <section className={styles.section} aria-labelledby="empty">
@@ -223,6 +252,9 @@ function Dashboard({ data, today, timeZone, pending }: { data: DashboardData; to
               )}
               <p className={styles.muted}>프로젝트 납기 기준입니다(작업별 마감 아님).</p>
             </section>
+
+            {/* G4: 납기 임박 바로 아래(같은 열) */}
+            <FollowupDueCard summary={followups} />
 
             <section className={styles.section} aria-labelledby="recent">
               <SectionHead id="recent" title="최근 결과물" more={{ href: "/results", label: "결과물 전체 보기" }} />
