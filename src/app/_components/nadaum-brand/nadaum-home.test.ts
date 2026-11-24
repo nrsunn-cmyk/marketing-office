@@ -8,7 +8,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("./nadaum.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
 const { NadaumHome } = await import("./nadaum-home");
-const { CONTACT, CTA, FAQ, FOOTER, PRIVACY_RETENTION, SERVICE_OPTIONS, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN } = await import("./brand-copy");
+const { BRAND_INDEXABLE, CONTACT, CTA, FAQ, FOOTER, PHONE_PLACEHOLDER, PRIVACY_RETENTION, SERVICE_OPTIONS, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN, WORKS } = await import("./brand-copy");
+const { brandRobots } = await import("./brand-seo");
 
 const html = renderToString(createElement(NadaumHome)).replaceAll("<!-- -->", "");
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ");
@@ -160,6 +161,24 @@ describe("나다움브랜드 공개 화면", () => {
     // 공유 이미지도 / 에만(AGY nadaum-og-1200x630.png, 루트 opengraph-image.png 는 그대로)
     expect(existsSync(join(process.cwd(), "src/app/(brand)/opengraph-image.png"))).toBe(true);
     expect(existsSync(join(process.cwd(), "src/app/opengraph-image.png"))).toBe(true);
+  });
+});
+
+describe("검색 노출 A안 2단계(NADAUM-BRAND-INDEX-FLAG-01)", () => {
+  it("끄면 robots 를 넣지 않아 루트 noindex 를 따르고, 켜면 / 만 index·follow", () => {
+    expect(brandRobots(false)).toEqual({});
+    expect(brandRobots(true)).toEqual({ robots: { index: true, follow: true } });
+  });
+
+  it("1차 출시는 꺼짐(주인님 승인 A안)", () => {
+    expect(BRAND_INDEXABLE).toBe(false);
+  });
+
+  it("켜려면 대표 전화번호와 실제 사례가 먼저 채워져 있어야 한다(조건 없이 켜면 실패)", () => {
+    const phoneReady = !FOOTER.phone.includes(PHONE_PLACEHOLDER);
+    const worksReady = WORKS.items.some((w) => w.status !== "preparing");
+    if (BRAND_INDEXABLE) expect({ phoneReady, worksReady }).toEqual({ phoneReady: true, worksReady: true });
+    else expect(FOOTER.phone).toBe(`전화: ${PHONE_PLACEHOLDER}`); // 지금 화면 글자는 그대로
   });
 });
 
