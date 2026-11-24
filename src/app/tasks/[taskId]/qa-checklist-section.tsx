@@ -5,7 +5,6 @@ import { getProject } from "@/features/projects/server";
 import { approveQaReviewAction, archiveQaReviewAction, openQaReviewAction, rebaseQaReviewAction, requestQaFixAction, saveQaItemsAction } from "@/features/qa-delivery/actions";
 import { getQaChecklistFor } from "@/features/qa-delivery/server";
 import type { TaskDetail } from "@/features/tasks/server";
-import { HashArrival } from "../../_components/hash-arrival";
 import { P3QaIcon } from "../../_components/p3-icons";
 import styles from "../../ui.module.css";
 import { StepBackLink } from "./step-back-link";
@@ -75,8 +74,6 @@ export function QaChecklistSection({ data, readOnly, taskId, actions = {} }: { d
           {QA_COPY.heading}
         </h2>
         <StepBackLink />
-        {/* 현황 「검수 열기」(#qa-checklist)로 들어왔을 때 늦게 그려져도 이 구획으로(UX-G1-G4-FRONT-01 r2). 그리는 것 없음 */}
-        <HashArrival id="qa-checklist" />
         <p className={`${styles.muted} ${f.keep}`}>{QA_COPY.intro}</p>
       </div>
       {data === null ? (

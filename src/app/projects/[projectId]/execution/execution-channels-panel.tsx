@@ -1,6 +1,5 @@
 import type { FormState } from "../../../_components/form-state";
 import { ActionForm } from "../../../_components/action-form";
-import { HashArrival } from "../../../_components/hash-arrival";
 import styles from "../../../ui.module.css";
 import s from "./execution.module.css";
 import type { P4ExternalBoard } from "@/features/execution/channels";
@@ -297,9 +296,6 @@ export function ExternalChannelsPanel({
           <h2 id="p4b-ops" className={styles.subtitle}>
             예약 실행 · 상담 접수 (마스킹) · CRM 후속 작업
           </h2>
-          {/* 현황 「후속 열기」(#p4b-ops)로 들어왔을 때 늦게 그려져도 이 구획으로(UX-G1-G4-FRONT-01 r2) */}
-          <HashArrival id="p4b-ops" />
-
           <details className={s.exFold}>
             <summary>예약 실행 ({externalBoard.schedules.length}건)</summary>
             <p className={styles.muted}>{C.scIntro}</p>
