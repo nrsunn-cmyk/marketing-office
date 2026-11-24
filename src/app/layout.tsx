@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import { FlashProvider } from "./_components/flash";
+import { GlobalHashScroll } from "./_components/global-hash-scroll";
 import { HydrationHintProvider } from "./_components/hydration-hint";
 
 /**
@@ -37,6 +39,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FlashProvider>
           <HydrationHintProvider>{children}</HydrationHintProvider>
         </FlashProvider>
+        {/* #해시 대상이 스트리밍으로 늦게 그려져도 그 자리로 한 번 옮긴다(UX-HASH-SCROLL-GLOBAL-01). 그리는 것 없음 */}
+        <Suspense fallback={null}>
+          <GlobalHashScroll />
+        </Suspense>
       </body>
     </html>
   );
