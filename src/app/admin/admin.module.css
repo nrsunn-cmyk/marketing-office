@@ -147,6 +147,26 @@
   color: var(--text-on-primary);
 }
 
+/*
+ * ADMIN-INQUIRY-BADGE-01 「공개 상담」 탭 신규 배지(AGY 규격): 11px 굵게, 2px 7px, 완전 둥글게, 탭 글자와 6px.
+ * 비활성 탭: #B67AF5 바탕·#06070C 글자 6.80:1 / 활성 탭(라일락 바탕 위): #06070C 바탕·#F1F3F8 글자 18.3:1
+ */
+.tabBadge {
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: #b67af5;
+  color: #06070c;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.tabBadgeActive {
+  background: #06070c;
+  color: #f1f3f8;
+}
+
 .readonly {
   margin: 0;
 }

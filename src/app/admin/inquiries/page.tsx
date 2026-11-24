@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { countAdminPublicInquiries, listAdminPublicInquiries } from "@/features/admin/server";
+import { listAdminPublicInquiries } from "@/features/admin/server";
 import { isPublicInquiryStatus } from "@/features/public-inquiries/contract";
 import { AppNav } from "../../_components/app-nav";
 import styles from "../../ui.module.css";
-import { AdminHeader, adminMetadata, requireAdminOr404 } from "../admin-parts";
+import { AdminHeader, adminInquiryCounts, adminMetadata, requireAdminOr404 } from "../admin-parts";
 import { deleteInquiryAction, setInquiryStatusAction } from "./actions";
 import { cursorText, InquiriesView, parseInquiryCursor } from "./inquiries-view";
 import { INQ_COPY, isInquiryRefCode } from "./inquiry-copy";
@@ -41,7 +41,7 @@ async function Inquiries({ searchParams }: { searchParams: PageProps<"/admin/inq
   const id = typeof sp.id === "string" && /^[0-9a-f-]{36}$/i.test(sp.id) ? sp.id : null;
   // 삭제 직후 안내(NADAUM-INQUIRY-DELETE-FRONT-01): 참조 번호 형식이 맞을 때만 싣는다
   const deleted = isInquiryRefCode(sp.deleted) ? sp.deleted : null;
-  const [list, counts] = await Promise.all([listAdminPublicInquiries({ status: status ?? undefined, limit: PAGE, before }), countAdminPublicInquiries()]);
+  const [list, counts] = await Promise.all([listAdminPublicInquiries({ status: status ?? undefined, limit: PAGE, before }), adminInquiryCounts()]); // 탭 배지와 같은 한 번의 읽기(감사 기록 한 줄)
   if ((!list.ok && list.code === "NOT_FOUND") || (!counts.ok && counts.code === "NOT_FOUND")) notFound();
 
   return (

@@ -3,8 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import type { ReactNode } from "react";
-import { isAdmin } from "@/features/admin/server";
+import { cache, Suspense, type ReactNode } from "react";
+import { countAdminPublicInquiries, isAdmin } from "@/features/admin/server";
 import styles from "../ui.module.css";
 import ad from "./admin.module.css";
 
@@ -37,6 +37,26 @@ const TABS = [
   { href: "/admin/inquiries", label: "공개 상담" },
 ] as const;
 
+/**
+ * ADMIN-INQUIRY-BADGE-01(UX-SCENARIO-AUDIT-03 H2, AGY 배지 규격): 공개 상담 건수를 한 요청에서 한 번만 읽는다.
+ * 이 DB 함수는 부를 때마다 감사 기록을 한 줄 남긴다 — 공개 상담 화면은 이 함수를 함께 써서 두 번 남지 않게 한다.
+ */
+export const adminInquiryCounts = cache(countAdminPublicInquiries);
+
+/** 탭 배지 글자: 0건이면 없음, 99 초과는 99+ */
+export function inquiryBadgeText(n: number): string | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `신규 ${n > 99 ? "99+" : n}`;
+}
+
+/** 「공개 상담」 탭 옆 신규 배지. 건수를 못 읽으면 조용히 숨긴다(탭은 그대로) */
+export async function InquiryBadge({ active }: { active: boolean }) {
+  const r = await adminInquiryCounts();
+  const text = r.ok ? inquiryBadgeText(r.data.new) : null;
+  if (!text) return null;
+  return <span className={active ? `${ad.tabBadge} ${ad.tabBadgeActive}` : ad.tabBadge}>{text}</span>;
+}
+
 /** 기존 관리자 화면 공통 안내(읽기 전용). 공개 상담 화면은 자기 안내를 넘긴다(AGY 확정 msg_ed6cda9e89ef) */
 const READONLY_NOTICE = "운영 상태를 보기만 하는 화면입니다. 가입자 정보 수정·삭제·비밀번호 초기화는 여기서 할 수 없습니다. 이 화면을 열 때마다 열람 기록이 남습니다.";
 
@@ -54,6 +74,15 @@ export function AdminHeader({ current, title, lead, notice = READONLY_NOTICE }: 
             <li key={t.href}>
               <Link href={t.href} className={`${ad.tab} ${t.href === current ? ad.tabActive : ""}`} aria-current={t.href === current ? "page" : undefined}>
                 {t.label}
+                {/* 띄어쓰기는 화면 읽기 이름(「공개 상담 신규 3」)용. 눈에 보이는 간격은 배지 여백 6px */}
+                {t.href === "/admin/inquiries" && (
+                  <>
+                    {" "}
+                    <Suspense fallback={null}>
+                      <InquiryBadge active={t.href === current} />
+                    </Suspense>
+                  </>
+                )}
               </Link>
             </li>
           ))}
