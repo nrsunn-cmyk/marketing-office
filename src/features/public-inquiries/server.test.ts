@@ -17,7 +17,7 @@ vi.mock("@/server/supabase/server", () => ({
     },
   }),
 }));
-const { submitPublicInquiry, submitPublicInquiryFromRequest, submitErrorFromDb, clientIpFrom, clientHashOf, MIN_FILL_MS } = await import("./server");
+const { submitPublicInquiry, submitPublicInquiryFromRequest, submitErrorFromDb, clientIpFrom, clientHashOf, MIN_FILL_MS, deletePublicInquiryAsAdmin } = await import("./server");
 const { normalizePublicInquiryInput, validatePublicInquiry, serviceLabel, PUBLIC_INQUIRY_CONSENT_VERSION } = await import("./contract");
 
 const KEY = "unit-test-signing-key-0123456789abcdef";
@@ -168,5 +168,48 @@ describe("contract", () => {
   it("serviceLabel: 코드 → 표시값", () => {
     expect(serviceLabel("ad_image")).toBe("광고·상품 이미지");
     expect(serviceLabel("unknown")).toBe("unknown");
+  });
+});
+
+describe("deletePublicInquiryAsAdmin(NADAUM-INQUIRY-DELETE-BACKEND-01)", () => {
+  const ID = "11111111-2222-4333-8444-555555555555";
+  it("성공: RPC 이름·인자(사유 앞뒤 공백 제거, 빈 사유는 null)와 id·참조 번호", async () => {
+    st.result = { data: [{ id: ID, ref_code: "ND-261124-ABC123" }], error: null };
+    expect(await deletePublicInquiryAsAdmin({ id: ID, reason: "  고객 삭제 요청 " })).toEqual({ ok: true, data: { id: ID, refCode: "ND-261124-ABC123" } });
+    expect(await deletePublicInquiryAsAdmin({ id: ID, reason: "   " })).toMatchObject({ ok: true });
+    expect(await deletePublicInquiryAsAdmin({ id: ID })).toMatchObject({ ok: true });
+    expect(st.calls).toEqual([
+      { fn: "admin_delete_public_inquiry", args: { p_inquiry_id: ID, p_reason: "고객 삭제 요청" } },
+      { fn: "admin_delete_public_inquiry", args: { p_inquiry_id: ID, p_reason: null } },
+      { fn: "admin_delete_public_inquiry", args: { p_inquiry_id: ID, p_reason: null } },
+    ]);
+  });
+
+  it("id 모양이 틀리거나 사유가 200자를 넘으면 DB 를 부르지 않는다", async () => {
+    expect(await deletePublicInquiryAsAdmin({ id: "not-a-uuid" })).toMatchObject({ ok: false, code: "NOT_FOUND" });
+    expect(await deletePublicInquiryAsAdmin({ id: "" })).toMatchObject({ ok: false, code: "NOT_FOUND" });
+    expect(await deletePublicInquiryAsAdmin({ id: ID, reason: "가".repeat(201) })).toMatchObject({ ok: false, code: "VALIDATION" });
+    expect(st.calls).toHaveLength(0);
+    st.result = { data: [{ id: ID, ref_code: "ND-261124-ABC123" }], error: null };
+    expect(await deletePublicInquiryAsAdmin({ id: ID, reason: "가".repeat(200) })).toMatchObject({ ok: true });
+  });
+
+  it("DB 오류 변환: 권한·FORBIDDEN → NOT_FOUND(관리자 화면 숨김), NOT_FOUND, VALIDATION, 그 밖은 ERROR(기록에 원문 없음)", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cases: Array<[{ code?: string; message: string }, string]> = [
+      [{ code: "42501", message: "permission denied for function admin_delete_public_inquiry" }, "NOT_FOUND"],
+      [{ code: "42501", message: "FORBIDDEN: 관리자만" }, "NOT_FOUND"],
+      [{ code: "P0002", message: "NOT_FOUND: 상담 접수를 찾을 수 없습니다" }, "NOT_FOUND"],
+      [{ code: "22023", message: "VALIDATION: 삭제 사유는 200자 이하로 입력해 주세요" }, "VALIDATION"],
+      [{ code: "XX000", message: "내부 오류 010-1234-5678" }, "ERROR"],
+    ];
+    for (const [e, code] of cases) {
+      st.result = { data: null, error: e };
+      expect(await deletePublicInquiryAsAdmin({ id: ID, reason: "사유" })).toMatchObject({ ok: false, code });
+    }
+    st.result = { data: [], error: null };
+    expect(await deletePublicInquiryAsAdmin({ id: ID })).toMatchObject({ ok: false, code: "ERROR" });
+    expect(JSON.stringify(err.mock.calls)).not.toContain("010-1234-5678");
+    expect(JSON.stringify(err.mock.calls)).not.toContain("사유");
   });
 });

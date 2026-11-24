@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac, randomUUID } from "node:crypto";
 import { headers } from "next/headers";
+import { fail, ok, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import {
   PUBLIC_INQUIRY_CONSENT_VERSION,
@@ -130,4 +131,48 @@ export async function submitPublicInquiryFromRequest(
 ): Promise<PublicInquirySubmitResult> {
   const h = await headers();
   return submitPublicInquiry(raw, { ip: clientIpFrom(h), honeypot: opts.honeypot, startedAt: opts.startedAt });
+}
+
+// ─────────────────────────────────────────────
+// NADAUM-INQUIRY-DELETE-BACKEND-01: 관리자 건별 영구 삭제(migration 20261123011000)
+//   관리자만(아니면 NOT_FOUND — 관리자 화면이 있다는 것도 알리지 않는 기존 관례). 되돌릴 수 없다.
+//   DB 가 admin_access_log 에 참조 번호·사유만 남긴다(개인정보 없음). 서버 기록에도 사유·개인정보를 남기지 않는다.
+// ─────────────────────────────────────────────
+export const PUBLIC_INQUIRY_DELETE_REASON_MAX = 200;
+const DELETE_MSG = {
+  notFound: "상담 접수를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.",
+  reason: `삭제 사유는 ${PUBLIC_INQUIRY_DELETE_REASON_MAX}자 이하로 입력해 주세요.`,
+  error: "상담을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+} as const;
+
+type DeleteRpc = {
+  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+};
+
+/** 관리자 화면에서 상담 1건을 영구 삭제한다. 성공하면 삭제된 id 와 참조 번호(refCode) */
+export async function deletePublicInquiryAsAdmin(input: {
+  id: string;
+  reason?: string | null;
+}): Promise<Result<{ id: string; refCode: string }>> {
+  const id = typeof input?.id === "string" ? input.id.trim() : "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return fail("NOT_FOUND", DELETE_MSG.notFound);
+  const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+  if ([...reason].length > PUBLIC_INQUIRY_DELETE_REASON_MAX) return fail("VALIDATION", DELETE_MSG.reason);
+
+  const sb = (await createSupabaseServerClient()) as unknown as DeleteRpc;
+  const { data, error } = await sb.rpc("admin_delete_public_inquiry", { p_inquiry_id: id, p_reason: reason || null });
+  if (error) {
+    const m = error.message ?? "";
+    if (error.code === "42501" || /FORBIDDEN|permission denied/.test(m)) return fail("NOT_FOUND", "페이지를 찾을 수 없습니다.");
+    if (/^\s*NOT_FOUND:/.test(m)) return fail("NOT_FOUND", DELETE_MSG.notFound);
+    if (/^\s*VALIDATION:/.test(m)) return fail("VALIDATION", DELETE_MSG.reason);
+    console.error("[deletePublicInquiryAsAdmin]", error.code ?? "UNKNOWN");
+    return fail("ERROR", DELETE_MSG.error);
+  }
+  const row = (Array.isArray(data) ? data[0] : data) as { id?: unknown; ref_code?: unknown } | undefined;
+  if (!row || typeof row.ref_code !== "string") {
+    console.error("[deletePublicInquiryAsAdmin]", "EMPTY_RESULT");
+    return fail("ERROR", DELETE_MSG.error);
+  }
+  return ok({ id: String(row.id ?? id), refCode: row.ref_code });
 }

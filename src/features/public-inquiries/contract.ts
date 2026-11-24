@@ -44,9 +44,9 @@ export const isPublicInquiryStatus = (v: unknown): v is PublicInquiryStatus =>
 
 /**
  * 개인정보 동의 문구의 판. 동의 문구(목적·항목·보유 기간)를 바꾸면 이 값을 바꾼다 — 접수마다 함께 저장한다.
- * 최종 문구·보유 기간은 출시 전 주인님 확인 항목이다.
+ * v2(2026-11-24): 보유 기간 「관리자 삭제 시까지 보관」(주인님 결정, INQUIRY-ADMIN-DELETE-SPEC-01). 문구는 brand-copy.ts.
  */
-export const PUBLIC_INQUIRY_CONSENT_VERSION = "privacy-v1-20261123";
+export const PUBLIC_INQUIRY_CONSENT_VERSION = "privacy-v2-20261124";
 
 /** 화면이 넘기는 입력(Front ContactInput 과 같은 모양) */
 export interface PublicInquiryInput {

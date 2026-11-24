@@ -171,8 +171,9 @@ describe("열람 기록 보호·회수", () => {
     )).rows;
     // admin_p3_progress 는 ADMIN-P3-01(migration 30), admin_p4_execution 은 ADMIN-P4-01(묶음 M 20261121013000),
     // admin_*public_inquir* 3개는 NADAUM-BRAND-BACKEND-01(20261123010000)에서 더했다
+    // admin_delete_public_inquiry 는 NADAUM-INQUIRY-DELETE-BACKEND-01(20261123011000)에서 더했다
     expect(fns.map((f) => f.name)).toEqual([
-      "admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_list_public_inquiries", "admin_p3_progress", "admin_p4_execution",
+      "admin_delete_public_inquiry", "admin_list_accounts", "admin_list_audit", "admin_list_pending_allowlist", "admin_list_public_inquiries", "admin_p3_progress", "admin_p4_execution",
       "admin_public_inquiry_counts", "admin_set_public_inquiry_status", "admin_usage_summary", "admin_whoami",
     ]);
     for (const f of fns) expect(f).toEqual({ name: f.name, secdef: true, cfg: ['search_path=""'], anon: false, auth: true });
