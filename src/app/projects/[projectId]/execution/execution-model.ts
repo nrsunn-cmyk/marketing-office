@@ -51,6 +51,10 @@ export const EX_LABELS = {
   jumpQueue: "실행 대기열 · 수동 게시",
   jumpResults: "성과 기록 · 수동 입력",
   jumpChannels: "준비 중인 채널",
+  // UX-EXEC-JUMP-FRONT-01: 외부 연동 구획 바로가기(AGY msg_ca29bb39f260, 구획 제목과 맞춤)
+  jumpSetup: "외부 채널 설정",
+  jumpDispatch: "외부 채널 실행",
+  jumpP4b: "예약·상담·CRM",
   firstSource: "1차 입력: P2-g 티스토리 초안",
   channelLine: (key: string) => `채널: 티스토리 수동 게시 · 멱등 키: ${key}`,
   matchOk: "지문 일치",
@@ -68,7 +72,7 @@ export const EX_LABELS = {
   publishedAt: "게시 시각 (한국 시간)",
   note: "메모 (선택)",
   manualBadge: "수동 입력",
-  syncBadge: "준비 중 (읽기 전용 수집)",
+  syncBadge: "자동 수집", // G6: AGY msg_979029ebaf58(수동 입력과 대칭)
   autoSyncPreparing: "자동 수집: 준비 중 (수동 입력만)",
   resultEmpty: "아직 기록된 성과 수치가 없습니다.",
   resultEmptyDesc: "출처와 집계 기간(KST, 최대 366일)을 적어 성과 수치를 수동 입력할 수 있습니다.",

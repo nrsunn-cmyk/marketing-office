@@ -462,6 +462,15 @@ a.secondaryButton.settingsActive {
   color: var(--success-text);
 }
 
+/* 안전 보호로 막힌 결과(실패 오류 아님) — 경고 색(AGY P4A-HANDOFF 1절 3번) */
+.warnNotice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-text);
+}
+
 .error {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);

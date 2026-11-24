@@ -3,7 +3,7 @@ import { ActionForm } from "../../../_components/action-form";
 import styles from "../../../ui.module.css";
 import s from "./execution.module.css";
 import type { P4ExternalBoard } from "@/features/execution/channels";
-import type { ExecutionBoard } from "./execution-model";
+import { formatKst, type ExecutionBoard } from "./execution-model";
 
 type Action = (prev: FormState, fd: FormData) => Promise<FormState>;
 
@@ -25,6 +25,62 @@ const CHANNEL_ITEMS = [
   { key: "search_ad", title: "검색 광고", desc: "검색 광고 캠페인 집행 및 성과 지표 읽기 전용 수집" },
   { key: "social_api", title: "SNS", desc: "공식 SNS 게시 API 실행 및 노출·전환 지표 수집" },
 ] as const;
+
+/** 채널 내부 값 → 화면 이름(AGY DESIGN-QA-P4-INTEGRATE-01 권고 1). 티스토리는 수동 게시 채널 */
+const CHANNEL_NAME: Record<string, string> = { crm: "고객 관리", search_ad: "검색 광고", social_api: "SNS", tistory_manual: "티스토리" };
+const channelName = (key: string) => CHANNEL_NAME[key] ?? key;
+
+/** P4B 상태 이름표(AGY P4B-HANDOFF·P4-HANDOFF-CONSISTENCY, 권고 2). 자동 보류만 경고 톤 */
+const SCHEDULE_STATUS: Record<string, string> = { scheduled: "예약됨", paused_version_changed: "자동 보류", cancelled: "취소됨", executed: "실행 완료" };
+const INQUIRY_STATUS: Record<string, string> = { new: "신규", linked: "후속 연결됨", closed: "종료" };
+const FOLLOWUP_STATUS = { todo: "할 일", in_progress: "진행 중", done: "완료", hold: "보류" } as const;
+function StatusPill({ map, value }: { map: Record<string, string>; value: string }) {
+  const tone = value === "paused_version_changed" ? styles.pillWarning : styles.pillNeutral;
+  return <span className={`${styles.pill} ${tone}`}>{map[value] ?? value}</span>;
+}
+
+/** P4B 문구 — AGY 확정본(Design/p4-execution/P4B-HANDOFF.md 4절) 그대로 */
+export const P4B_COPY = {
+  scIntro: "승인된 실행 건에 예정 시각(한국 시간)을 붙여 관리합니다.",
+  scEmpty: "예약된 실행 건이 없습니다.",
+  scEmptyDesc: "실행 승인 대기열에서 승인된 건에 예정 시각을 붙이면 이곳에 한국 시간 기준으로 표시됩니다.",
+  scPaused: "예약 이후 원본 초안 내용이 바뀌어 자동 보류되었습니다. 최신 초안으로 맞춘 뒤 다시 예약해 주세요.",
+  scCancel: "예약 취소",
+  scNoPermission: "보관한 프로젝트이거나 예약을 바꿀 권한이 없습니다.",
+  iqIntro: "리드 마그넷 신청과 홈페이지 문의를 기록합니다. 목록에서는 개인정보를 최소한으로 가려서 표시합니다.",
+  iqMasking: "개인정보 최소 표시 · 마스킹 적용",
+  iqEmpty: "아직 접수된 상담·문의가 없습니다.",
+  iqEmptyDesc: "리드 마그넷 신청이나 홈페이지 문의가 들어오면 개인정보를 가린 요약 목록으로 표시됩니다.",
+  iqConnect: "CRM 후속 작업으로 연결",
+  iqNoPermission: "보관한 프로젝트이거나 후속 작업을 연결할 권한이 없습니다.",
+  crIntro: "접수된 상담·문의를 담당자와 기한(한국 날짜)을 정해 후속 관리하고, 완료된 건은 성과 수동 입력과 연결합니다.",
+  crEmpty: "등록된 CRM 후속 작업이 없습니다.",
+  crEmptyDesc: "상담·문의 접수 목록에서 후속 작업으로 연결하면 담당자·기한·진행 상태를 관리할 수 있습니다.",
+  crSave: "상태 저장",
+  crNoPermission: "보관한 프로젝트이거나 후속 작업 상태를 바꿀 권한이 없습니다.",
+} as const;
+const C = P4B_COPY;
+
+/** 빈 목록 안내(제목 + 설명) */
+function Empty({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className={s.exEmpty}>
+      <p>
+        <strong>{title}</strong>
+      </p>
+      <p className={styles.muted}>{desc}</p>
+    </div>
+  );
+}
+
+/** 읽기 전용 안내 */
+function NoPermission({ text }: { text: string }) {
+  return (
+    <p className={styles.muted} role="note">
+      {text}
+    </p>
+  );
+}
 
 export function ExternalChannelsPanel({
   board,
@@ -178,7 +234,7 @@ export function ExternalChannelsPanel({
                   <select id="ext-ch" name="channel" required>
                     {connectedChannels.map((c) => (
                       <option key={c.channel} value={c.channel}>
-                        {c.channel} ({c.accountLabel})
+                        {channelName(c.channel)} ({c.accountLabel})
                       </option>
                     ))}
                   </select>
@@ -193,7 +249,7 @@ export function ExternalChannelsPanel({
                 <li key={j.id} className={s.exCard}>
                   <div className={s.exCardHead}>
                     <strong>
-                      [{j.channel}] {j.payloadTitle}
+                      [{channelName(j.channel)}] {j.payloadTitle}
                     </strong>
                     <span className={styles.badge}>{j.statusLabel}</span>
                   </div>
@@ -224,7 +280,7 @@ export function ExternalChannelsPanel({
                       .filter((c) => c.metricsUrl)
                       .map((c) => (
                         <option key={c.channel} value={c.channel}>
-                          {c.channel} ({c.accountLabel})
+                          {channelName(c.channel)} ({c.accountLabel})
                         </option>
                       ))}
                   </select>
@@ -243,6 +299,8 @@ export function ExternalChannelsPanel({
 
           <details className={s.exFold}>
             <summary>예약 실행 ({externalBoard.schedules.length}건)</summary>
+            <p className={styles.muted}>{C.scIntro}</p>
+            {!board.canWrite ? <NoPermission text={C.scNoPermission} /> : null}
             {board.canWrite && schedulableJobs.length > 0 ? (
               <ActionForm action={actions.scheduleJob ?? notConnected} submitLabel="한국 시간(KST) 예약 등록">
                 <div className={styles.row}>
@@ -251,7 +309,7 @@ export function ExternalChannelsPanel({
                     <select id="sched-job" name="executionJobId" required>
                       {schedulableJobs.map((j) => (
                         <option key={j.id} value={j.id}>
-                          [{j.channel}] {j.payloadTitle}
+                          [{channelName(j.channel)}] {j.payloadTitle}
                         </option>
                       ))}
                     </select>
@@ -263,24 +321,34 @@ export function ExternalChannelsPanel({
                 </div>
               </ActionForm>
             ) : null}
-            <ul className={s.exList}>
-              {externalBoard.schedules.map((sc) => (
-                <li key={sc.id} className={s.exCard}>
-                  <span>
-                    {sc.scheduledAt} · 상태: {sc.status}
-                  </span>
-                  {sc.status === "scheduled" && board.canWrite ? (
-                    <ActionForm action={actions.cancelSchedule ?? notConnected} submitLabel="예약 취소">
-                      <input type="hidden" name="scheduleId" value={sc.id} />
-                    </ActionForm>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            {externalBoard.schedules.length === 0 ? (
+              <Empty title={C.scEmpty} desc={C.scEmptyDesc} />
+            ) : (
+              <ul className={s.exList}>
+                {externalBoard.schedules.map((sc) => (
+                  <li key={sc.id} className={s.exCard}>
+                    <div className={s.exCardHead}>
+                      <span>{formatKst(sc.scheduledAt)}</span>
+                      <StatusPill map={SCHEDULE_STATUS} value={sc.status} />
+                    </div>
+                    {sc.status === "paused_version_changed" ? <p className={s.exWarn}>{C.scPaused}</p> : null}
+                    {sc.status === "scheduled" && board.canWrite ? (
+                      <ActionForm action={actions.cancelSchedule ?? notConnected} submitLabel={C.scCancel}>
+                        <input type="hidden" name="scheduleId" value={sc.id} />
+                      </ActionForm>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
           </details>
 
           <details className={s.exFold}>
             <summary>상담 · 문의 접수 기록 (개인정보 마스킹 · {externalBoard.inquiries.length}건)</summary>
+            <p className={styles.muted}>{C.iqIntro}</p>
+            <p>
+              <span className={`${styles.pill} ${styles.pillInfo}`}>{C.iqMasking}</span>
+            </p>
             {board.canWrite ? (
               <ActionForm action={actions.createInquiry ?? notConnected} submitLabel="상담·문의 등록">
                 <input type="hidden" name="projectId" value={board.projectId} />
@@ -292,7 +360,7 @@ export function ExternalChannelsPanel({
                   </div>
                   <div className={styles.field}>
                     <label htmlFor="inq-phone">연락처</label>
-                    <input id="inq-phone" name="contactPhone" maxLength={40} />
+                    <input id="inq-phone" name="contactPhone" type="tel" maxLength={40} />
                   </div>
                   <div className={styles.field}>
                     <label htmlFor="inq-email">이메일</label>
@@ -304,53 +372,77 @@ export function ExternalChannelsPanel({
                   <input id="inq-note" name="note" maxLength={500} />
                 </div>
               </ActionForm>
-            ) : null}
-            <ul className={s.exList}>
-              {externalBoard.inquiries.map((inq) => (
-                <li key={inq.id} className={s.exCard}>
-                  <strong>{inq.maskedName}</strong> ({inq.maskedPhone || "연락처 없음"} · {inq.maskedEmail || "이메일 없음"}) · 상태: {inq.status}
-                  {board.canWrite ? (
-                    <ActionForm action={actions.createFollowup ?? notConnected} submitLabel="CRM 후속 작업 연결">
-                      <input type="hidden" name="inquiryId" value={inq.id} />
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label htmlFor={`asg-${inq.id}`}>담당자</label>
-                          <input id={`asg-${inq.id}`} name="assigneeName" required maxLength={60} />
+            ) : (
+              <NoPermission text={C.iqNoPermission} />
+            )}
+            {externalBoard.inquiries.length === 0 ? (
+              <Empty title={C.iqEmpty} desc={C.iqEmptyDesc} />
+            ) : (
+              <ul className={s.exList}>
+                {externalBoard.inquiries.map((inq) => (
+                  <li key={inq.id} className={s.exCard}>
+                    <div className={s.exCardHead}>
+                      <span>
+                        <strong>{inq.maskedName}</strong> ({inq.maskedPhone || "연락처 없음"} · {inq.maskedEmail || "이메일 없음"})
+                      </span>
+                      <StatusPill map={INQUIRY_STATUS} value={inq.status} />
+                    </div>
+                    {board.canWrite ? (
+                      <ActionForm action={actions.createFollowup ?? notConnected} submitLabel={C.iqConnect}>
+                        <input type="hidden" name="inquiryId" value={inq.id} />
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label htmlFor={`asg-${inq.id}`}>담당자</label>
+                            <input id={`asg-${inq.id}`} name="assigneeName" required maxLength={60} />
+                          </div>
+                          <div className={styles.field}>
+                            <label htmlFor={`due-${inq.id}`}>기한</label>
+                            <input id={`due-${inq.id}`} name="dueDate" type="date" required />
+                          </div>
                         </div>
-                        <div className={styles.field}>
-                          <label htmlFor={`due-${inq.id}`}>기한</label>
-                          <input id={`due-${inq.id}`} name="dueDate" type="date" required />
-                        </div>
-                      </div>
-                    </ActionForm>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+                      </ActionForm>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
           </details>
 
           <details className={s.exFold}>
             <summary>CRM 후속 작업 목록 ({externalBoard.followups.length}건)</summary>
-            <ul className={s.exList}>
-              {externalBoard.followups.map((f) => (
-                <li key={f.id} className={s.exCard}>
-                  <span>
-                    담당: {f.assigneeName} · 기한: {f.dueDate} · 상태: {f.status}
-                  </span>
-                  {board.canWrite ? (
-                    <ActionForm action={actions.updateFollowup ?? notConnected} submitLabel="상태 저장">
-                      <input type="hidden" name="followupId" value={f.id} />
-                      <select name="status" defaultValue={f.status}>
-                        <option value="todo">할 일</option>
-                        <option value="in_progress">진행 중</option>
-                        <option value="done">완료</option>
-                        <option value="hold">보류</option>
-                      </select>
-                    </ActionForm>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <p className={styles.muted}>{C.crIntro}</p>
+            {!board.canWrite ? <NoPermission text={C.crNoPermission} /> : null}
+            {externalBoard.followups.length === 0 ? (
+              <Empty title={C.crEmpty} desc={C.crEmptyDesc} />
+            ) : (
+              <ul className={s.exList}>
+                {externalBoard.followups.map((f) => (
+                  <li key={f.id} className={s.exCard}>
+                    <div className={s.exCardHead}>
+                      <span>
+                        담당: {f.assigneeName} · 기한: {f.dueDate}
+                      </span>
+                      <StatusPill map={FOLLOWUP_STATUS} value={f.status} />
+                    </div>
+                    {board.canWrite ? (
+                      <ActionForm action={actions.updateFollowup ?? notConnected} submitLabel={C.crSave}>
+                        <input type="hidden" name="followupId" value={f.id} />
+                        <div className={styles.field}>
+                          <label htmlFor={`fst-${f.id}`}>진행 상태</label>
+                          <select id={`fst-${f.id}`} name="status" defaultValue={f.status}>
+                            {Object.entries(FOLLOWUP_STATUS).map(([v, t]) => (
+                              <option key={v} value={v}>
+                                {t}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </ActionForm>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
           </details>
         </section>
       ) : null}

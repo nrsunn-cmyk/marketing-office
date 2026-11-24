@@ -3,6 +3,7 @@ import type { FormState } from "../../../_components/form-state";
 import { ActionForm } from "../../../_components/action-form";
 import styles from "../../../ui.module.css";
 import s from "./execution.module.css";
+import { QueueActionForm, QueueAlert } from "./queue-alert";
 import {
   ER_COPY,
   EX_COPY,
@@ -55,6 +56,17 @@ export function ExecutionView({
   actions?: ExecutionActions;
   externalBoard?: P4ExternalBoard | null;
 }) {
+  // UX-EXEC-JUMP-FRONT-01(AGY msg_ca29bb39f260): 외부 연동을 불러왔으면 '준비 중인 외부 채널' 구획과 그 링크를 빼고(아래 설정 구획과 중복),
+  // 바로가기 막대는 실제로 그려지는 외부 구획과 1:1로 맞춘다(조건은 execution-channels-panel.tsx 와 같다).
+  const showPreparing = !externalBoard;
+  const externalJumps: [string, string][] =
+    externalBoard === undefined
+      ? []
+      : [
+          ["#external-channels-setup", EX_LABELS.jumpSetup],
+          ...(board && externalBoard?.connections.some((c) => c.status === "connected") ? [["#external-dispatch", EX_LABELS.jumpDispatch] as [string, string]] : []),
+          ...(board && externalBoard ? [["#p4b-ops", EX_LABELS.jumpP4b] as [string, string]] : []),
+        ];
   return (
     <>
       <div className={styles.header}>
@@ -71,12 +83,21 @@ export function ExecutionView({
           <li>
             <a href="#queue">{EX_LABELS.jumpQueue}</a>
           </li>
-          <li>
-            <a href="#results">{EX_LABELS.jumpResults}</a>
-          </li>
-          <li>
-            <a href="#channels">{EX_LABELS.jumpChannels}</a>
-          </li>
+          {board && (
+            <li>
+              <a href="#results">{EX_LABELS.jumpResults}</a>
+            </li>
+          )}
+          {showPreparing && (
+            <li>
+              <a href="#channels">{EX_LABELS.jumpChannels}</a>
+            </li>
+          )}
+          {externalJumps.map(([href, label]) => (
+            <li key={href}>
+              <a href={href}>{label}</a>
+            </li>
+          ))}
         </ul>
       </nav>
       {board === null ? (
@@ -90,27 +111,29 @@ export function ExecutionView({
         </section>
       ) : (
         <>
-          <Queue board={board} actions={actions} />
-          <Results board={board} actions={actions} />
+          <Queue board={board} actions={actions} showPreparing={showPreparing} />
+          <Results board={board} actions={actions} showPreparing={showPreparing} />
         </>
       )}
-      <section className={`${styles.section} ${s.exSection}`} aria-labelledby="channels">
-        <h2 id="channels" className={styles.subtitle}>
-          {EX_LABELS.channelsHeading}
-        </h2>
-        <ul className={s.exList}>
-          {EX_LABELS.channels.map((c) => (
-            <li key={c} className={s.exCard}>
-              <p>
-                <strong>{c}</strong>
-              </p>
-              <p className={s.exTags}>
-                <span className={s.exTag}>{externalBoard ? "연동 가능" : EX_COPY.channelPreparing}</span>
-              </p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {showPreparing && (
+        <section className={`${styles.section} ${s.exSection}`} aria-labelledby="channels">
+          <h2 id="channels" className={styles.subtitle}>
+            {EX_LABELS.channelsHeading}
+          </h2>
+          <ul className={s.exList}>
+            {EX_LABELS.channels.map((c) => (
+              <li key={c} className={s.exCard}>
+                <p>
+                  <strong>{c}</strong>
+                </p>
+                <p className={s.exTags}>
+                  <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {externalBoard !== undefined ? (
         <ExternalChannelsPanel board={board} externalBoard={externalBoard} actions={actions} notConnected={notConnected} />
       ) : null}
@@ -118,67 +141,71 @@ export function ExecutionView({
   );
 }
 
-function Queue({ board, actions }: { board: ExecutionBoard; actions: ExecutionActions }) {
+function Queue({ board, actions, showPreparing }: { board: ExecutionBoard; actions: ExecutionActions; showPreparing: boolean }) {
   const { queue, history } = splitJobs(board.jobs);
   return (
     <section className={`${styles.section} ${s.exSection}`} aria-labelledby="queue">
       <h2 id="queue" className={styles.subtitle}>
         {EX_COPY.heading}
       </h2>
-      <p className={styles.muted}>{EX_COPY.intro}</p>
-      <p className={s.exTags}>
-        <span className={`${s.exTag} ${s.exTag_info}`}>{EX_LABELS.firstSource}</span>
-        <span className={s.exTag}>{EX_COPY.channelPreparing}</span>
-      </p>
-      {!board.canWrite && (
-        <p className={styles.notice} role="note">
-          {EX_COPY.noPermission}
+      {/* P4-ALERT-FRONT-01: 막힘 경고는 폼 밖 대기열 머리 live 영역에 한 번(queue-alert.tsx) */}
+      <QueueAlert>
+        <p className={styles.muted}>{EX_COPY.intro}</p>
+        <p className={s.exTags}>
+          <span className={`${s.exTag} ${s.exTag_info}`}>{EX_LABELS.firstSource}</span>
+          {/* 외부 연동을 불러왔으면 '아직 연결되지 않았습니다' 태그를 뺀다(AGY msg_a00e8d11a62d, 연결 상태는 외부 채널 설정 배지로) */}
+          {showPreparing && <span className={s.exTag}>{EX_COPY.channelPreparing}</span>}
         </p>
-      )}
-      {/* 티스토리 기본 경로 3단계(자동 게시 없음, tistory-manual.html) */}
-      <details>
-        <summary>{EX_LABELS.manualSteps}</summary>
-        <ol className={s.exSteps}>
-          <li>{EX_LABELS.step1}</li>
-          <li>{EX_LABELS.step2}</li>
-          <li>{`${EX_LABELS.step3}: ${EX_COPY.recordBtn}`}</li>
-        </ol>
-        <p className={styles.muted}>{EX_LABELS.noApi}</p>
-      </details>
-      {queue.length === 0 ? (
-        <div className={styles.emptyState}>
-          <strong>{EX_COPY.emptyTitle}</strong>
-          <p className={styles.muted}>{EX_COPY.emptyDesc}</p>
-        </div>
-      ) : (
-        <ul className={s.exList}>
-          {queue.map((j) => (
-            <JobCard key={j.id} j={j} canWrite={board.canWrite} actions={actions} />
-          ))}
-        </ul>
-      )}
-      {history.length > 0 && (
-        <>
-          <h3 className={styles.subtitle}>{EX_LABELS.historyHeading}</h3>
-          <p className={styles.muted}>{EX_LABELS.historyHint}</p>
+        {!board.canWrite && (
+          <p className={styles.notice} role="note">
+            {EX_COPY.noPermission}
+          </p>
+        )}
+        {/* 티스토리 기본 경로 3단계(자동 게시 없음, tistory-manual.html) */}
+        <details>
+          <summary>{EX_LABELS.manualSteps}</summary>
+          <ol className={s.exSteps}>
+            <li>{EX_LABELS.step1}</li>
+            <li>{EX_LABELS.step2}</li>
+            <li>{`${EX_LABELS.step3}: ${EX_COPY.recordBtn}`}</li>
+          </ol>
+          <p className={styles.muted}>{EX_LABELS.noApi}</p>
+        </details>
+        {queue.length === 0 ? (
+          <div className={styles.emptyState}>
+            <strong>{EX_COPY.emptyTitle}</strong>
+            <p className={styles.muted}>{EX_COPY.emptyDesc}</p>
+          </div>
+        ) : (
           <ul className={s.exList}>
-            {history.map((j) => (
+            {queue.map((j) => (
               <JobCard key={j.id} j={j} canWrite={board.canWrite} actions={actions} />
             ))}
           </ul>
-        </>
-      )}
+        )}
+        {history.length > 0 && (
+          <>
+            <h3 className={styles.subtitle}>{EX_LABELS.historyHeading}</h3>
+            <p className={styles.muted}>{EX_LABELS.historyHint}</p>
+            <ul className={s.exList}>
+              {history.map((j) => (
+                <JobCard key={j.id} j={j} canWrite={board.canWrite} actions={actions} />
+              ))}
+            </ul>
+          </>
+        )}
+      </QueueAlert>
     </section>
   );
 }
 
 function Step({ action, j, label, variant = "secondary", children }: { action?: Action; j: ExecutionJobView; label: string; variant?: "primary" | "secondary"; children?: React.ReactNode }) {
   return (
-    <ActionForm action={action ?? notConnected} submitLabel={label} variant={variant} className={s.exInline}>
+    <QueueActionForm action={action ?? notConnected} submitLabel={label} variant={variant} className={s.exInline}>
       <input type="hidden" name="jobId" value={j.id} />
       <input type="hidden" name="revision" value={j.revision} />
       {children}
-    </ActionForm>
+    </QueueActionForm>
   );
 }
 
@@ -232,7 +259,7 @@ function JobCard({ j, canWrite, actions }: { j: ExecutionJobView; canWrite: bool
       {can.record && (
         <details open>
           <summary>{EX_COPY.recordBtn}</summary>
-          <ActionForm action={actions.record ?? notConnected} submitLabel={EX_COPY.recordBtn}>
+          <QueueActionForm action={actions.record ?? notConnected} submitLabel={EX_COPY.recordBtn}>
             <input type="hidden" name="jobId" value={j.id} />
             <input type="hidden" name="revision" value={j.revision} />
             <div className={s.exGrid2}>
@@ -249,7 +276,7 @@ function JobCard({ j, canWrite, actions }: { j: ExecutionJobView; canWrite: bool
               <label htmlFor={`${headId}-note`}>{EX_LABELS.note}</label>
               <input id={`${headId}-note`} name="note" type="text" />
             </div>
-          </ActionForm>
+          </QueueActionForm>
         </details>
       )}
       {can.archive && (
@@ -264,7 +291,7 @@ function JobCard({ j, canWrite, actions }: { j: ExecutionJobView; canWrite: bool
   );
 }
 
-function Results({ board, actions }: { board: ExecutionBoard; actions: ExecutionActions }) {
+function Results({ board, actions, showPreparing }: { board: ExecutionBoard; actions: ExecutionActions; showPreparing: boolean }) {
   const list = board.results;
   return (
     <section className={`${styles.section} ${s.exSection}`} aria-labelledby="results">
@@ -272,9 +299,12 @@ function Results({ board, actions }: { board: ExecutionBoard; actions: Execution
         {ER_COPY.heading}
       </h2>
       <p className={styles.muted}>{ER_COPY.intro}</p>
-      <p className={s.exTags}>
-        <span className={s.exTag}>{EX_LABELS.autoSyncPreparing}</span>
-      </p>
+      {/* G6(AGY msg_979029ebaf58): 외부 연동을 불러왔으면 '자동 수집: 준비 중' 태그를 뺀다(외부 성과 자동 수집 기능과 모순 방지) */}
+      {showPreparing && (
+        <p className={s.exTags}>
+          <span className={s.exTag}>{EX_LABELS.autoSyncPreparing}</span>
+        </p>
+      )}
       {!board.canWrite && (
         <p className={styles.notice} role="note">
           {EX_COPY.noPermission}

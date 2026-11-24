@@ -61,7 +61,8 @@ const text = (fd: FormData, k: string) => String(fd.get(k) ?? "");
 function stepState(r: Result<ExecutionStepResult>): FormState {
   if (!r.ok) return { message: r.message };
   refresh();
-  if (r.data.status === "blocked_mismatch") return { message: r.data.blockReason ? BLOCK_COPY[r.data.blockReason] : EXEC_ACTION_COPY.blockedContentChanged };
+  // 막힘은 실패가 아니라 안전 보호 차단 → 경고 색 안내(AGY 결정 ②, 문구는 EX_COPY 그대로)
+  if (r.data.status === "blocked_mismatch") return { message: r.data.blockReason ? BLOCK_COPY[r.data.blockReason] : EXEC_ACTION_COPY.blockedContentChanged, tone: "warn" };
   if (r.data.alreadyDone) return { ok: true, message: EXEC_ACTION_COPY.alreadyDoneNotice };
   return { ok: true };
 }
