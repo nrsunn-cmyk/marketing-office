@@ -351,6 +351,18 @@ export async function countAdminPublicInquiries(): Promise<Result<Record<PublicI
 }
 
 /**
+ * ADMIN-INQUIRY-COUNT-LITE-01: 머리글 배지용 신규(new) 건수 하나. DB 함수가 감사 기록을 남기지 않는다(화면 입구용, 개인정보 없음).
+ * 상태 탭 건수는 countAdminPublicInquiries(기록 남김)를 그대로 쓴다.
+ */
+export async function countAdminNewPublicInquiries(): Promise<Result<number>> {
+  const sb = await publicInquiryRpc();
+  const { data, error } = await sb.rpc("admin_public_inquiry_new_count");
+  if (error) return rpcFail("countAdminNewPublicInquiries", error);
+  const n = Number(data ?? 0);
+  return ok(Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0);
+}
+
+/**
  * 상태 변경. expectedStatus = 화면이 보고 있던 상태. 그사이 다른 관리자가 바꿨으면 CONFLICT(새로 고침 안내).
  * 같은 상태로 바꾸면 아무것도 바꾸지 않고 성공.
  */
