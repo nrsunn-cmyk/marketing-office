@@ -94,7 +94,7 @@
  * 새 토큰을 만들지 않고 칸 안에서만 --text-muted 를 바꾼다. 어두운 화면은 원래 토큰을 그대로 쓴다. */
 .column,
 .sourceRow {
-  --text-muted: #475569;
+  --text-muted: var(--text-muted-strong);
 }
 :global([data-theme="dark"]) .column,
 :global([data-theme="dark"]) .sourceRow {
@@ -163,7 +163,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   background: var(--bg-subtle);
 }
@@ -192,7 +192,7 @@
   flex-wrap: wrap;
   gap: 0 var(--space-3);
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
 }
 .leadView {
