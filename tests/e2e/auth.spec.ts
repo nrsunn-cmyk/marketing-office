@@ -112,9 +112,10 @@ test("비로그인 '/'는 공개 홍보 화면(200)이고 로그인·가입 주�
     expect(r?.status(), path).toBe(200);
     await expect(page, path).toHaveURL(new RegExp(`${path}$`));
   }
+  // ADMIN-LOGIN-NEXT-IMPL-01(H1): 허용 경로는 돌아갈 주소를 next 로 넘긴다(/login?next=%2Fworkspace 등)
   for (const path of ["/workspace", "/projects", "/clients", "/settings"]) {
     await page.goto(path);
-    await expect(page, path).toHaveURL(/\/login$/);
+    await expect(page, path).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(path)}$`));
   }
 });
 
@@ -125,7 +126,7 @@ test("T16 로그아웃 후 다시 로그인해도 업무실이 그대로 있다"
   await expect(page).toHaveURL(/\/login$/);
   // 7411d5b 이후 '/'는 공개 랜딩이다. 보호 경로로 로그아웃 상태를 확인한다(LANDING-FIX-01 E1)
   await page.goto("/projects");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fprojects$/); // H1: 돌아갈 주소 포함
   await loginAsOwner(page);
   await expect(page.getByRole("heading", { name: "나다움 업무실" })).toBeVisible();
 });
@@ -275,5 +276,5 @@ test("T01 앱 허용 목록에 없는 계정은 Supabase 계정이 있어도 들
   await expect(page).toHaveURL(/\/login\?error=not_allowed$/);
   // 허용되지 않은 사람은 세션이 남지 않는다: 보호 경로는 로그인으로 보낸다('/'는 공개 랜딩, LANDING-FIX-01 E1)
   await page.goto("/projects");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fprojects$/); // H1: 돌아갈 주소 포함
 });
