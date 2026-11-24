@@ -741,6 +741,260 @@
 }
 
 /*
+ * SECTION 04 WORKS 사례 카드·분류 칩·상세 dialog(NADAUM-PORTFOLIO-WORKS-FRONT-01, AGY PORTFOLIO-WORKS-SPEC-01 2·3절).
+ * 사례가 1건 이상일 때만 쓰인다. 색·크기는 명세 값 그대로
+ */
+.workFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.workChip {
+  min-height: var(--nd-touch-min);
+  padding: 0 18px;
+  border-radius: var(--nd-radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #101927;
+  color: #c5cbd8;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.workChipActive {
+  background: #b67af5;
+  border-color: #b67af5;
+  color: #06070c;
+}
+/* 데스크톱 3열(.grid3) · 태블릿 768~1023px 2열 · 모바일 767px 이하 1열 */
+@media (max-width: 1023px) {
+  .grid3.workGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .grid3.workGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.workCard {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: #101927;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.root .workCard:focus-visible {
+  outline: 2px solid var(--nd-accent-lilac);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.workCardMedia {
+  position: relative;
+  display: block;
+}
+.workCardImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #090d16;
+}
+.workKind {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: var(--nd-radius-pill);
+  background: rgba(6, 7, 12, 0.85);
+  color: #f1f3f8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.workCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  flex: 1;
+}
+.workCategory {
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 600;
+}
+.workTitle {
+  color: #f1f3f8;
+  font-size: 18px;
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.workSummary {
+  color: #c5cbd8;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.workHint {
+  margin-top: auto;
+  min-height: var(--nd-touch-min);
+  display: inline-flex;
+  align-items: center;
+  color: var(--nd-accent-lilac);
+  font-size: 14px;
+  font-weight: 700;
+}
+.workDialog {
+  width: min(760px, calc(100% - 32px));
+  max-width: 760px;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--nd-text-white);
+  background: #101927;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+.workDialog::backdrop {
+  background: rgba(6, 7, 12, 0.78);
+  backdrop-filter: blur(6px);
+}
+.workDialogInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+.workClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nd-radius-pill);
+  border: 1px solid var(--nd-border-strong);
+  background: rgba(6, 7, 12, 0.85);
+  color: #f1f3f8;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.workDialogImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #090d16;
+}
+.workDialogMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.workKindInline {
+  padding: 2px 10px;
+  border-radius: var(--nd-radius-pill);
+  border: 1px solid var(--nd-border-strong);
+  color: #f1f3f8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.workDialogTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f1f3f8;
+}
+.workFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+}
+.workFacts dt {
+  color: var(--nd-text-subtle);
+  font-size: 12px;
+}
+.workFacts dd {
+  margin: 0;
+  color: #c5cbd8;
+  font-size: 14px;
+}
+.workSteps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workSteps > li {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0a101b;
+}
+.workSteps h4 {
+  margin-bottom: 6px;
+  color: #38bdf8;
+  font-size: 13px;
+  font-weight: 700;
+}
+.workSteps p {
+  color: #c5cbd8;
+  font-size: 14px;
+}
+.workTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workTags li {
+  padding: 2px 10px;
+  border-radius: var(--nd-radius-pill);
+  border: 1px solid var(--nd-border-strong);
+  color: #c5cbd8;
+  font-size: 13px;
+}
+.workDialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .workDialogInner {
+    padding: 16px;
+  }
+  .workDialogActions > * {
+    flex: 1 1 100%;
+  }
+}
+
+/*
  * 움직임 줄이기(3안 8번): 파일 맨 끝에 둬서 같은 특이도의 .serviceCard:hover·.btn:hover 를 확실히 덮는다
  * (Tester QA-NADAUM-BRAND-CONCEPT3-01 F1: 앞에 있으면 translateY·전환이 남았음)
  */

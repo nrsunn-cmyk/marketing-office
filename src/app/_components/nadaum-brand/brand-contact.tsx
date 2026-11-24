@@ -18,13 +18,18 @@ import s from "./nadaum.module.css";
 /** 서비스 카드 → 상담 폼 미리 선택 신호(카드와 폼은 서로 다른 구획이라 브라우저 이벤트로 잇는다) */
 const PRESET_EVENT = "nadaum:contact-preset";
 
+/** 상담 폼에 서비스를 더해 고르라는 신호(서비스 카드·작업물 상세의 '비슷한 프로젝트 상담하기'가 함께 쓴다) */
+export function requestContactPreset(preset: readonly string[]) {
+  window.dispatchEvent(new CustomEvent(PRESET_EVENT, { detail: [...preset] }));
+}
+
 /**
  * 서비스 카드 전체 링크(#contact). 누르면 폼에 해당 서비스를 더해 고른다(기존 선택 유지, 방문자가 바꿀 수 있음).
  * 스크립트가 없어도 #contact 로는 이동한다.
  */
 export function PresetLink({ preset, className, children }: { preset: readonly string[]; className?: string; children: ReactNode }) {
   return (
-    <a href="#contact" className={className} onClick={() => window.dispatchEvent(new CustomEvent(PRESET_EVENT, { detail: [...preset] }))}>
+    <a href="#contact" className={className} onClick={() => requestContactPreset(preset)}>
       {children}
     </a>
   );

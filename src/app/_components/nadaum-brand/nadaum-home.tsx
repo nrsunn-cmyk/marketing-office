@@ -3,6 +3,8 @@ import Link from "next/link";
 import { CTA, FAQ, FOOTER, HERO, HOOK, NAV, SERVICES, SHOW_FOOTER_WORKSPACE_LOGIN, STATEMENT, WORKS, WORK_STATUS_LABEL } from "./brand-copy";
 import { ContactForm, PresetLink } from "./brand-contact";
 import { FaqAccordion } from "./brand-faq";
+import { PortfolioWorks } from "./brand-works";
+import { PORTFOLIO_ITEMS } from "./portfolio-data";
 import type { ContactSubmit } from "./contact-model";
 import s from "./nadaum.module.css";
 
@@ -118,7 +120,7 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
           </div>
         </section>
 
-        {/* SECTION 04 WORKS — 공개 허락된 사례가 없으면 '프로젝트 준비 중'(지어낸 사례 없음) */}
+        {/* SECTION 04 WORKS — 공개 허락된 사례가 없으면 '프로젝트 준비 중'(지어낸 사례 없음). 사례가 생기면 카드·상세(NADAUM-PORTFOLIO-WORKS-FRONT-01) */}
         <section id="works" className={s.section} aria-labelledby="works-title">
           <div className={s.container}>
             <div className={s.secHead}>
@@ -127,17 +129,21 @@ export function NadaumHome({ submit }: { submit?: ContactSubmit }) {
                 {WORKS.title}
               </h2>
             </div>
-            <ul className={s.grid3}>
-              {WORKS.items.map((w) => (
-                <li key={w.type} className={s.card}>
-                  <div className={s.workThumb}>{WORK_STATUS_LABEL[w.status]}</div>
-                  <h3 className={s.cardTitle}>{w.type}</h3>
-                  <p className={s.cardDesc}>
-                    <span className={s.statusTag}>{WORK_STATUS_LABEL[w.status]}</span>
-                  </p>
-                </li>
-              ))}
-            </ul>
+            {PORTFOLIO_ITEMS.length > 0 ? (
+              <PortfolioWorks items={PORTFOLIO_ITEMS} />
+            ) : (
+              <ul className={s.grid3}>
+                {WORKS.items.map((w) => (
+                  <li key={w.type} className={s.card}>
+                    <div className={s.workThumb}>{WORK_STATUS_LABEL[w.status]}</div>
+                    <h3 className={s.cardTitle}>{w.type}</h3>
+                    <p className={s.cardDesc}>
+                      <span className={s.statusTag}>{WORK_STATUS_LABEL[w.status]}</span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 
