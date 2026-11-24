@@ -8,8 +8,8 @@ import { describe, expect, it } from "vitest";
 import { asUser, expectDbError, migrationFiles, seedOwner, type Db } from "./harness";
 
 const KIT = process.env.P4_LOWFIX_KIT;
-const M6 = "20261123006000_p4_low_fixes.sql";
-const M7 = "20261123007000_p4_r3_limits.sql";
+const M6 = "20261124006000_p4_low_fixes.sql";
+const M7 = "20261124007000_p4_r3_limits.sql";
 const MIG = join(import.meta.dirname, "..", "..", "supabase", "migrations");
 
 const SIGS = [

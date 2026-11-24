@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { asSetup, asUser, migrationFiles, one, seedOwner, type Db } from "./harness";
 
 const KIT = process.env.P4_PRIVACY_KIT;
-const TARGET = "20261123004000_p4_inquiry_privacy.sql";
+const TARGET = "20261124004000_p4_inquiry_privacy.sql";
 const MIG = join(import.meta.dirname, "..", "..", "supabase", "migrations");
 
 async function baseDb(): Promise<Db> {
