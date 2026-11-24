@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { fieldErrors, type FormState } from "@/app/_components/form-state";
 import { loginEmailSchema, loginInputSchema, passwordPairSchema, signupInputSchema } from "@/contracts";
 import { allowedEmailsFromEnv, isAllowedEmail } from "@/server/auth/allowlist";
-import { getSignedInHome, requireUser } from "@/server/auth/session";
+import { requireUser, resolveSignedInDestination } from "@/server/auth/session";
 import { siteUrl } from "@/server/env";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -37,7 +37,8 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
     console.error("[login] 로그인 실패:", error.status, error.code);
     return { message: error.status === 429 ? `요청이 너무 많습니다. ${TRY_LATER}` : `로그인하지 못했습니다. ${TRY_LATER}` };
   }
-  redirect(await getSignedInHome());
+  // H1: 숨은 칸 next 는 믿지 않고 서버에서 다시 검사한다(허용 경로·관리자 여부)
+  redirect(await resolveSignedInDestination(text(fd, "next")));
 }
 
 export async function signupAction(_prev: FormState, fd: FormData): Promise<FormState> {

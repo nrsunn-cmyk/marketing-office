@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { isAdmin } from "@/features/admin/server";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { allowedEmailsFromEnv, isAllowedEmail } from "./allowlist";
+import { isAdminReturnPath, safeReturnPath } from "./redirect";
 
 /**
  * 인증 확인 계층 (Next.js 권장 Data Access Layer).
@@ -39,6 +40,20 @@ export async function requireUser(): Promise<SessionUser> {
 /** 로그인 뒤 역할에 맞는 첫 화면을 고른다. 관리자 화면의 권한 확인은 화면에서도 수행한다. */
 export async function getSignedInHome(): Promise<"/admin" | "/workspace"> {
   return (await isAdmin()) ? "/admin" : "/workspace";
+}
+
+/**
+ * ADMIN-LOGIN-NEXT-IMPL-01(H1): 로그인 뒤 갈 곳. next 가 허용 경로면 그리로, 아니면 역할별 첫 화면.
+ * 관리자가 아닌 계정의 /admin* next 는 404 가 아니라 /workspace(next 가 없을 때와 같아 관리자 화면 존재를 알려 주지 않는다).
+ * isAdmin 은 요청당 cache 라 한 번만 부른다. 확인 실패는 isAdmin 이 false(관리자 아님)로 돌려준다.
+ * next 값은 로그에 남기지 않는다(상담 id 등이 들어 있을 수 있다).
+ */
+export async function resolveSignedInDestination(next: unknown): Promise<string> {
+  const dest = safeReturnPath(next);
+  const admin = await isAdmin();
+  if (!dest) return admin ? "/admin" : "/workspace";
+  if (isAdminReturnPath(dest) && !admin) return "/workspace";
+  return dest;
 }
 
 export interface Workspace {

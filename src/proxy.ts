@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeReturnPath } from "@/server/auth/redirect";
 
 /**
  * 1차 거름 (Next.js proxy). 할 일은 세 가지뿐이다.
@@ -71,6 +72,12 @@ export async function proxy(request: NextRequest) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = "";
+    // H1: 화면을 여는 요청(GET·HEAD)이고 허용 경로면 돌아갈 주소를 넘긴다. 서버 액션 POST·허용 밖 경로는 지금처럼 버린다.
+    // 로그인 때 서버가 한 번 더 검사한다(src/app/login/actions.ts).
+    if (request.method === "GET" || request.method === "HEAD") {
+      const back = safeReturnPath(request.nextUrl.pathname + request.nextUrl.search);
+      if (back) login.searchParams.set("next", back);
+    }
     const redirect = NextResponse.redirect(login);
     for (const c of response.cookies.getAll()) redirect.cookies.set(c);
     return redirect;
