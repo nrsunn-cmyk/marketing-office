@@ -396,3 +396,84 @@
     min-width: 0;
   }
 }
+
+/*
+ * NADAUM-INQUIRY-DELETE-FRONT-01 공개 상담 건별 영구 삭제(AGY INQUIRY-ADMIN-DELETE-SPEC-01 3절). 관리자 화면은 늘 다크라 값을 그대로 쓴다.
+ * 대비: [삭제] #FCA5A5/#101927, [영구 삭제] #FFFFFF/#DC2626 4.83:1, 안내·오류 #FCA5A5/#131C2E. 누르는 곳은 모두 44px.
+ */
+.deleteBox {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.dangerOutline,
+.dangerSolid,
+.neutralButton {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+.dangerOutline {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: transparent;
+  color: #fca5a5;
+}
+.dangerOutline:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+.dangerSolid {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+.dangerSolid:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+.neutralButton {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-main);
+}
+.neutralButton:hover {
+  background: var(--bg-hover);
+}
+.dangerOutline:disabled,
+.dangerSolid:disabled,
+.neutralButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.deleteConfirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+.deleteWarn {
+  margin: 0;
+  color: #fca5a5;
+  font-weight: var(--font-weight-semibold);
+}
+.deleteForm {
+  display: grid;
+  gap: var(--space-3);
+}
+.deleteReason {
+  width: 100%;
+  min-height: 44px;
+}
+.deleteError {
+  margin: 0;
+  color: #fca5a5;
+}
+.deleteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

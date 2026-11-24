@@ -5,9 +5,9 @@ import { isPublicInquiryStatus } from "@/features/public-inquiries/contract";
 import { AppNav } from "../../_components/app-nav";
 import styles from "../../ui.module.css";
 import { AdminHeader, adminMetadata, requireAdminOr404 } from "../admin-parts";
-import { setInquiryStatusAction } from "./actions";
+import { deleteInquiryAction, setInquiryStatusAction } from "./actions";
 import { cursorText, InquiriesView, parseInquiryCursor } from "./inquiries-view";
-import { INQ_COPY } from "./inquiry-copy";
+import { INQ_COPY, isInquiryRefCode } from "./inquiry-copy";
 
 export const generateMetadata = () => adminMetadata(INQ_COPY.title);
 
@@ -39,12 +39,19 @@ async function Inquiries({ searchParams }: { searchParams: PageProps<"/admin/inq
   const status = isPublicInquiryStatus(sp.status) ? sp.status : null;
   const before = parseInquiryCursor(sp.before);
   const id = typeof sp.id === "string" && /^[0-9a-f-]{36}$/i.test(sp.id) ? sp.id : null;
+  // 삭제 직후 안내(NADAUM-INQUIRY-DELETE-FRONT-01): 참조 번호 형식이 맞을 때만 싣는다
+  const deleted = isInquiryRefCode(sp.deleted) ? sp.deleted : null;
   const [list, counts] = await Promise.all([listAdminPublicInquiries({ status: status ?? undefined, limit: PAGE, before }), countAdminPublicInquiries()]);
   if ((!list.ok && list.code === "NOT_FOUND") || (!counts.ok && counts.code === "NOT_FOUND")) notFound();
 
   return (
     <>
       <AdminHeader current="/admin/inquiries" title={INQ_COPY.title} lead={INQ_COPY.lead} notice={INQ_COPY.notice} />
+      {deleted && (
+        <p className={styles.notice} role="status">
+          {INQ_COPY.deleted(deleted)}
+        </p>
+      )}
       <InquiriesView
         counts={counts.ok ? counts.data : null}
         rows={list.ok ? list.data.rows : null}
@@ -53,6 +60,7 @@ async function Inquiries({ searchParams }: { searchParams: PageProps<"/admin/inq
         cursor={cursorText(before)}
         selectedId={id}
         action={setInquiryStatusAction}
+        deleteAction={deleteInquiryAction}
       />
     </>
   );

@@ -9,6 +9,19 @@ import type { AdminPublicInquiry } from "@/features/public-inquiries/contract";
 const setMock = vi.fn();
 vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, setAdminPublicInquiryStatus: (...a: unknown[]) => setMock(...a) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// NADAUM-INQUIRY-DELETE-FRONT-01: 삭제 계약 함수(Backend)와 redirect(던져서 흐름을 끊는 Next 동작 흉내)
+const delMock = vi.fn();
+vi.mock("@/features/public-inquiries/server", () => ({ deletePublicInquiryAsAdmin: (...a: unknown[]) => delMock(...a) }));
+class RedirectSignal extends Error {
+  constructor(public to: string) {
+    super("NEXT_REDIRECT");
+  }
+}
+vi.mock("next/navigation", () => ({
+  redirect: (to: string) => {
+    throw new RedirectSignal(to);
+  },
+}));
 vi.mock("../../_components/action-form", async () => {
   const { createElement: h } = await import("react");
   return { ActionForm: ({ submitLabel, children }: { submitLabel: string; children?: unknown }) => h("form", null, children as never, h("button", { type: "submit", className: "button" }, submitLabel)) };
@@ -17,8 +30,8 @@ vi.mock("../admin.module.css", () => ({ default: new Proxy({}, { get: (_t, k) =>
 vi.mock("../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
 const { InquiriesView, inquiriesHref, parseInquiryCursor, cursorText } = await import("./inquiries-view");
-const { setInquiryStatusAction } = await import("./actions");
-const { INQ_COPY } = await import("./inquiry-copy");
+const { deleteInquiryAction, setInquiryStatusAction } = await import("./actions");
+const { INQ_COPY, isInquiryRefCode } = await import("./inquiry-copy");
 
 const ID1 = "11111111-1111-4111-8111-111111111111";
 const ID2 = "22222222-2222-4222-8222-222222222222";
@@ -46,7 +59,7 @@ const row = (x: Partial<AdminPublicInquiry> = {}): AdminPublicInquiry => ({
 const counts = { new: 2, contacted: 1, quoted: 0, closed: 4 };
 const action = async () => ({});
 const render = (p: Partial<Parameters<typeof InquiriesView>[0]> = {}) =>
-  renderToString(createElement(InquiriesView, { counts, rows: [row(), row({ id: ID2, refCode: "ND-261123-BBBBBB", status: "closed" })], nextCursor: null, status: null, cursor: null, selectedId: null, action, ...p })).replaceAll("<!-- -->", "");
+  renderToString(createElement(InquiriesView, { counts, rows: [row(), row({ id: ID2, refCode: "ND-261123-BBBBBB", status: "closed" })], nextCursor: null, status: null, cursor: null, selectedId: null, action, deleteAction: action, ...p })).replaceAll("<!-- -->", "");
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ");
 
 describe("관리자 공개 상담 화면", () => {
@@ -128,6 +141,75 @@ describe("상태 바꾸기 서버 동작", () => {
     setMock.mockClear();
     expect(await setInquiryStatusAction({}, fd({ id: ID1, status: "deleted", expectedStatus: "new" }))).toEqual({ errors: { status: "알 수 없는 상담 상태입니다." } });
     expect(setMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("건별 영구 삭제(NADAUM-INQUIRY-DELETE-FRONT-01)", () => {
+  beforeEach(() => delMock.mockReset());
+  const fd = (o: Record<string, string>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(o)) f.set(k, v);
+    return f;
+  };
+  const redirectedTo = async (p: Promise<unknown>) => {
+    try {
+      await p;
+    } catch (e) {
+      if (e instanceof RedirectSignal) return e.to;
+      throw e;
+    }
+    return null;
+  };
+
+  it("상세 칸 맨 아래(상태 폼 뒤)에 [삭제] 1개, 확인 영역은 처음엔 닫힘, 자바스크립트 전에는 비활성", () => {
+    const h = render({ selectedId: ID1 });
+    const btn = h.match(/<button[^>]*>삭제<\/button>/)?.[0] ?? "";
+    expect(btn).toContain('type="button"');
+    expect(btn).toContain('aria-label="ND-261123-AAAAAA 상담 삭제"');
+    expect(btn).toContain("dangerOutline");
+    expect(btn).toContain("disabled");
+    expect(h.indexOf("상태 바꾸기")).toBeLessThan(h.indexOf(btn));
+    expect(text(h)).not.toContain(INQ_COPY.deleteConfirm);
+    expect(text(h)).not.toContain(INQ_COPY.deleteSubmit);
+    expect(h).not.toMatch(/confirm\(/);
+    // 상담을 고르지 않으면 삭제 단추도 없다
+    expect(render()).not.toContain("dangerOutline");
+  });
+
+  it("확정 문구(명세 3절)와 참조 번호 형식", () => {
+    expect(INQ_COPY.deleteConfirm).toBe("이 상담을 영구 삭제할까요? 삭제 후에는 복구할 수 없습니다.");
+    expect(INQ_COPY.deleteReason).toBe("삭제 사유 (선택 · 예: 고객 삭제 요청)");
+    expect([INQ_COPY.deleteOpen, INQ_COPY.deleteSubmit, INQ_COPY.deletePending, INQ_COPY.deleteCancel]).toEqual(["삭제", "영구 삭제", "삭제 중...", "취소"]);
+    expect(INQ_COPY.deleted("ND-261123-AAAAAA")).toBe("상담(ND-261123-AAAAAA)이 영구 삭제되었습니다.");
+    expect(isInquiryRefCode("ND-261123-AAAAAA")).toBe(true);
+    for (const bad of [undefined, "", "ND-261123-aaaaaa", "<b>ND-261123-AAAAAA</b>", "ND-261123-AAAAAA ", ["ND-261123-AAAAAA"]]) expect(isInquiryRefCode(bad)).toBe(false);
+    expect(inquiriesHref({ status: "new", deleted: "ND-261123-AAAAAA" })).toBe("/admin/inquiries?status=new&deleted=ND-261123-AAAAAA");
+  });
+
+  it("성공: 계약 함수에 id·사유를 넘기고, 상세를 닫은 같은 목록(상태·쪽 유지)+deleted 로 보낸다", async () => {
+    delMock.mockResolvedValue({ ok: true, data: { id: ID1, refCode: "ND-261123-AAAAAA" } });
+    const c = "2026-11-23T03:00:00.123456+00:00|" + ID2;
+    const to = await redirectedTo(deleteInquiryAction({}, fd({ id: ID1, reason: "고객 삭제 요청", status: "contacted", before: c })));
+    expect(delMock).toHaveBeenCalledWith({ id: ID1, reason: "고객 삭제 요청" });
+    expect(to).toBe(inquiriesHref({ status: "contacted", before: c, deleted: "ND-261123-AAAAAA" }));
+    expect(to).not.toContain("id=");
+  });
+
+  it("모르는 상태·잘못된 커서는 주소에서 뺀다", async () => {
+    delMock.mockResolvedValue({ ok: true, data: { id: ID1, refCode: "ND-261123-AAAAAA" } });
+    expect(await redirectedTo(deleteInquiryAction({}, fd({ id: ID1, status: "deleted", before: "x|y" })))).toBe("/admin/inquiries?deleted=ND-261123-AAAAAA");
+  });
+
+  it("실패: 서버 문구를 그대로 돌려준다(이동 없음)", async () => {
+    delMock.mockResolvedValue({ ok: false, code: "NOT_FOUND", message: "상담 접수를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다." });
+    expect(await deleteInquiryAction({}, fd({ id: ID1 }))).toEqual({ message: "상담 접수를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다." });
+  });
+
+  it("사유 200자 초과는 호출 없이 안내, 200자(그림 문자 포함 글자 수)는 통과", async () => {
+    expect(await deleteInquiryAction({}, fd({ id: ID1, reason: "가".repeat(201) }))).toEqual({ message: "삭제 사유는 200자 이하로 입력해 주세요." });
+    expect(delMock).not.toHaveBeenCalled();
+    delMock.mockResolvedValue({ ok: true, data: { id: ID1, refCode: "ND-261123-AAAAAA" } });
+    expect(await redirectedTo(deleteInquiryAction({}, fd({ id: ID1, reason: "😀".repeat(200) })))).toContain("deleted=");
   });
 });
 

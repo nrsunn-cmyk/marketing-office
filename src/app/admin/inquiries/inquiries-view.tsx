@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { AdminPublicInquiryCursor } from "@/features/admin/server";
 import type { AdminPublicInquiry, PublicInquiryStatus } from "@/features/public-inquiries/contract";
 import { ActionForm } from "../../_components/action-form";
 import type { FormState } from "../../_components/form-state";
 import styles from "../../ui.module.css";
 import { kstDateTime, TableWrap } from "../admin-parts";
 import ad from "../admin.module.css";
+import { DeleteInquiry } from "./delete-inquiry";
+import { inquiriesHref } from "./inquiries-href";
 import { INQ_COPY as C, INQ_STATUS_LABEL, INQ_STATUS_ORDER } from "./inquiry-copy";
 
 /**
@@ -24,35 +25,19 @@ export interface InquiriesViewProps {
   cursor: string | null;
   selectedId: string | null;
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
+  /** 건별 영구 삭제 서버 동작(NADAUM-INQUIRY-DELETE-FRONT-01) */
+  deleteAction: (prev: FormState, fd: FormData) => Promise<FormState>;
 }
 
-/** 커서는 '접수 시각|id' 한 값으로 주소에 싣는다(시각 글자는 받은 그대로 — 마이크로초 유지, Backend 계약 3-2) */
-export function parseInquiryCursor(v: unknown): AdminPublicInquiryCursor | undefined {
-  if (typeof v !== "string") return undefined;
-  const i = v.lastIndexOf("|");
-  if (i <= 0) return undefined;
-  const beforeCreated = v.slice(0, i);
-  const beforeId = v.slice(i + 1);
-  return Number.isNaN(Date.parse(beforeCreated)) || !/^[0-9a-f-]{36}$/i.test(beforeId) ? undefined : { beforeCreated, beforeId };
-}
-export const cursorText = (c: AdminPublicInquiryCursor | null | undefined) => (c ? `${c.beforeCreated}|${c.beforeId}` : null);
-
-/** 주소 만들기(상태·쪽·고른 상담) */
-export function inquiriesHref(p: { status?: PublicInquiryStatus | null; before?: string | null; id?: string | null }): string {
-  const q = new URLSearchParams();
-  if (p.status) q.set("status", p.status);
-  if (p.before) q.set("before", p.before);
-  if (p.id) q.set("id", p.id);
-  const s = q.toString();
-  return s ? `/admin/inquiries?${s}` : "/admin/inquiries";
-}
+// 주소 도우미는 inquiries-href.ts 로 옮겼다(기존 가져오기 유지용 다시 내보내기)
+export { cursorText, inquiriesHref, parseInquiryCursor } from "./inquiries-href";
 
 /** 사용자가 적은 글자(방향 제어 문자가 있어도 주변 화면을 뒤집지 않게 격리) */
 function UserText({ children, block = false }: { children: string; block?: boolean }) {
   return <bdi className={block ? `${ad.userText} ${ad.userBlock}` : ad.userText}>{children}</bdi>;
 }
 
-export function InquiriesView({ counts, rows, nextCursor, status, cursor, selectedId, action }: InquiriesViewProps) {
+export function InquiriesView({ counts, rows, nextCursor, status, cursor, selectedId, action, deleteAction }: InquiriesViewProps) {
   const total = counts ? INQ_STATUS_ORDER.reduce((n, s) => n + counts[s], 0) : null;
   const selected = selectedId && rows ? (rows.find((r) => r.id === selectedId) ?? null) : null;
   const tabs: { key: PublicInquiryStatus | null; label: string; n: number | null }[] = [
@@ -164,7 +149,7 @@ export function InquiriesView({ counts, rows, nextCursor, status, cursor, select
           ) : !selected ? (
             <p className={styles.muted}>{C.notInPage}</p>
           ) : (
-            <Detail r={selected} action={action} />
+            <Detail r={selected} action={action} deleteAction={deleteAction} status={status} cursor={cursor} />
           )}
         </section>
       </div>
@@ -172,7 +157,13 @@ export function InquiriesView({ counts, rows, nextCursor, status, cursor, select
   );
 }
 
-function Detail({ r, action }: { r: AdminPublicInquiry; action: InquiriesViewProps["action"] }) {
+function Detail({
+  r,
+  action,
+  deleteAction,
+  status,
+  cursor,
+}: Pick<InquiriesViewProps, "action" | "deleteAction" | "status" | "cursor"> & { r: AdminPublicInquiry }) {
   const rows: [string, ReactNode][] = [
     ["접수 번호", r.refCode],
     ["접수 시각", kstDateTime(r.createdAt)],
@@ -221,6 +212,8 @@ function Detail({ r, action }: { r: AdminPublicInquiry; action: InquiriesViewPro
           </select>
         </div>
       </ActionForm>
+      {/* 상세 칸 맨 아래 위험 동작(2단계 확인). 고른 상담이 바뀌면 확인 영역을 닫은 새 상태로 */}
+      <DeleteInquiry key={r.id} id={r.id} refCode={r.refCode} status={status} cursor={cursor} action={deleteAction} />
     </div>
   );
 }

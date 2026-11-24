@@ -89,8 +89,12 @@ export const FAQ = {
   ],
 } as const;
 
-/** 공개 상담 개인정보 보유 기간. 주인님 최종 확인 때 이 한 줄만 바꾼다(바꾸면 Backend 동의 판 번호도 함께 올림) */
-export const PRIVACY_RETENTION = "접수일로부터 1년";
+/**
+ * 공개 상담 개인정보 보유·이용 기간(고지 문구 전체). 바꾸면 Backend 동의 판 번호도 함께 올린다.
+ * 2026-11-24 주인님 결정: 계속 보관하고 관리자가 필요할 때 건별 삭제(AGY INQUIRY-ADMIN-DELETE-SPEC-01, 동의 판 privacy-v2-20261124)
+ */
+export const PRIVACY_RETENTION =
+  "상담 이력 관리 및 관리자 삭제 시까지 보관 (이용자 삭제 요청 시 지체 없이 파기, 관계 법령에 따라 보존이 필요한 경우 해당 기간 보관)";
 
 export const CONTACT = {
   eyebrow: "START A PROJECT",
@@ -130,7 +134,7 @@ export const CONTACT = {
   privacy: [
     { term: "수집·이용 목적", desc: "프로젝트 상담 확인, 견적 안내 및 회신 연락" },
     { term: "수집 항목", desc: "(필수) 업체명, 담당자 이름, 연락처, 요청 서비스, 요청 내용 / (선택) 참고 URL, 희망 일정, 예상 예산" },
-    { term: "보유·이용 기간", desc: `${PRIVACY_RETENTION} 보관 후 파기 (관계 법령에 따라 보존이 필요한 경우 해당 기간 보관)` },
+    { term: "보유·이용 기간", desc: PRIVACY_RETENTION },
     { term: "동의 거부 권리 및 불이익", desc: "개인정보 수집·이용 동의를 거부할 수 있으며, 거부 시 상담 신청 접수가 제한됩니다." },
   ],
 } as const;

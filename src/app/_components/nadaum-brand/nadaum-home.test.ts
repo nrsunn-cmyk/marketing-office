@@ -129,8 +129,11 @@ describe("나다움브랜드 공개 화면", () => {
     expect(t).toContain("개인정보 수집·이용에 동의합니다 (필수)");
     const dl = html.match(/<dl id="nd-privacy"[^>]*>[\s\S]*?<\/dl>/)?.[0] ?? "";
     for (const term of ["수집·이용 목적", "수집 항목", "보유·이용 기간", "동의 거부 권리 및 불이익"]) expect(dl).toContain(`<dt>${term}</dt>`);
-    expect(PRIVACY_RETENTION).toBe("접수일로부터 1년");
-    expect(text(dl)).toContain(`${PRIVACY_RETENTION} 보관 후 파기`);
+    expect(PRIVACY_RETENTION).toBe(
+      "상담 이력 관리 및 관리자 삭제 시까지 보관 (이용자 삭제 요청 시 지체 없이 파기, 관계 법령에 따라 보존이 필요한 경우 해당 기간 보관)",
+    );
+    expect(text(dl)).toContain(PRIVACY_RETENTION);
+    expect(text(dl)).not.toContain("1년");
     expect(text(dl)).toContain("거부 시 상담 신청 접수가 제한됩니다");
   });
 

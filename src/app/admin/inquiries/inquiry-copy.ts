@@ -27,4 +27,18 @@ export const INQ_COPY = {
   statusPending: "바꾸는 중…",
   statusDone: "처리 상태를 바꿨습니다.",
   urlNote: "고객이 적은 주소입니다. 링크로 열지 말고 주소를 확인한 뒤 직접 입력해 주세요.",
+  // NADAUM-INQUIRY-DELETE-FRONT-01 건별 영구 삭제(AGY INQUIRY-ADMIN-DELETE-SPEC-01 3절 확정 문구)
+  deleteOpen: "삭제",
+  deleteConfirm: "이 상담을 영구 삭제할까요? 삭제 후에는 복구할 수 없습니다.",
+  deleteReason: "삭제 사유 (선택 · 예: 고객 삭제 요청)",
+  deleteSubmit: "영구 삭제",
+  deletePending: "삭제 중...",
+  deleteCancel: "취소",
+  deleted: (refCode: string) => `상담(${refCode})이 영구 삭제되었습니다.`,
 } as const;
+
+/** 삭제 사유 최대 글자 수(Backend deletePublicInquiryAsAdmin·RPC 와 같은 200자) */
+export const INQ_DELETE_REASON_MAX = 200;
+
+/** 공개 상담 참조 번호 형식(DB ref_code CHECK 와 같다). 주소로 받은 값을 화면에 그대로 싣지 않으려고 검사한다 */
+export const isInquiryRefCode = (v: unknown): v is string => typeof v === "string" && /^ND-[0-9]{6}-[0-9A-F]{6}$/.test(v);
