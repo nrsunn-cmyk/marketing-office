@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { getSessionUser, getSignedInHome } from "@/server/auth/session";
+import { safeReturnPath } from "@/server/auth/redirect";
+import { getSessionUser, resolveSignedInDestination } from "@/server/auth/session";
 import { AuthForm, EmailField, PasswordField } from "../_components/auth-form";
 import { AuthShell, authStyles as s } from "../_components/auth-shell";
 import { loginAction } from "./actions";
@@ -27,6 +28,9 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
         <LoginStatus searchParams={searchParams} />
       </Suspense>
       <AuthForm action={loginAction} submitLabel="로그인" pendingLabel="로그인 중…">
+        <Suspense fallback={null}>
+          <ReturnField searchParams={searchParams} />
+        </Suspense>
         <EmailField />
         <PasswordField
           name="password"
@@ -42,8 +46,9 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
 /** 요청마다 달라지는 부분: 이미 로그인했는지, 메일 링크에서 돌아온 안내 */
 async function LoginStatus({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
-  if (await getSessionUser()) redirect(await getSignedInHome());
   const params = await searchParams;
+  // H1: 이미 로그인했으면 돌아갈 주소(next, 서버가 다시 검사)로, 없거나 허용 밖이면 역할별 첫 화면으로
+  if (await getSessionUser()) redirect(await resolveSignedInDestination(params.next));
   const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
   return (
     <div className={s.statusArea}>
@@ -59,4 +64,13 @@ async function LoginStatus({ searchParams }: { searchParams: PageProps<"/login">
       )}
     </div>
   );
+}
+
+/**
+ * H1: 로그인 뒤 돌아갈 주소를 폼 숨은 칸으로 넘긴다(화면 변화 없음). 검사를 통과한 값만 넣고, 로그인 때 서버가 한 번 더 검사한다.
+ * 요청마다 다른 값이라 Suspense 안에서 그린다.
+ */
+async function ReturnField({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
+  const back = safeReturnPath((await searchParams).next);
+  return back ? <input type="hidden" name="next" value={back} /> : null;
 }

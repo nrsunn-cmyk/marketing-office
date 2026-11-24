@@ -35,10 +35,10 @@ beforeEach(() => {
 });
 
 describe("Proxy 관리자 화면 404", () => {
-  it("비로그인 /admin → 지금처럼 /login 으로, 관리자 확인 RPC 없음", async () => {
+  it("비로그인 /admin → /login 으로(H1: 돌아갈 주소 next 포함), 관리자 확인 RPC 없음", async () => {
     const r = await proxy(req("/admin"));
     expect(r.status).toBe(307);
-    expect(r.headers.get("location")).toBe("http://localhost:3000/login");
+    expect(r.headers.get("location")).toBe("http://localhost:3000/login?next=%2Fadmin");
     expect(S.rpcCalls).toEqual([]);
   });
 
@@ -80,5 +80,52 @@ describe("Proxy 관리자 화면 404", () => {
       expect(r.status, p).toBe(200);
     }
     expect(S.rpcCalls).toEqual([]);
+  });
+});
+
+/** ADMIN-LOGIN-NEXT-IMPL-01(H1): 비로그인 보호 경로 → /login?next=… (허용 경로·GET/HEAD 만) */
+describe("Proxy 로그인 돌아갈 주소(next)", () => {
+  const U = "11111111-1111-4111-8111-111111111111";
+  const loc = (r: Response) => new URL(r.headers.get("location") ?? "");
+
+  it("비로그인 GET /admin/inquiries?id=… → /login?next=(원래 주소), 갱신 쿠키 실림, RPC 없음", async () => {
+    S.setCookie = true;
+    const r = await proxy(req(`/admin/inquiries?id=${U}`));
+    expect(r.status).toBe(307);
+    expect(r.headers.get("location")).toBe(`http://localhost:3000/login?next=%2Fadmin%2Finquiries%3Fid%3D${U}`);
+    expect(loc(r).searchParams.get("next")).toBe(`/admin/inquiries?id=${U}`);
+    expect(r.cookies.get("sb-x-auth-token")?.value).toBe("새값");
+    expect(S.rpcCalls).toEqual([]);
+  });
+
+  it("업무실 경로도 next 를 넘긴다(HEAD 포함)", async () => {
+    for (const [p, method] of [[`/projects/${U}/execution`, "GET"], ["/workspace", "HEAD"], [`/tasks/${U}`, "GET"], ["/settings", "GET"]] as const) {
+      const r = await proxy(new NextRequest(new URL(p, "http://localhost:3000"), { method }));
+      expect(loc(r).pathname, p).toBe("/login");
+      expect(loc(r).searchParams.get("next"), p).toBe(p);
+    }
+  });
+
+  it("서버 액션 POST 는 next 를 붙이지 않는다", async () => {
+    const r = await proxy(new NextRequest(new URL("/admin/inquiries", "http://localhost:3000"), { method: "POST" }));
+    expect(r.status).toBe(307);
+    expect(r.headers.get("location")).toBe("http://localhost:3000/login");
+  });
+
+  it("허용 목록 밖·우회 경로는 next 없이 /login(지금과 같음)", async () => {
+    for (const p of ["/setup", "/reset-password", "/admin/..//evil.com", "/admin/%2e%2e//evil.com", "/admin/evil.com"]) {
+      const r = await proxy(req(p));
+      expect(r.status, p).toBe(307);
+      expect(loc(r).pathname, p).toBe("/login");
+      expect(loc(r).searchParams.has("next"), p).toBe(false);
+      expect(loc(r).host, p).toBe("localhost:3000");
+    }
+  });
+
+  it("공개 경로(/login?next=…·/·/auth/…)는 그대로 통과한다(되돌이 없음)", async () => {
+    for (const p of ["/login?next=%2Fadmin", "/", "/auth/callback?code=x", "/signup"]) {
+      const r = await proxy(req(p));
+      expect(r.status, p).toBe(200);
+    }
   });
 });
