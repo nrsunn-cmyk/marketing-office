@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 // 서버 전용 모듈은 이 시험에서 쓰지 않는다(표시용 변환만 본다)
-vi.mock("@/features/admin/server", () => ({ isAdmin: async () => false, countAdminPublicInquiries: async () => ({ ok: false, code: "ERROR", message: "x" }) }));
+vi.mock("@/features/admin/server", () => ({ isAdmin: async () => false, countAdminNewPublicInquiries: async () => ({ ok: false, code: "ERROR", message: "x" }), countAdminPublicInquiries: async () => ({ ok: false, code: "ERROR", message: "x" }) }));
 const { formatBytes, kstDate, kstDateTime, kstDaysAgo, microUsdToWon, shortId } = await import("./admin-parts");
 
 describe("관리자 화면 표시 변환(ADMIN-UI-01)", () => {

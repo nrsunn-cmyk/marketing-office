@@ -7,7 +7,7 @@ import type { AdminPublicInquiry } from "@/features/public-inquiries/contract";
 
 /** NADAUM-BRAND-CONNECT-01 /admin/inquiries: 목록·상태 탭·상세·글자 격리·URL 글자·상태 바꾸기 서버 동작(합성 데이터) */
 const setMock = vi.fn();
-vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, setAdminPublicInquiryStatus: (...a: unknown[]) => setMock(...a), countAdminPublicInquiries: async () => ({ ok: true, data: { new: 2, contacted: 1, quoted: 0, closed: 4 } }) }));
+vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, setAdminPublicInquiryStatus: (...a: unknown[]) => setMock(...a), countAdminNewPublicInquiries: async () => ({ ok: true, data: 2 }), countAdminPublicInquiries: async () => ({ ok: true, data: { new: 2, contacted: 1, quoted: 0, closed: 4 } }) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // NADAUM-INQUIRY-DELETE-FRONT-01: 삭제 계약 함수(Backend)와 redirect(던져서 흐름을 끊는 Next 동작 흉내)
 const delMock = vi.fn();

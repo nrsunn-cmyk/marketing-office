@@ -1,14 +1,14 @@
 import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/** ADMIN-INQUIRY-BADGE-01: 「공개 상담」 탭 신규 배지(AGY 규격). 건수 함수 결과를 바꿔 가며 본다 */
+/** ADMIN-INQUIRY-BADGE-01: 「공개 상담」 탭 신규 배지(AGY 규격). ADMIN-INQUIRY-COUNT-LITE-01: 기록 없는 신규 건수 함수 결과를 바꿔 가며 본다 */
 const counts = vi.fn();
-vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, countAdminPublicInquiries: () => counts() }));
+vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, countAdminNewPublicInquiries: () => counts(), countAdminPublicInquiries: () => { throw new Error("배지는 기록 남기는 상태별 건수 함수를 부르지 않는다"); } }));
 vi.mock("./admin.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 const { InquiryBadge, inquiryBadgeText } = await import("./admin-parts");
 
-const ok = (n: number) => ({ ok: true, data: { new: n, contacted: 1, quoted: 0, closed: 4 } });
+const ok = (n: number) => ({ ok: true, data: n });
 const draw = async (active: boolean) => {
   const el = await InquiryBadge({ active });
   return el ? renderToString(el) : "";

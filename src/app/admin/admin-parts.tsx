@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache, Suspense, type ReactNode } from "react";
-import { countAdminPublicInquiries, isAdmin } from "@/features/admin/server";
+import { countAdminNewPublicInquiries, isAdmin } from "@/features/admin/server";
 import styles from "../ui.module.css";
 import ad from "./admin.module.css";
 
@@ -38,10 +38,10 @@ const TABS = [
 ] as const;
 
 /**
- * ADMIN-INQUIRY-BADGE-01(UX-SCENARIO-AUDIT-03 H2, AGY 배지 규격): 공개 상담 건수를 한 요청에서 한 번만 읽는다.
- * 이 DB 함수는 부를 때마다 감사 기록을 한 줄 남긴다 — 공개 상담 화면은 이 함수를 함께 써서 두 번 남지 않게 한다.
+ * ADMIN-INQUIRY-BADGE-01(UX-SCENARIO-AUDIT-03 H2, AGY 배지 규격): 신규 건수를 한 요청에서 한 번만 읽는다.
+ * ADMIN-INQUIRY-COUNT-LITE-01: 감사 기록을 남기지 않는 신규 건수 함수로 바꿈(탭을 옮길 때마다 지울 수 없는 기록이 쌓이던 것).
  */
-export const adminInquiryCounts = cache(countAdminPublicInquiries);
+export const adminInquiryNewCount = cache(countAdminNewPublicInquiries);
 
 /** 탭 배지 글자: 0건이면 없음, 99 초과는 99+ */
 export function inquiryBadgeText(n: number): string | null {
@@ -51,8 +51,8 @@ export function inquiryBadgeText(n: number): string | null {
 
 /** 「공개 상담」 탭 옆 신규 배지. 건수를 못 읽으면 조용히 숨긴다(탭은 그대로) */
 export async function InquiryBadge({ active }: { active: boolean }) {
-  const r = await adminInquiryCounts();
-  const text = r.ok ? inquiryBadgeText(r.data.new) : null;
+  const r = await adminInquiryNewCount();
+  const text = r.ok ? inquiryBadgeText(r.data) : null;
   if (!text) return null;
   return <span className={active ? `${ad.tabBadge} ${ad.tabBadgeActive}` : ad.tabBadge}>{text}</span>;
 }

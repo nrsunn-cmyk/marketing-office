@@ -15,7 +15,7 @@ vi.mock("@/server/supabase/server", () => ({
     },
   }),
 }));
-const { listAdminPublicInquiries, countAdminPublicInquiries, setAdminPublicInquiryStatus } = await import("./server");
+const { listAdminPublicInquiries, countAdminPublicInquiries, countAdminNewPublicInquiries, setAdminPublicInquiryStatus } = await import("./server");
 
 const row = (i: number) => ({
   id: `00000000-0000-4000-8000-00000000000${i}`,
@@ -73,6 +73,22 @@ describe("countAdminPublicInquiries", () => {
     st.result.admin_public_inquiry_counts = { data: [{ status: "new", total: 3 }, { status: "closed", total: 1 }], error: null };
     const r = await countAdminPublicInquiries();
     expect(r).toEqual({ ok: true, data: { new: 3, contacted: 0, quoted: 0, closed: 1 } });
+  });
+});
+
+describe("countAdminNewPublicInquiries (배지, 기록 없는 함수)", () => {
+  it("숫자 변환, 비정상 값은 0, 오류는 ERROR", async () => {
+    st.result.admin_public_inquiry_new_count = { data: 5, error: null };
+    expect(await countAdminNewPublicInquiries()).toEqual({ ok: true, data: 5 });
+    expect(st.calls.at(-1)).toEqual({ fn: "admin_public_inquiry_new_count", args: undefined });
+    for (const v of [null, -3, "x"]) {
+      st.result.admin_public_inquiry_new_count = { data: v, error: null };
+      expect(await countAdminNewPublicInquiries()).toEqual({ ok: true, data: 0 });
+    }
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    st.result.admin_public_inquiry_new_count = { data: null, error: { code: "XX000", message: "boom" } };
+    expect(await countAdminNewPublicInquiries()).toMatchObject({ ok: false });
+    err.mockRestore();
   });
 });
 

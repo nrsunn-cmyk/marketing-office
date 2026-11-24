@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 /** NADAUM-BRAND-ADMIN-THEME-01 관리자 화면 나다움 테마: 레이아웃·로고·파비콘·토큰 대비 */
-vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, countAdminPublicInquiries: async () => ({ ok: false, code: "ERROR", message: "x" }) }));
+vi.mock("@/features/admin/server", () => ({ isAdmin: async () => true, countAdminNewPublicInquiries: async () => ({ ok: false, code: "ERROR", message: "x" }), countAdminPublicInquiries: async () => ({ ok: false, code: "ERROR", message: "x" }) }));
 vi.mock("./admin.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
