@@ -464,9 +464,23 @@
   display: grid;
   gap: var(--space-3);
 }
+/* 사유 칸: 공용 .field input 과 같은 모양(바로 위 처리 상태 칸과 맞춤) */
 .deleteReason {
   width: 100%;
   min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--text-main);
+}
+.deleteReason::placeholder {
+  color: var(--text-dim);
+}
+.deleteReason:focus {
+  border-color: var(--border-focus);
 }
 .deleteError {
   margin: 0;
