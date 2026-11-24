@@ -37,9 +37,16 @@ export function DeleteInquiry({
   const regionId = `${uid}-confirm`;
   const warnId = `${uid}-warn`;
 
-  // 열면 사유 칸으로, 닫으면 [삭제]로 초점을 옮긴다(처음 그릴 때는 옮기지 않는다)
+  // 열면 사유 칸으로, 닫으면 [삭제]로 초점을 옮긴다(처음 그릴 때는 옮기지 않는다).
+  // 열 때는 사유 칸을 화면 가운데로 올린다 — 사유 칸과 [영구 삭제]/[취소]가 휴대폰 아래 고정 메뉴에 가리지 않게
+  // (AGY INQUIRY-ADMIN-DELETE-SPEC-01 4절, Tester QA-NADAUM-INQUIRY-DELETE-01 R1). 움직임 줄이기 설정이면 바로 옮긴다
   useEffect(() => {
-    if (open) reasonRef.current?.focus();
+    if (open) {
+      const reason = reasonRef.current;
+      reason?.focus({ preventScroll: true });
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      reason?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    }
     else if (wasOpen.current) openRef.current?.focus();
     wasOpen.current = open;
   }, [open]);
