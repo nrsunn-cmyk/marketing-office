@@ -142,10 +142,20 @@ export const CONTACT = {
 /** 푸터 보조 링크 '업무실 로그인'(/login) 노출 여부. 숨기려면 false 한 줄(AGY PRIVACY-CONSENT-SPEC-01 2절) */
 export const SHOW_FOOTER_WORKSPACE_LOGIN = true;
 
+/**
+ * 검색 노출 A안 2단계(AGY 공용 지침 v3.0 공지 msg_02f75daa367a, 주인님 승인 2026-11-24 10:47).
+ * 1차 출시는 false(루트 layout 의 noindex 그대로). 대표 전화번호와 실제 사례(WORKS 의 concept·published)를 채운 뒤
+ * true 로 바꾸면 공개 첫 화면(/)만 검색에 노출된다. 로그인·업무실·관리자 화면은 계속 루트 noindex.
+ * 조건을 채우지 않고 켜면 nadaum-home.test.ts 가 실패한다.
+ */
+export const BRAND_INDEXABLE = false;
+/** 대표 전화번호 자리 표시(이 글자가 남아 있으면 아직 번호를 정하지 않은 것) */
+export const PHONE_PLACEHOLDER = "[전화번호 직접 입력 예정]";
+
 export const FOOTER = {
   name: "NADAUM BRAND",
   /** 8절 미확정: 실제 번호가 확정될 때까지 자리 표시 그대로(번호를 지어내지 않음) */
-  phone: "전화: [전화번호 직접 입력 예정]",
+  phone: `전화: ${PHONE_PLACEHOLDER}`,
   copyright: "© NADAUM BRAND",
   login: "업무실 로그인",
   loginHref: "/login",
