@@ -7,7 +7,7 @@
   padding: var(--space-2) var(--space-4);
   overflow-wrap: anywhere;
   word-break: keep-all;
-  --text-muted: #475569; /* 밝은 화면 회색 글 대비 보강(영상 구성과 같음) */
+  --text-muted: var(--text-muted-strong); /* 밝은 화면 회색 글 대비 보강(영상 구성과 같음) */
 }
 :global([data-theme="dark"]) .help {
   --text-muted: inherit;
@@ -89,7 +89,7 @@
   background: var(--bg-app);
 }
 .term {
-  gap: 4px;
+  gap: var(--space-1);
   background: var(--bg-subtle);
 }
 .stepTop {

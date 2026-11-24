@@ -59,7 +59,7 @@
 /* 회색 배지(#64748b/#f1f5f9 4.34:1) 대비 보강. 퍼널 칸(.column)·QA-SOURCES-UI-01 O4 와 같은 방식:
  * 밝은 화면에서만 카드 안 --text-muted 를 #475569(6.91:1)로, 어두운 화면은 원래 토큰 */
 .lmCard {
-  --text-muted: #475569;
+  --text-muted: var(--text-muted-strong);
 }
 :global([data-theme="dark"]) .lmCard {
   --text-muted: inherit;
