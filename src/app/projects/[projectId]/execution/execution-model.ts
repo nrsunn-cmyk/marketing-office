@@ -70,6 +70,8 @@ export const EX_LABELS = {
   noApi: "외부 API 호출 0건",
   url: "게시 주소 (https://로 시작)",
   publishedAt: "게시 시각 (한국 시간)",
+  /** A8(AGY msg_eda62e087f14) 빈 대기열 → 프로젝트 작업 목록 */
+  emptyTasksLink: "프로젝트 작업 목록으로 이동 →",
   note: "메모 (선택)",
   manualBadge: "수동 입력",
   syncBadge: "자동 수집", // G6: AGY msg_979029ebaf58(수동 입력과 대칭)

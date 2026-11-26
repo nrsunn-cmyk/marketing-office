@@ -226,6 +226,15 @@ it.runIf(Boolean(process.env.EX_HARNESS))("화면 점검용 HTML 쓰기", () => 
   );
 });
 
+describe("P4-UX-POLISH A8 빈 대기열", () => {
+  it("대기열이 비면 확정 빈 상태 아래 '프로젝트 작업 목록으로 이동 →'(작업 목록 앵커)", () => {
+    const h = renderToString(createElement(ExecutionView, { board: board(), projectTitle: "나다음 리뉴얼" })).replaceAll("<!-- -->", "");
+    expect(h).toContain(`href="/projects/${P}#tasks"`);
+    expect(h).toContain(`>${EX_LABELS.emptyTasksLink}</a>`);
+    expect(EX_LABELS.emptyTasksLink).toBe("프로젝트 작업 목록으로 이동 →");
+  });
+});
+
 describe("UX-EXEC-JUMP-FRONT-01 바로가기 막대와 외부 연동 구획", () => {
   const conn = (status: "connected" | "disconnected") =>
     ({ id: "c1", channel: "crm", status, accountLabel: "회사 CRM", endpointUrl: "https://e", metricsUrl: "https://m", monthlyBudgetWon: 100000, perRunLimitWon: 5000, lastCheckedAt: null, lastErrorCode: null }) as P4ExternalBoard["connections"][number];

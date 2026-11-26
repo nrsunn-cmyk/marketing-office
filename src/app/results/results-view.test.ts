@@ -115,6 +115,14 @@ describe("결과물 목록 — 납품 묶음(F1)", () => {
     expect(a).not.toContain(C.bundleFilterEmptyTitle);
   });
 
+  it("P4-UX-POLISH A7: 승인본 체크 이름에 납품 묶음 기준, 승인본만 보기로 비었으면 끄는 안내", () => {
+    expect(render()).toContain(`/> ${C.approvedOnlyLabel}</label>`);
+    expect(render()).not.toContain(C.approvedOnlyEmptyHint);
+    expect(render({ approvedOnly: true })).toContain(C.approvedOnlyEmptyHint);
+    expect(render({ type: "delivery_bundle", approvedOnly: true })).toContain(C.approvedOnlyEmptyHint);
+    expect(render({ type: "delivery_bundle" })).not.toContain(C.approvedOnlyEmptyHint);
+  });
+
   it("쪽 넘김은 종류·승인 조건과 커서를 그대로 이어 간다", () => {
     const h = render({ items: [bundle()], total: 120, nextCursor: "CUR", type: "delivery_bundle", approvedOnly: true });
     expect(h).toContain('href="/results?type=delivery_bundle&amp;approved=1&amp;cursor=CUR&amp;page=2"');

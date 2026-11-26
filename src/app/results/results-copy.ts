@@ -13,6 +13,9 @@ export const RESULTS_COPY = {
   filterEmptyTitle: "조건에 맞는 결과물이 없습니다.",
   filterEmptyDesc: "종류를 ‘전체’로 바꾸거나 ‘승인본 있는 것만’을 끄고 다시 찾아 보세요.",
   filterClear: "조건 지우기",
+  /** A7(AGY msg_eda62e087f14): 납품 묶음은 '검토 완료'가 승인본 기준 */
+  approvedOnlyLabel: "승인본 있는 것만 (납품 묶음은 검토 완료 기준)",
+  approvedOnlyEmptyHint: "승인본 있는 것만 필터를 끄면 전체 항목을 볼 수 있습니다.",
   bundleReviewed: "검토 완료",
   bundleDrafting: "작성 중",
 } as const;

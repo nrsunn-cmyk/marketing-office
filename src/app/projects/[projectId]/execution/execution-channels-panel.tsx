@@ -3,7 +3,7 @@ import { ActionForm } from "../../../_components/action-form";
 import styles from "../../../ui.module.css";
 import s from "./execution.module.css";
 import type { P4ExternalBoard } from "@/features/execution/channels";
-import { formatKst, type ExecutionBoard } from "./execution-model";
+import { formatKst, resultHeadline, type ExecutionBoard } from "./execution-model";
 
 type Action = (prev: FormState, fd: FormData) => Promise<FormState>;
 
@@ -74,6 +74,25 @@ export const P4B_COPY = {
   crSave: "상태 저장",
   crNoPermission: "보관한 프로젝트이거나 후속 작업 상태를 바꿀 권한이 없습니다.",
 } as const;
+/** P4-UX-POLISH-FRONT-01 문구 — AGY 확정본(msg_eda62e087f14, UX-SCENARIO-AUDIT-04 A3~A6) 그대로 */
+export const P4_POLISH_COPY = {
+  inquiryPrefix: "상담: ",
+  linkResult: "연결할 성과",
+  linkResultNone: "선택 안 함",
+  linkedResult: (name: string) => `연결된 성과: ${name}`,
+  addFollowup: "후속 작업 추가",
+} as const;
+
+/** 외부 게시 주소는 https 일 때만 새 창 링크(A6, 그 밖은 글자로만) */
+export function safeExternalUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 const C = P4B_COPY;
 
 /** 예약 시각이 지나 '실행할 차례'인 예약 수(실행 화면 머리 알림과 예약 구획이 같이 쓴다) */
@@ -116,6 +135,9 @@ export function ExternalChannelsPanel({
   const externalJobs = (board?.jobs ?? []).filter((j) => j.channel !== "tistory_manual" && !j.archivedAt);
   const jobById = new Map((board?.jobs ?? []).map((j) => [j.id, j]));
   const dueCount = dueScheduleCount(externalBoard);
+  const inquiryName = new Map((externalBoard?.inquiries ?? []).map((q) => [q.id, q.maskedName]));
+  const activeResults = (board?.results ?? []).filter((r) => r.status === "active" && r.archivedAt === null);
+  const resultName = new Map((board?.results ?? []).map((r) => [r.id, resultHeadline(r)]));
   const schedulableJobs = (board?.jobs ?? []).filter(
     (j) => !j.archivedAt && (j.status === "pending_approval" || j.status === "queued"),
   );
@@ -280,7 +302,16 @@ export function ExternalChannelsPanel({
                     </ActionForm>
                   ) : null}
                   {j.externalUrl ? (
-                    <p className={styles.muted}>외부 게시 주소: {j.externalUrl}</p>
+                    <p className={styles.muted}>
+                      외부 게시 주소:{" "}
+                      {safeExternalUrl(j.externalUrl) ? (
+                        <a href={j.externalUrl} target="_blank" rel="noopener noreferrer" className={styles.touchLink}>
+                          {j.externalUrl}
+                        </a>
+                      ) : (
+                        j.externalUrl
+                      )}
+                    </p>
                   ) : null}
                 </li>
               ))}
@@ -423,7 +454,7 @@ export function ExternalChannelsPanel({
                       <StatusPill map={INQUIRY_STATUS} value={inq.status} />
                     </div>
                     {board.canWrite ? (
-                      <ActionForm action={actions.createFollowup ?? notConnected} submitLabel={C.iqConnect}>
+                      <ActionForm action={actions.createFollowup ?? notConnected} submitLabel={inq.status === "linked" ? P4_POLISH_COPY.addFollowup : C.iqConnect}>
                         <input type="hidden" name="inquiryId" value={inq.id} />
                         <div className={styles.row}>
                           <div className={styles.field}>
@@ -455,10 +486,13 @@ export function ExternalChannelsPanel({
                   <li key={f.id} className={s.exCard}>
                     <div className={s.exCardHead}>
                       <span>
-                        담당: {f.assigneeName} · 기한: {f.dueDate}
+                        {inquiryName.get(f.inquiryId) ? `${P4_POLISH_COPY.inquiryPrefix}${inquiryName.get(f.inquiryId)} · ` : ""}담당: {f.assigneeName} · 기한: {f.dueDate}
                       </span>
                       <StatusPill map={FOLLOWUP_STATUS} value={f.status} />
                     </div>
+                    {f.linkedResultId && resultName.get(f.linkedResultId) ? (
+                      <p className={styles.muted}>{P4_POLISH_COPY.linkedResult(resultName.get(f.linkedResultId)!)}</p>
+                    ) : null}
                     {board.canWrite ? (
                       <ActionForm action={actions.updateFollowup ?? notConnected} submitLabel={C.crSave}>
                         <input type="hidden" name="followupId" value={f.id} />
@@ -472,6 +506,20 @@ export function ExternalChannelsPanel({
                             ))}
                           </select>
                         </div>
+                        {activeResults.length > 0 ? (
+                          <div className={styles.field}>
+                            <label htmlFor={`flr-${f.id}`}>{P4_POLISH_COPY.linkResult}</label>
+                            {/* 서버는 빈 값이면 기존 연결을 유지한다(update_crm_followup coalesce) */}
+                            <select id={`flr-${f.id}`} name="linkedResultId" defaultValue={activeResults.some((r) => r.id === f.linkedResultId) ? (f.linkedResultId ?? "") : ""}>
+                              <option value="">{P4_POLISH_COPY.linkResultNone}</option>
+                              {activeResults.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {resultHeadline(r)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
                       </ActionForm>
                     ) : null}
                   </li>

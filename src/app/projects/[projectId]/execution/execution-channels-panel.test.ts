@@ -17,7 +17,7 @@ vi.mock("../../../_components/action-form", async () => {
 vi.mock("./execution.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
-const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount } = await import("./execution-channels-panel");
+const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount, P4_POLISH_COPY, safeExternalUrl } = await import("./execution-channels-panel");
 
 const P = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
 const job = (x: Partial<ExecutionJobView> = {}): ExecutionJobView => ({
@@ -127,6 +127,45 @@ describe("외부 채널·P4B 패널", () => {
     const h = html(board(), full);
     expect(h).toMatch(/<details class="exFold">\s*<summary>예약 실행 \(2건\)<\/summary>/);
     expect(h).not.toContain(SCHEDULE_RUNNER_COPY.dueNote);
+  });
+
+  it("P4-UX-POLISH A3·A5: 후속 카드에 '상담: 이름'(없으면 생략), 후속 연결됨 상담은 '후속 작업 추가'", () => {
+    const h = html(board(), full);
+    expect(h).toContain("상담: 김*수 · 담당: 담당 A · 기한: 2026-11-30");
+    const linked: P4ExternalBoard = {
+      ...full,
+      inquiries: [{ ...full.inquiries[0], status: "linked" }],
+      followups: [{ ...full.followups[0], inquiryId: "없는-상담" }],
+    };
+    const h2 = html(board(), linked);
+    expect(h2).toContain(`>${P4_POLISH_COPY.addFollowup}</button>`);
+    expect(h2).not.toContain(`>${P4B_COPY.iqConnect}</button>`);
+    expect(h2).toContain("<span>담당: 담당 A · 기한: 2026-11-30</span>"); // 짝이 없으면 '상담:' 생략
+  });
+
+  it("P4-UX-POLISH A4: '연결할 성과'는 활성 성과만, 연결된 성과는 이름을 보이고 고르기 칸 기본값", () => {
+    const res = (id: string, x: object = {}) =>
+      ({ id, metricName: `성과 ${id}`, value: 12, unit: "count", numerator: null, denominator: null, status: "active", archivedAt: null, ...x }) as unknown as ExecutionBoard["results"][number];
+    const b = board({ results: [res("r1"), res("r2", { status: "voided" }), res("r3", { archivedAt: "2026-11-20T00:00:00Z" })] });
+    const h = html(b, { ...full, followups: [{ ...full.followups[0], linkedResultId: "r1" }] });
+    expect(h).toMatch(/<label for="flr-f1">연결할 성과<\/label><select id="flr-f1" name="linkedResultId">/);
+    expect(h).toContain('<option value="">선택 안 함</option>');
+    expect(h).toMatch(/<option value="r1" selected="">성과 r1 · /);
+    expect(h).not.toContain('value="r2"');
+    expect(h).not.toContain('value="r3"');
+    expect(h).toContain(P4_POLISH_COPY.linkedResult("성과 r1 · 12"));
+    // 활성 성과가 없으면 칸을 그리지 않는다
+    expect(html(board(), full)).not.toContain("flr-f1");
+  });
+
+  it("P4-UX-POLISH A6: 외부 게시 주소는 https 만 새 창 링크(noopener noreferrer), 그 밖은 글자로만", () => {
+    const h = html(board({ jobs: [job({ status: "succeeded", externalUrl: "https://sns.example.test/p/1" })] }), full);
+    expect(h).toContain('<a href="https://sns.example.test/p/1" target="_blank" rel="noopener noreferrer" class="touchLink">https://sns.example.test/p/1</a>');
+    const h2 = html(board({ jobs: [job({ status: "succeeded", externalUrl: "http://sns.example.test/p/1" })] }), full);
+    expect(h2).toContain("외부 게시 주소: http://sns.example.test/p/1</p>");
+    expect(h2).not.toContain('href="http://sns.example.test');
+    expect(safeExternalUrl("javascript:alert(1)")).toBeNull();
+    expect(safeExternalUrl(null)).toBeNull();
   });
 
   it("외부 보드를 못 읽으면 P4B 구역은 그리지 않는다(연결 설정은 남음)", () => {

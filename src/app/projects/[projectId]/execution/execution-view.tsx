@@ -185,6 +185,12 @@ function Queue({ board, actions, showPreparing }: { board: ExecutionBoard; actio
           <div className={styles.emptyState}>
             <strong>{EX_COPY.emptyTitle}</strong>
             <p className={styles.muted}>{EX_COPY.emptyDesc}</p>
+            {/* A8(AGY msg_eda62e087f14): 대기열 올리기는 작업 화면에만 있어 작업 목록으로 안내 */}
+            <p>
+              <Link href={`/projects/${board.projectId}#tasks`} className={styles.touchLink}>
+                {EX_LABELS.emptyTasksLink}
+              </Link>
+            </p>
           </div>
         ) : (
           <ul className={s.exList}>

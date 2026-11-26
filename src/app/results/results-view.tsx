@@ -44,7 +44,7 @@ export function ResultsView({
           <option value="delivery_bundle">{C.typeBundle}</option>
         </select>
         <label className={styles.row}>
-          <input type="checkbox" name="approved" value="1" defaultChecked={approvedOnly} /> 승인본 있는 것만
+          <input type="checkbox" name="approved" value="1" defaultChecked={approvedOnly} /> {C.approvedOnlyLabel}
         </label>
         <button type="submit" className={styles.secondaryButton}>
           찾기
@@ -97,6 +97,7 @@ function EmptyResults({ type, approvedOnly }: { type: ResultEntryType | null; ap
     <div className={styles.emptyState}>
       <strong>{bundle ? C.bundleFilterEmptyTitle : C.filterEmptyTitle}</strong>
       <p className={styles.muted}>{bundle ? C.bundleFilterEmptyDesc : C.filterEmptyDesc}</p>
+      {approvedOnly && <p className={styles.muted}>{C.approvedOnlyEmptyHint}</p>}
       <p className={styles.row}>
         <Link href="/results" className={styles.secondaryButton}>
           {C.filterClear}
