@@ -30,12 +30,27 @@ const CHANNEL_ITEMS = [
 const CHANNEL_NAME: Record<string, string> = { crm: "고객 관리", search_ad: "검색 광고", social_api: "SNS", tistory_manual: "티스토리" };
 const channelName = (key: string) => CHANNEL_NAME[key] ?? key;
 
+/**
+ * P4-SCHEDULE-RUNNER-01 예약 실행기 문구 — 초안(AGY 확정 대기, 확정본이 오면 이 블록만 바꾼다).
+ * 실행기는 예약 시각에 '실행할 차례'로 바꾸기만 하고 실제 실행(승인·게시 기록·외부 실행)은 사람이 누른다
+ */
+export const SCHEDULE_RUNNER_COPY = {
+  dueLabel: "실행할 차례",
+  intro: "예약 시각이 되면 '실행할 차례'로 알려 드립니다. 실행은 대기열에서 직접 눌러 주세요. 원본 초안 내용이 바뀌면 자동 보류됩니다.",
+  dueNote: "예약 시각이 되었습니다. 대기열에서 이 실행 건을 실행해 주세요.",
+  dueLink: "실행 건으로 이동 →",
+  dueSummary: (n: number) => `실행할 차례 ${n}건`,
+  banner: (n: number) => `예약 시각이 된 실행 건이 ${n}건 있습니다.`,
+  bannerLink: "예약 실행 보기 →",
+  unknownJob: "실행 건",
+} as const;
+
 /** P4B 상태 이름표(AGY P4B-HANDOFF·P4-HANDOFF-CONSISTENCY, 권고 2). 자동 보류만 경고 톤 */
-const SCHEDULE_STATUS: Record<string, string> = { scheduled: "예약됨", paused_version_changed: "자동 보류", cancelled: "취소됨", executed: "실행 완료" };
+const SCHEDULE_STATUS: Record<string, string> = { scheduled: "예약됨", due: SCHEDULE_RUNNER_COPY.dueLabel, paused_version_changed: "자동 보류", cancelled: "취소됨", executed: "실행 완료" };
 const INQUIRY_STATUS: Record<string, string> = { new: "신규", linked: "후속 연결됨", closed: "종료" };
 const FOLLOWUP_STATUS = { todo: "할 일", in_progress: "진행 중", done: "완료", hold: "보류" } as const;
 function StatusPill({ map, value }: { map: Record<string, string>; value: string }) {
-  const tone = value === "paused_version_changed" ? styles.pillWarning : styles.pillNeutral;
+  const tone = value === "paused_version_changed" ? styles.pillWarning : value === "due" ? styles.pillInfo : styles.pillNeutral;
   return <span className={`${styles.pill} ${tone}`}>{map[value] ?? value}</span>;
 }
 
@@ -60,6 +75,9 @@ export const P4B_COPY = {
   crNoPermission: "보관한 프로젝트이거나 후속 작업 상태를 바꿀 권한이 없습니다.",
 } as const;
 const C = P4B_COPY;
+
+/** 예약 시각이 지나 '실행할 차례'인 예약 수(실행 화면 머리 알림과 예약 구획이 같이 쓴다) */
+export const dueScheduleCount = (b: P4ExternalBoard | null | undefined) => (b?.schedules ?? []).filter((x) => x.status === "due").length;
 
 /** 빈 목록 안내(제목 + 설명) */
 function Empty({ title, desc }: { title: string; desc: string }) {
@@ -96,6 +114,8 @@ export function ExternalChannelsPanel({
   const connMap = new Map((externalBoard?.connections ?? []).map((c) => [c.channel, c]));
   const connectedChannels = (externalBoard?.connections ?? []).filter((c) => c.status === "connected");
   const externalJobs = (board?.jobs ?? []).filter((j) => j.channel !== "tistory_manual" && !j.archivedAt);
+  const jobById = new Map((board?.jobs ?? []).map((j) => [j.id, j]));
+  const dueCount = dueScheduleCount(externalBoard);
   const schedulableJobs = (board?.jobs ?? []).filter(
     (j) => !j.archivedAt && (j.status === "pending_approval" || j.status === "queued"),
   );
@@ -296,9 +316,12 @@ export function ExternalChannelsPanel({
           <h2 id="p4b-ops" className={styles.subtitle}>
             예약 실행 · 상담 접수 (마스킹) · CRM 후속 작업
           </h2>
-          <details className={s.exFold}>
-            <summary>예약 실행 ({externalBoard.schedules.length}건)</summary>
+          <details className={s.exFold} open={dueCount > 0}>
+            <summary>
+              예약 실행 ({externalBoard.schedules.length}건){dueCount > 0 ? ` · ${SCHEDULE_RUNNER_COPY.dueSummary(dueCount)}` : ""}
+            </summary>
             <p className={styles.muted}>{C.scIntro}</p>
+            <p className={styles.muted}>{SCHEDULE_RUNNER_COPY.intro}</p>
             {!board.canWrite ? <NoPermission text={C.scNoPermission} /> : null}
             {board.canWrite && schedulableJobs.length > 0 ? (
               <ActionForm action={actions.scheduleJob ?? notConnected} submitLabel="한국 시간(KST) 예약 등록">
@@ -324,20 +347,33 @@ export function ExternalChannelsPanel({
               <Empty title={C.scEmpty} desc={C.scEmptyDesc} />
             ) : (
               <ul className={s.exList}>
-                {externalBoard.schedules.map((sc) => (
+                {externalBoard.schedules.map((sc) => {
+                  const job = jobById.get(sc.executionJobId);
+                  return (
                   <li key={sc.id} className={s.exCard}>
                     <div className={s.exCardHead}>
-                      <span>{formatKst(sc.scheduledAt)}</span>
+                      <span>
+                        {job ? `[${channelName(job.channel)}] ${job.payloadTitle}` : SCHEDULE_RUNNER_COPY.unknownJob} · {formatKst(sc.scheduledAt)}
+                      </span>
                       <StatusPill map={SCHEDULE_STATUS} value={sc.status} />
                     </div>
                     {sc.status === "paused_version_changed" ? <p className={s.exWarn}>{C.scPaused}</p> : null}
-                    {sc.status === "scheduled" && board.canWrite ? (
+                    {sc.status === "due" ? (
+                      <p role="note">
+                        {SCHEDULE_RUNNER_COPY.dueNote}{" "}
+                        <a href={job && job.channel !== "tistory_manual" ? "#external-dispatch" : `#job-${sc.executionJobId}`} className={styles.touchLink}>
+                          {SCHEDULE_RUNNER_COPY.dueLink}
+                        </a>
+                      </p>
+                    ) : null}
+                    {(sc.status === "scheduled" || sc.status === "due") && board.canWrite ? (
                       <ActionForm action={actions.cancelSchedule ?? notConnected} submitLabel={C.scCancel}>
                         <input type="hidden" name="scheduleId" value={sc.id} />
                       </ActionForm>
                     ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </details>

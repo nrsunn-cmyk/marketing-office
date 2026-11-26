@@ -248,6 +248,20 @@ describe("UX-EXEC-JUMP-FRONT-01 바로가기 막대와 외부 연동 구획", ()
     });
   }
 
+  it("P4-SCHEDULE-RUNNER-01: 실행할 차례 예약이 있으면 머리에 건수 알림과 예약 구획 링크, 없으면 알림 없음", () => {
+    const due: P4ExternalBoard = {
+      ...ext("connected"),
+      schedules: [{ id: "s1", executionJobId: "j1", scheduledAt: "2026-11-24T01:30:00Z", status: "due", dueAt: "2026-11-24T01:31:00Z" }],
+    };
+    const h = renderToString(createElement(ExecutionView, { board: board(), projectTitle: "나다음 리뉴얼", externalBoard: due })).replaceAll("<!-- -->", "");
+    expect(h).toMatch(/<p class="notice" role="note" data-schedule-due="">예약 시각이 된 실행 건이 1건 있습니다\. <a href="#p4b-ops"/);
+    const none = renderToString(createElement(ExecutionView, { board: board(), projectTitle: "나다음 리뉴얼", externalBoard: ext("connected") }));
+    expect(none).not.toContain("data-schedule-due");
+    // 대기열을 못 읽으면 예약 구획이 없으므로 알림도 띄우지 않는다
+    const noBoard = renderToString(createElement(ExecutionView, { board: null, projectTitle: "나다음 리뉴얼", externalBoard: due }));
+    expect(noBoard).not.toContain("data-schedule-due");
+  });
+
   it("외부 연동을 불러왔으면 '준비 중인 외부 채널' 구획·링크가 없고(설정 구획과 중복 방지), AGY 막대 이름을 쓴다", () => {
     const h = text(renderToString(createElement(ExecutionView, { board: board(), projectTitle: "나다음 리뉴얼", externalBoard: ext("connected") })));
     expect(h).not.toContain(EX_LABELS.channelsHeading);

@@ -17,7 +17,7 @@ vi.mock("../../../_components/action-form", async () => {
 vi.mock("./execution.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
-const { ExternalChannelsPanel, P4B_COPY } = await import("./execution-channels-panel");
+const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount } = await import("./execution-channels-panel");
 
 const P = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
 const job = (x: Partial<ExecutionJobView> = {}): ExecutionJobView => ({
@@ -48,8 +48,8 @@ const conn = { id: "c1", channel: "crm" as const, status: "connected" as const, 
 const full: P4ExternalBoard = {
   connections: [conn],
   schedules: [
-    { id: "s1", executionJobId: "j1", scheduledAt: "2026-11-24T01:30:00Z", status: "scheduled" },
-    { id: "s2", executionJobId: "j1", scheduledAt: "2026-11-25T01:30:00Z", status: "paused_version_changed" },
+    { id: "s1", executionJobId: "j1", scheduledAt: "2026-11-24T01:30:00Z", status: "scheduled", dueAt: null },
+    { id: "s2", executionJobId: "j1", scheduledAt: "2026-11-25T01:30:00Z", status: "paused_version_changed", dueAt: null },
   ],
   inquiries: [{ id: "i1", sourceKind: "manual", maskedName: "김*수", maskedPhone: "010-****-1234", maskedEmail: "k***@a.com", status: "new", createdAt: "2026-11-20T00:00:00Z" }],
   followups: [{ id: "f1", inquiryId: "i1", assigneeName: "담당 A", dueDate: "2026-11-30", status: "todo", linkedResultId: null }],
@@ -96,6 +96,37 @@ describe("외부 채널·P4B 패널", () => {
     for (const t of [P4B_COPY.scNoPermission, P4B_COPY.iqNoPermission, P4B_COPY.crNoPermission]) expect(h).toContain(t);
     expect(h).not.toContain(P4B_COPY.iqConnect);
     expect(h).not.toContain("예약 등록");
+  });
+
+  it("P4-SCHEDULE-RUNNER-01: 예약 카드에 어느 실행 건인지 보이고, 예약 중·실행할 차례·자동 보류를 구분한다", () => {
+    const tistory = job({ id: "j2", channel: "tistory_manual", payloadTitle: "티스토리 글", status: "queued" });
+    const ext: P4ExternalBoard = {
+      ...empty,
+      schedules: [
+        { id: "s1", executionJobId: "j1", scheduledAt: "2026-11-24T01:30:00Z", status: "due", dueAt: "2026-11-24T01:31:00Z" },
+        { id: "s2", executionJobId: "j2", scheduledAt: "2026-11-24T02:30:00Z", status: "due", dueAt: "2026-11-24T02:31:00Z" },
+        { id: "s3", executionJobId: "zz", scheduledAt: "2099-01-01T00:00:00Z", status: "scheduled", dueAt: null },
+      ],
+    };
+    expect(dueScheduleCount(ext)).toBe(2);
+    expect(dueScheduleCount(null)).toBe(0);
+    const h = html(board({ jobs: [job(), tistory] }), ext);
+    expect(h).toContain("[고객 관리] 11월 소식 · 2026-11-24 10:30 KST");
+    expect(h).toContain("[티스토리] 티스토리 글 · 2026-11-24 11:30 KST");
+    expect(h).toContain(`${SCHEDULE_RUNNER_COPY.unknownJob} · `); // 목록에 없는 실행 건은 이름 대신 '실행 건'
+    expect((h.match(/class="pill pillInfo">실행할 차례</g) ?? []).length).toBe(2);
+    expect((h.match(new RegExp(SCHEDULE_RUNNER_COPY.dueNote, "g")) ?? []).length).toBe(2);
+    expect(h).toContain('href="#external-dispatch"'); // 외부 채널은 외부 실행 구획으로
+    expect(h).toContain('href="#job-j2"'); // 티스토리는 그 실행 건 카드로
+    expect((h.match(new RegExp(`>${P4B_COPY.scCancel}</button>`, "g")) ?? []).length).toBe(3); // 실행할 차례도 취소할 수 있다
+    expect(h).toMatch(/<details class="exFold" open="">\s*<summary>예약 실행 \(3건\) · 실행할 차례 2건<\/summary>/);
+    expect(h.replaceAll("&#x27;", "'")).toContain(SCHEDULE_RUNNER_COPY.intro);
+  });
+
+  it("실행할 차례가 없으면 예약 구획은 접힌 채, 요약에 차례 건수를 붙이지 않는다", () => {
+    const h = html(board(), full);
+    expect(h).toMatch(/<details class="exFold">\s*<summary>예약 실행 \(2건\)<\/summary>/);
+    expect(h).not.toContain(SCHEDULE_RUNNER_COPY.dueNote);
   });
 
   it("외부 보드를 못 읽으면 P4B 구역은 그리지 않는다(연결 설정은 남음)", () => {

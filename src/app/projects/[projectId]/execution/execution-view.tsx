@@ -22,7 +22,7 @@ import {
 } from "./execution-model";
 
 import type { P4ExternalBoard } from "@/features/execution/channels";
-import { ExternalChannelsPanel, type ExternalExecutionActions } from "./execution-channels-panel";
+import { ExternalChannelsPanel, SCHEDULE_RUNNER_COPY, dueScheduleCount, type ExternalExecutionActions } from "./execution-channels-panel";
 
 type Action = (prev: FormState, fd: FormData) => Promise<FormState>;
 /** 서버 동작(actions.ts). 시험에서 넘기지 않으면 단추마다 '아직 서버와 연결되지 않아…' 안내 */
@@ -59,6 +59,8 @@ export function ExecutionView({
   // UX-EXEC-JUMP-FRONT-01(AGY msg_ca29bb39f260): 외부 연동을 불러왔으면 '준비 중인 외부 채널' 구획과 그 링크를 빼고(아래 설정 구획과 중복),
   // 바로가기 막대는 실제로 그려지는 외부 구획과 1:1로 맞춘다(조건은 execution-channels-panel.tsx 와 같다).
   const showPreparing = !externalBoard;
+  // P4-SCHEDULE-RUNNER-01: 예약 시각이 된 실행 건 알림(예약 구획은 접혀 있을 수 있어 머리에 한 번 더)
+  const dueCount = board ? dueScheduleCount(externalBoard) : 0;
   const externalJumps: [string, string][] =
     externalBoard === undefined
       ? []
@@ -100,6 +102,14 @@ export function ExecutionView({
           ))}
         </ul>
       </nav>
+      {dueCount > 0 && (
+        <p className={styles.notice} role="note" data-schedule-due="">
+          {SCHEDULE_RUNNER_COPY.banner(dueCount)}{" "}
+          <a href="#p4b-ops" className={styles.touchLink}>
+            {SCHEDULE_RUNNER_COPY.bannerLink}
+          </a>
+        </p>
+      )}
       {board === null ? (
         <section className={`${styles.section} ${s.exSection}`} aria-labelledby="queue">
           <h2 id="queue" className={styles.subtitle}>

@@ -46,7 +46,9 @@ export interface ExecutionScheduleView {
   id: string;
   executionJobId: string;
   scheduledAt: string;
-  status: "scheduled" | "paused_version_changed" | "cancelled" | "executed";
+  /** P4-SCHEDULE-RUNNER-01: due = 예약 시각이 지나 실행할 차례(사람이 대기열에서 실행) */
+  status: "scheduled" | "due" | "paused_version_changed" | "cancelled" | "executed";
+  dueAt: string | null;
 }
 
 export interface MaskedInquiryView {
@@ -91,6 +93,10 @@ export async function listP4ExternalBoard(projectId: string): Promise<Result<P4E
   const workspaceId = workspace.id;
   const supabase = await createSupabaseServerClient();
 
+  // P4-SCHEDULE-RUNNER-01: 크론(pg_cron)이 없거나 늦어도 화면이 맞게 보이도록 본인 업무실 예약을 먼저 따라잡는다(상태만 바꿈, 외부 호출 없음)
+  const caught = await (supabase as unknown as RpcCaller).rpc("refresh_due_execution_schedules", {});
+  if (caught.error) console.error("[listP4ExternalBoard] refresh_due_execution_schedules", caught.error);
+
   const [connRes, schedRes, inqRes, crmRes] = await Promise.all([
     supabase
       .from("channel_connections" as never)
@@ -99,7 +105,7 @@ export async function listP4ExternalBoard(projectId: string): Promise<Result<P4E
       .order("channel"),
     supabase
       .from("execution_schedules" as never)
-      .select("id, execution_job_id, scheduled_at, status")
+      .select("id, execution_job_id, scheduled_at, status, due_at")
       .eq("workspace_id", workspaceId)
       .eq("project_id", projectId)
       .is("archived_at", null)
@@ -137,6 +143,7 @@ export async function listP4ExternalBoard(projectId: string): Promise<Result<P4E
     executionJobId: String(r.execution_job_id),
     scheduledAt: String(r.scheduled_at),
     status: r.status as ExecutionScheduleView["status"],
+    dueAt: (r.due_at as string | null) ?? null,
   }));
 
   const inquiries = (Array.isArray(inqRes.data) ? (inqRes.data as Array<Record<string, unknown>>) : []).map((r) => ({
