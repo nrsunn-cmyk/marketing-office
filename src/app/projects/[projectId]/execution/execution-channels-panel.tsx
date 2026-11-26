@@ -82,6 +82,16 @@ export const P4_POLISH_COPY = {
   linkedResult: (name: string) => `연결된 성과: ${name}`,
   addFollowup: "후속 작업 추가",
 } as const;
+/**
+ * Tester msg_d50295c3379a: 서버는 빈 값이면 기존 연결을 유지한다(update_crm_followup coalesce).
+ * 그래서 이미 연결된 후속 작업의 빈 선택지는 '해제'가 아니라 '유지'다. ⚠ AGY 확정 대기 초안
+ */
+export const P4_LINK_KEEP_COPY = { linkResultKeep: "바꾸지 않음" } as const;
+
+/** 성과 선택 칸의 빈 선택지 이름: 연결이 있으면 '바꾸지 않음', 없으면 '선택 안 함' */
+export function emptyResultOptionLabel(linkedResultId: string | null | undefined): string {
+  return linkedResultId ? P4_LINK_KEEP_COPY.linkResultKeep : P4_POLISH_COPY.linkResultNone;
+}
 
 /** 외부 게시 주소는 https 일 때만 새 창 링크(A6, 그 밖은 글자로만) */
 export function safeExternalUrl(url: string | null | undefined): string | null {
@@ -511,7 +521,7 @@ export function ExternalChannelsPanel({
                             <label htmlFor={`flr-${f.id}`}>{P4_POLISH_COPY.linkResult}</label>
                             {/* 서버는 빈 값이면 기존 연결을 유지한다(update_crm_followup coalesce) */}
                             <select id={`flr-${f.id}`} name="linkedResultId" defaultValue={activeResults.some((r) => r.id === f.linkedResultId) ? (f.linkedResultId ?? "") : ""}>
-                              <option value="">{P4_POLISH_COPY.linkResultNone}</option>
+                              <option value="">{emptyResultOptionLabel(f.linkedResultId)}</option>
                               {activeResults.map((r) => (
                                 <option key={r.id} value={r.id}>
                                   {resultHeadline(r)}
