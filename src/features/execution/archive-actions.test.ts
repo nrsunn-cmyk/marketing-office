@@ -73,9 +73,9 @@ describe("보관 서버 함수", () => {
 });
 
 describe("보관 서버 동작", () => {
-  it("성공하면 새로 고침", async () => {
-    expect(await A.archiveInquiryAction({}, fd({ inquiryId: I }))).toEqual({ ok: true });
-    expect(await A.archiveCrmFollowupAction({}, fd({ followupId: F }))).toEqual({ ok: true });
+  it("성공하면 새로 고침 + 확정 안내 '보관했습니다.'", async () => {
+    expect(await A.archiveInquiryAction({}, fd({ inquiryId: I }))).toEqual({ ok: true, message: "보관했습니다." });
+    expect(await A.archiveCrmFollowupAction({}, fd({ followupId: F }))).toEqual({ ok: true, message: "보관했습니다." });
     expect(h.refresh).toHaveBeenCalledTimes(2);
   });
 

@@ -45,6 +45,8 @@ const uuid = z.uuid();
 const INT_MAX = 2_147_483_647;
 const revision = z.coerce.number().int().positive().max(INT_MAX);
 const BAD = { message: "잘못된 요청입니다." } as const;
+/** 보관 성공 안내(AGY 확정, msg_3eaa3c935a83). 카드가 사라져도 ActionForm 공용 안내 영역에 보인다 */
+const ARCHIVED_MESSAGE = "보관했습니다.";
 
 const BLOCK_COPY: Record<BlockReason, string> = {
   content_changed: EXEC_ACTION_COPY.blockedContentChanged,
@@ -301,7 +303,7 @@ export async function archiveInquiryAction(_prev: FormState, fd: FormData): Prom
   const r = await archiveInquiry(id.data);
   if (!r.ok) return { message: r.message };
   refresh();
-  return { ok: true };
+  return { ok: true, message: ARCHIVED_MESSAGE };
 }
 
 /** 후속 작업 하나 보관. AUDIT-04 A1 */
@@ -311,5 +313,5 @@ export async function archiveCrmFollowupAction(_prev: FormState, fd: FormData): 
   const r = await archiveCrmFollowup(id.data);
   if (!r.ok) return { message: r.message };
   refresh();
-  return { ok: true };
+  return { ok: true, message: ARCHIVED_MESSAGE };
 }
