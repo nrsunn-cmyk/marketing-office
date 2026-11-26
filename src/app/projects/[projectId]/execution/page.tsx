@@ -22,6 +22,8 @@ import {
   scheduleExecutionAction,
   syncChannelMetricsAction,
   updateCrmFollowupAction,
+  archiveInquiryAction,
+  archiveCrmFollowupAction,
   voidExecutionResultAction,
 } from "@/features/execution/actions";
 import { listP4ExternalBoard, type P4ExternalBoard } from "@/features/execution/channels";
@@ -55,6 +57,8 @@ const SERVER_ACTIONS: ExecutionActions = {
   createInquiry: createInquiryAction,
   createFollowup: createCrmFollowupAction,
   updateFollowup: updateCrmFollowupAction,
+  archiveInquiry: archiveInquiryAction,
+  archiveFollowup: archiveCrmFollowupAction,
 };
 
 /**

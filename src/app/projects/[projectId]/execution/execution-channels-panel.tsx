@@ -18,6 +18,8 @@ export interface ExternalExecutionActions {
   createInquiry?: Action;
   createFollowup?: Action;
   updateFollowup?: Action;
+  archiveInquiry?: Action;
+  archiveFollowup?: Action;
 }
 
 const CHANNEL_ITEMS = [
@@ -87,6 +89,16 @@ export const P4_POLISH_COPY = {
  * 그래서 이미 연결된 후속 작업의 빈 선택지는 '해제'가 아니라 '유지'다. ⚠ AGY 확정 대기 초안
  */
 export const P4_LINK_KEEP_COPY = { linkResultKeep: "바꾸지 않음" } as const;
+
+/** P4-ARCHIVE-BUTTONS-FRONT-01 문구 — AGY 원안 확정(msg_3eaa3c935a83, UX-SCENARIO-AUDIT-04 A1) */
+export const P4_ARCHIVE_COPY = {
+  inquirySummary: "이 상담 보관",
+  inquiryWarn: "보관하면 이 상담에 연결된 후속 작업도 함께 보관됩니다. 보관한 항목은 목록에서 사라집니다.",
+  followupSummary: "이 후속 작업 보관",
+  followupNote: "보관하면 목록에서 사라집니다.",
+  confirm: "보관 확인",
+  done: "보관했습니다.",
+} as const;
 
 /** 성과 선택 칸의 빈 선택지 이름: 연결이 있으면 '바꾸지 않음', 없으면 '선택 안 함' */
 export function emptyResultOptionLabel(linkedResultId: string | null | undefined): string {
@@ -478,6 +490,16 @@ export function ExternalChannelsPanel({
                         </div>
                       </ActionForm>
                     ) : null}
+                    {/* AUDIT-04 A1: 한도에 닿으면 서버가 '보관한 뒤 다시 등록'을 안내하므로 보관할 길을 둔다 */}
+                    {board.canWrite ? (
+                      <details className={s.exFold} data-archive="inquiry">
+                        <summary>{P4_ARCHIVE_COPY.inquirySummary}</summary>
+                        <ActionForm action={actions.archiveInquiry ?? notConnected} submitLabel={P4_ARCHIVE_COPY.confirm} variant="secondary">
+                          <input type="hidden" name="inquiryId" value={inq.id} />
+                          <p className={s.exWarn}>{P4_ARCHIVE_COPY.inquiryWarn}</p>
+                        </ActionForm>
+                      </details>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -531,6 +553,15 @@ export function ExternalChannelsPanel({
                           </div>
                         ) : null}
                       </ActionForm>
+                    ) : null}
+                    {board.canWrite ? (
+                      <details className={s.exFold} data-archive="followup">
+                        <summary>{P4_ARCHIVE_COPY.followupSummary}</summary>
+                        <ActionForm action={actions.archiveFollowup ?? notConnected} submitLabel={P4_ARCHIVE_COPY.confirm} variant="secondary">
+                          <input type="hidden" name="followupId" value={f.id} />
+                          <p className={styles.muted}>{P4_ARCHIVE_COPY.followupNote}</p>
+                        </ActionForm>
+                      </details>
                     ) : null}
                   </li>
                 ))}

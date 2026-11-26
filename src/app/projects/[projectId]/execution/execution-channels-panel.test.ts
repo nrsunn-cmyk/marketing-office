@@ -17,7 +17,7 @@ vi.mock("../../../_components/action-form", async () => {
 vi.mock("./execution.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
-const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount, P4_POLISH_COPY, safeExternalUrl, P4_LINK_KEEP_COPY, emptyResultOptionLabel } = await import("./execution-channels-panel");
+const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount, P4_POLISH_COPY, safeExternalUrl, P4_LINK_KEEP_COPY, emptyResultOptionLabel, P4_ARCHIVE_COPY } = await import("./execution-channels-panel");
 
 const P = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
 const job = (x: Partial<ExecutionJobView> = {}): ExecutionJobView => ({
@@ -173,6 +173,20 @@ describe("외부 채널·P4B 패널", () => {
     expect(h2).not.toContain('href="http://sns.example.test');
     expect(safeExternalUrl("javascript:alert(1)")).toBeNull();
     expect(safeExternalUrl(null)).toBeNull();
+  });
+
+  it("P4-ARCHIVE A1: 상담·후속 카드에 접힌 보관 확인(상담은 후속 함께 보관 경고), 읽기 전용이면 없음", () => {
+    const h = html(board(), full);
+    expect(h).toContain(`<details class="exFold" data-archive="inquiry"><summary>${P4_ARCHIVE_COPY.inquirySummary}</summary>`);
+    expect(h).toMatch(/data-archive="inquiry">[\s\S]*?<input type="hidden" name="inquiryId" value="i1"\/><p class="exWarn">/);
+    expect(h).toContain(P4_ARCHIVE_COPY.inquiryWarn);
+    expect(h).toContain(`<details class="exFold" data-archive="followup"><summary>${P4_ARCHIVE_COPY.followupSummary}</summary>`);
+    expect(h).toMatch(/data-archive="followup">[\s\S]*?<input type="hidden" name="followupId" value="f1"\/>/);
+    expect((h.match(new RegExp(`>${P4_ARCHIVE_COPY.confirm}</button>`, "g")) ?? []).length).toBe(2);
+    // 처음엔 접혀 있다(실수로 누르지 않게)
+    expect(h).not.toMatch(/data-archive="[a-z]+" open/);
+    const ro = html(board({ canWrite: false }), full);
+    expect(ro).not.toContain("data-archive=");
   });
 
   it("외부 보드를 못 읽으면 P4B 구역은 그리지 않는다(연결 설정은 남음)", () => {
