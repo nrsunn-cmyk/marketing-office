@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
-import { saveSupplierAction } from "@/features/settings/actions";
-import { getSupplier } from "@/features/settings/server";
+import { renameWorkspaceAction, saveSupplierAction } from "@/features/settings/actions";
+import { getSupplier, getWorkspaceSettings, WORKSPACE_NAME_MAX } from "@/features/settings/server";
 import { ActionForm } from "../_components/action-form";
 import { AppNav } from "../_components/app-nav";
 import styles from "../ui.module.css";
+import { WORKSPACE_NAME_COPY } from "./workspace-name-copy";
 
 export const metadata: Metadata = { title: "업무실 설정 · 마케팅 업무실" };
 
@@ -29,6 +30,16 @@ export default function SettingsPage() {
       <AppNav />
       <main className={`${styles.page} ${styles.wide} ${styles.touchPage}`}>
         <h1 className={styles.title}>업무실 설정</h1>
+        {/* AUDIT-05 C3: 처음 설정 뒤에도 업무실 이름을 바꿀 수 있게(Backend 8b48353) */}
+        <Suspense
+          fallback={
+            <p className={styles.muted} role="status">
+              업무실 이름을 불러오는 중…
+            </p>
+          }
+        >
+          <WorkspaceNameForm />
+        </Suspense>
         <Suspense
           fallback={
             <p className={styles.muted} role="status">
@@ -40,6 +51,47 @@ export default function SettingsPage() {
         </Suspense>
       </main>
     </>
+  );
+}
+
+/** 업무실 이름. 읽어 온 revision 을 함께 보내 그사이 바뀐 이름을 덮어쓰지 않는다(서버가 CONFLICT) */
+async function WorkspaceNameForm() {
+  let ws: Awaited<ReturnType<typeof getWorkspaceSettings>>;
+  try {
+    ws = await getWorkspaceSettings();
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[settings workspace]", e);
+    ws = null;
+  }
+  if (!ws) {
+    return (
+      <section className={styles.section} aria-label="업무실 이름 상태">
+        <p className={styles.error} role="alert">
+          {WORKSPACE_NAME_COPY.loadError}
+        </p>
+        <p>
+          <Link href="/settings" className={`${styles.secondaryButton} ${styles.touchTarget}`}>
+            다시 불러오기
+          </Link>
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className={styles.section} aria-labelledby="workspace-name">
+      <h2 id="workspace-name" className={styles.subtitle}>
+        {WORKSPACE_NAME_COPY.heading}
+      </h2>
+      <p className={styles.muted}>{WORKSPACE_NAME_COPY.intro}</p>
+      <ActionForm action={renameWorkspaceAction} submitLabel={WORKSPACE_NAME_COPY.submit}>
+        <input type="hidden" name="revision" value={ws.revision} />
+        <div className={styles.field}>
+          <label htmlFor="ws-name">{WORKSPACE_NAME_COPY.label}</label>
+          <input id="ws-name" name="workspaceName" defaultValue={ws.name} required aria-required="true" maxLength={WORKSPACE_NAME_MAX} />
+        </div>
+      </ActionForm>
+    </section>
   );
 }
 

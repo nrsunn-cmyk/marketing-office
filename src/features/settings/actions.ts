@@ -2,7 +2,8 @@
 
 import { refresh } from "next/cache";
 import { fieldErrors, type FormState } from "@/app/_components/form-state";
-import { saveSupplierVersion, supplierInputSchema } from "./server";
+import { WORKSPACE_RENAME_SAVED } from "@/app/settings/workspace-name-copy";
+import { renameWorkspace, saveSupplierVersion, supplierInputSchema } from "./server";
 
 export async function saveSupplierAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const text = (k: string) => String(fd.get(k) ?? "");
@@ -26,4 +27,18 @@ export async function saveSupplierAction(_prev: FormState, fd: FormData): Promis
   if (!r.ok) return { message: r.message };
   refresh();
   return { ok: true, message: `공급자 정보 ${r.data.version}번 버전을 저장했습니다. 이후 확정하는 견적서부터 적용됩니다.` };
+}
+
+/**
+ * 업무실 이름 바꾸기(WORKSPACE-RENAME-FRONT-01, AUDIT-05 C3). Backend 8b48353 renameWorkspace 를 그대로 부른다.
+ * revision 은 화면이 읽어 온 값. 숫자가 아니면 0 → 서버가 CONFLICT 로 돌려준다.
+ */
+export async function renameWorkspaceAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const name = String(fd.get("workspaceName") ?? "");
+  const rev = String(fd.get("revision") ?? "");
+  const revision = /^\d{1,9}$/.test(rev) ? Number(rev) : 0;
+  const r = await renameWorkspace(name, revision);
+  if (!r.ok) return r.code === "VALIDATION" ? { errors: { workspaceName: r.message } } : { message: r.message };
+  refresh(); // 머리말 등 업무실 이름을 보여 주는 곳을 새로 그린다
+  return { ok: true, message: WORKSPACE_RENAME_SAVED };
 }
