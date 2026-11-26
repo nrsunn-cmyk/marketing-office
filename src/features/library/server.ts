@@ -1,7 +1,7 @@
 import "server-only";
 import { encodeCursor, PAGE_SIZE, type Cursor } from "@/domain/paging";
 import { requireWorkspace } from "@/server/auth/session";
-import { escapeLike } from "@/server/result";
+import { escapeLike, fail, ok, type Result } from "@/server/result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 /**
@@ -362,4 +362,38 @@ export async function listResultEntries(
     total: arts.total + bundles.total,
     nextCursor: (merged.length > PAGE_SIZE || arts.nextCursor !== null) && last ? encodeCursor({ at: last.updated_at, id: last.id }) : null,
   };
+}
+
+// ─────────────────────────────────────────────
+// 메모 보기 (AUDIT-05 C2, LIBRARY-TEXT-VIEW-BACKEND-01)
+// 목록(listLibrary)은 메모 본문(text_content)을 읽지 않는다(길이 제한이 없어 목록이 커진다).
+// 메모 한 건을 열 때만 이 함수로 본문을 읽는다. 업무실 확인 + RLS(app.owns_workspace) 아래에서 읽는다.
+// ─────────────────────────────────────────────
+const ASSET_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export interface TextAssetView {
+  id: string;
+  title: string | null;
+  text: string;
+  created_at: string;
+}
+
+export async function getTextAsset(id: string): Promise<Result<TextAssetView>> {
+  if (!ASSET_ID.test(id)) return fail("NOT_FOUND", "메모를 찾을 수 없습니다.");
+  const { workspace } = await requireWorkspace();
+  const sb = await createSupabaseServerClient();
+  const { data, error } = await sb
+    .from("source_assets")
+    .select("id, display_name, text_content, created_at")
+    .eq("workspace_id", workspace.id)
+    .eq("id", id)
+    .eq("kind", "text")
+    .maybeSingle();
+  if (error) {
+    console.error("[getTextAsset]", error.code, error.message);
+    return fail("ERROR", "메모를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+  const row = data as { id: string; display_name: string | null; text_content: string | null; created_at: string } | null;
+  if (!row) return fail("NOT_FOUND", "메모를 찾을 수 없습니다.");
+  return ok({ id: row.id, title: row.display_name, text: row.text_content ?? "", created_at: row.created_at });
 }
