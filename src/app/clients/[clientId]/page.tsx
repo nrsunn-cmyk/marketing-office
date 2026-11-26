@@ -18,6 +18,7 @@ import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { AssetsPanel } from "../../_components/assets-panel";
 import { formatDateTimeIn } from "../../_components/format-time";
+import { ONBOARDING_COPY } from "../../_components/onboarding-copy";
 import styles from "../../ui.module.css";
 import { ProfileReview } from "./profile-review";
 
@@ -207,6 +208,12 @@ async function ClientWorkspace({
         )}
         <details>
           <summary>새 프로젝트</summary>
+          {/* UX-SCENARIO-AUDIT-05 C1: 프로필이 없을 때만 먼저 저장하라고 알린다 */}
+          {!current && (
+            <p className={styles.warnNotice} role="note" data-no-profile="">
+              {ONBOARDING_COPY.noProfileBeforeProject}
+            </p>
+          )}
           <ActionForm action={createProjectAction} submitLabel="프로젝트 만들기">
             <input type="hidden" name="kind" value="client" />
             <input type="hidden" name="clientId" value={client.id} />

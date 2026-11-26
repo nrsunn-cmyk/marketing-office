@@ -4,12 +4,13 @@ import { startTransition, useActionState, type FormEvent } from "react";
 import styles from "../ui.module.css";
 import { setupWorkspace, type SetupState } from "./actions";
 import { useHydrated } from "../_components/use-hydrated";
+import { ONBOARDING_COPY } from "../_components/onboarding-copy";
 
-const FIELDS: Array<{ name: string; label: string; required?: boolean; type?: string; autoComplete?: string }> = [
+const FIELDS: Array<{ name: string; label: string; required?: boolean; type?: string; autoComplete?: string; help?: string }> = [
   { name: "name", label: "업무실 이름", required: true },
   { name: "legalName", label: "상호 (견적서 공급자)", required: true, autoComplete: "organization" },
   { name: "representative", label: "대표자" },
-  { name: "businessNumber", label: "사업자등록번호" },
+  { name: "businessNumber", label: "사업자등록번호", help: ONBOARDING_COPY.setupBusinessNumberHelp },
   { name: "phone", label: "전화번호", type: "tel", autoComplete: "tel" },
   { name: "email", label: "이메일", type: "email", autoComplete: "email" },
   { name: "address", label: "주소", autoComplete: "street-address" },
@@ -34,6 +35,9 @@ export function SetupForm() {
       {FIELDS.map((f) => {
         const error = state.errors?.[f.name];
         const errorId = `${f.name}-error`;
+        const helpId = `${f.name}-help`;
+        // 설명과 오류를 함께 읽게 한다(있는 것만)
+        const describedBy = [f.help ? helpId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined;
         return (
           <div className={styles.field} key={f.name}>
             <label htmlFor={f.name}>
@@ -47,8 +51,13 @@ export function SetupForm() {
               required={f.required}
               autoComplete={f.autoComplete}
               aria-invalid={error ? true : undefined}
-              aria-describedby={error ? errorId : undefined}
+              aria-describedby={describedBy}
             />
+            {f.help && (
+              <span id={helpId} className={styles.muted}>
+                {f.help}
+              </span>
+            )}
             {error && (
               <span id={errorId} className={styles.muted} role="alert">
                 {error}
