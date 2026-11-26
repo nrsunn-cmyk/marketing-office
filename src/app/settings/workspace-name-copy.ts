@@ -1,6 +1,6 @@
 /**
  * 업무실 이름 바꾸기 문구(WORKSPACE-RENAME-FRONT-01, AUDIT-05 C3).
- * ⚠ AGY 확정 대기 초안. 확정본이 오면 이 블록만 바꾼다.
+ * AGY 원안 확정(msg_46dc593778a5).
  * 충돌 안내(WORKSPACE_CONFLICT_MESSAGE)와 칸 오류는 Backend 서버가 준 문구를 그대로 보인다.
  */
 export const WORKSPACE_NAME_COPY = {
