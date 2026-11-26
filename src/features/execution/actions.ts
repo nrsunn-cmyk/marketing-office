@@ -7,6 +7,8 @@ import type { BlockReason, ExecutionStepResult } from "@/domain/execution";
 import type { Result } from "@/server/result";
 import { EXEC_ACTION_COPY } from "./copy";
 import {
+  archiveCrmFollowup,
+  archiveInquiry,
   cancelExecutionSchedule,
   createCrmFollowup,
   createInquiry,
@@ -287,6 +289,26 @@ export async function updateCrmFollowupAction(_prev: FormState, fd: FormData): P
   const resRaw = text(fd, "linkedResultId").trim();
   const linkedResultId = resRaw && uuid.safeParse(resRaw).success ? resRaw : null;
   const r = await updateCrmFollowup({ followupId: id.data, status: st.data, linkedResultId });
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+/** 문의 보관(그 후속 작업도 함께). AUDIT-04 A1 */
+export async function archiveInquiryAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const id = uuid.safeParse(fd.get("inquiryId"));
+  if (!id.success) return BAD;
+  const r = await archiveInquiry(id.data);
+  if (!r.ok) return { message: r.message };
+  refresh();
+  return { ok: true };
+}
+
+/** 후속 작업 하나 보관. AUDIT-04 A1 */
+export async function archiveCrmFollowupAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const id = uuid.safeParse(fd.get("followupId"));
+  if (!id.success) return BAD;
+  const r = await archiveCrmFollowup(id.data);
   if (!r.ok) return { message: r.message };
   refresh();
   return { ok: true };

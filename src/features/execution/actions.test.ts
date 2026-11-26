@@ -25,6 +25,8 @@ vi.mock("./channels", () => ({
   createInquiry: vi.fn(),
   createCrmFollowup: vi.fn(),
   updateCrmFollowup: vi.fn(),
+  archiveInquiry: vi.fn(),
+  archiveCrmFollowup: vi.fn(),
 }));
 vi.mock("./server", () => ({
   enqueueExecution: (...a: unknown[]) => m.enqueue(...a),

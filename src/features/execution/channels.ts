@@ -428,3 +428,28 @@ export async function updateCrmFollowup(input: {
   if (error) return rpcErr("updateCrmFollowup", error);
   return ok(true);
 }
+
+/**
+ * 보관(AUDIT-04 A1, P4-ARCHIVE-ACTIONS-BACKEND-01). DB 함수는 20261124007000 에 있다.
+ * 한도(R3)에 닿았을 때 "보관한 뒤 다시 등록"할 수 있게 하는 길이다. 지우지 않고 archived_at 만 채운다.
+ * - archive_inquiry: 본인 업무실의 열린 문의와 그 후속 작업을 함께 보관(잠금 순서 문의 → 후속 작업)
+ * - archive_crm_followup: 후속 작업 하나만 보관
+ * 이미 보관했거나 남의 업무실 것이면 NOT_FOUND(DB 한국어 설명 그대로).
+ */
+export async function archiveInquiry(inquiryId: string): Promise<Result<true>> {
+  if (!z.uuid().safeParse(inquiryId).success) return fail("NOT_FOUND", "상담·문의 건을 찾을 수 없습니다.");
+  await requireWorkspace();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await (supabase as unknown as RpcCaller).rpc("archive_inquiry", { p_inquiry_id: inquiryId });
+  if (error) return rpcErr("archiveInquiry", error);
+  return ok(true);
+}
+
+export async function archiveCrmFollowup(followupId: string): Promise<Result<true>> {
+  if (!z.uuid().safeParse(followupId).success) return fail("NOT_FOUND", "CRM 후속 작업을 찾을 수 없습니다.");
+  await requireWorkspace();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await (supabase as unknown as RpcCaller).rpc("archive_crm_followup", { p_followup_id: followupId });
+  if (error) return rpcErr("archiveCrmFollowup", error);
+  return ok(true);
+}
