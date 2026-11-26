@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 /** NADAUM-PORTFOLIO-WORKS-FRONT-01: #works 사례 데이터 계약·분류 칩·카드·상세 dialog 뼈대(AGY PORTFOLIO-WORKS-SPEC-01) */
 vi.mock("./nadaum.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
-const { PortfolioWorks } = await import("./brand-works");
+const { PortfolioWorks, hintText } = await import("./brand-works");
 const { NadaumHome } = await import("./nadaum-home");
 const { SERVICE_OPTIONS } = await import("./brand-copy");
 const { PORTFOLIO_COPY, PORTFOLIO_ITEMS, filterItems, hasVerifiedWorks, safeLiveUrl, showFilters } = await import("./portfolio-data");
@@ -105,6 +105,9 @@ describe("카드·dialog 뼈대(합성 사례로 그려 봄)", () => {
     for (const s of ["실제 사례", "콘셉트 시안", "홈페이지 제작", "합성 사례 a", "합성 요약 b", PORTFOLIO_COPY.viewHint]) expect(t).toContain(s);
     expect(html).toContain('alt="합성 사례 a 대표 화면"');
     expect(html).toMatch(/<dialog class="workDialog"(?![^>]*\sopen)[^>]*>/); // 처음엔 닫힘
+    // WCAG 2.5.3: '사례 보기'는 단추 이름에 들어가고 화살표만 숨긴다(Tester 제안)
+    expect(html).toContain('<span class="workHint">사례 보기<span aria-hidden="true"> →</span></span>');
+    expect(hintText(PORTFOLIO_COPY.viewHint)).toBe("사례 보기");
   });
 
   it("4건 이상: '전체·홈페이지·상세페이지·AI 영상·비주얼' 칩, 처음엔 '전체'만 눌림", () => {
