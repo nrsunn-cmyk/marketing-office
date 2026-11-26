@@ -17,7 +17,7 @@ vi.mock("../../../_components/action-form", async () => {
 vi.mock("./execution.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 vi.mock("../../../ui.module.css", () => ({ default: new Proxy({}, { get: (_t, k) => String(k) }) }));
 
-const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount, P4_POLISH_COPY, safeExternalUrl } = await import("./execution-channels-panel");
+const { ExternalChannelsPanel, P4B_COPY, SCHEDULE_RUNNER_COPY, dueScheduleCount, P4_POLISH_COPY, safeExternalUrl, P4_LINK_KEEP_COPY, emptyResultOptionLabel } = await import("./execution-channels-panel");
 
 const P = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
 const job = (x: Partial<ExecutionJobView> = {}): ExecutionJobView => ({
@@ -149,8 +149,15 @@ describe("외부 채널·P4B 패널", () => {
     const b = board({ results: [res("r1"), res("r2", { status: "voided" }), res("r3", { archivedAt: "2026-11-20T00:00:00Z" })] });
     const h = html(b, { ...full, followups: [{ ...full.followups[0], linkedResultId: "r1" }] });
     expect(h).toMatch(/<label for="flr-f1">연결할 성과<\/label><select id="flr-f1" name="linkedResultId">/);
-    expect(h).toContain('<option value="">선택 안 함</option>');
+    // Tester msg_d50295c3379a: 연결이 있으면 빈 선택지는 '유지'다(서버 coalesce)
+    expect(h).toContain(`<option value="">${P4_LINK_KEEP_COPY.linkResultKeep}</option>`);
+    expect(h).not.toContain('<option value="">선택 안 함</option>');
     expect(h).toMatch(/<option value="r1" selected="">성과 r1 · /);
+    // 연결이 없으면 그대로 '선택 안 함'
+    const hNone = html(b, { ...full, followups: [{ ...full.followups[0], linkedResultId: null }] });
+    expect(hNone).toContain('<option value="" selected="">선택 안 함</option>'); // 연결이 없으면 빈 선택지가 기본값
+    expect(emptyResultOptionLabel(null)).toBe(P4_POLISH_COPY.linkResultNone);
+    expect(emptyResultOptionLabel("r1")).toBe(P4_LINK_KEEP_COPY.linkResultKeep);
     expect(h).not.toContain('value="r2"');
     expect(h).not.toContain('value="r3"');
     expect(h).toContain(P4_POLISH_COPY.linkedResult("성과 r1 · 12"));
