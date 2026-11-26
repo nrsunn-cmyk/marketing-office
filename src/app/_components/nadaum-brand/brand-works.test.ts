@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -28,21 +30,35 @@ const sample = (id: string, kind: Item["kind"], category: Item["category"]): Ite
 });
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
 
-describe("사례 데이터(0건 상태)", () => {
-  it("1차 출시는 0건이라 첫 화면이 '프로젝트 준비 중' 세 칸 그대로이고 사례 카드·dialog 가 없다", () => {
-    expect(PORTFOLIO_ITEMS).toHaveLength(0);
-    const html = renderToString(createElement(NadaumHome));
-    expect((html.match(/프로젝트 준비 중/g) ?? []).length).toBe(6); // 기존: 칸마다 썸네일 글자 + 상태 태그
-    expect(html).not.toContain("<dialog");
-    expect(html).not.toContain(PORTFOLIO_COPY.viewHint);
+describe("사례 데이터(콘셉트 시안 3건, NADAUM-PORTFOLIO-CONCEPT3-FRONT-01)", () => {
+  it("자체 콘셉트 시안 3건만 공개: 모두 concept·링크 없음, 실제 사례 0건이라 검색 노출 안전장치 유지", () => {
+    expect(PORTFOLIO_ITEMS.map((w) => w.id)).toEqual(["website-brand-concept", "detail-commerce-concept", "ai-visual-motion-concept"]);
+    expect(PORTFOLIO_ITEMS.map((w) => w.category)).toEqual(["website", "detail", "ai-visual"]);
+    for (const w of PORTFOLIO_ITEMS) {
+      expect(w.kind).toBe("concept");
+      expect(w.liveUrl).toBeUndefined();
+      expect(w.industry?.startsWith("자체 제작 쇼케이스")).toBe(true);
+    }
     expect(hasVerifiedWorks(PORTFOLIO_ITEMS)).toBe(false);
   });
 
-  it("넣는 사례는 계약을 지킨다(공개 허락 사례·콘셉트 시안만, 사진 경로·https 링크·폼 서비스 이름, id 중복 없음)", () => {
+  it("첫 화면: 준비 중 세 칸 대신 카드 3장(칩 없음·닫힌 dialog), 배지는 모두 '콘셉트 시안'", () => {
+    const html = renderToString(createElement(NadaumHome));
+    expect(html).not.toContain("프로젝트 준비 중");
+    expect((html.match(/<button type="button" class="workCard" aria-haspopup="dialog"/g) ?? []).length).toBe(3);
+    expect(html).not.toContain("aria-pressed"); // 3건이라 분류 칩 없음
+    expect(html).toMatch(/<dialog class="workDialog"(?![^>]*\sopen)[^>]*>/);
+    expect((html.match(new RegExp(`>${PORTFOLIO_COPY.kind.concept}</span>`, "g")) ?? []).length).toBe(3); // 배지만(사진 대체 글자 제외)
+    expect(html).not.toContain(PORTFOLIO_COPY.kind.verified);
+    expect(html).not.toContain(PORTFOLIO_COPY.live);
+  });
+
+  it("넣는 사례는 계약을 지킨다(공개 허락 사례·콘셉트 시안만, 실제 있는 사진·https 링크·폼 서비스 이름, id 중복 없음)", () => {
     const ids = new Set<string>();
     for (const w of PORTFOLIO_ITEMS) {
       expect(["verified", "concept"]).toContain(w.kind);
-      expect(w.thumbnailSrc.startsWith("/brand/nadaum/works/")).toBe(true);
+      expect(w.thumbnailSrc.startsWith("/brand/nadaum/")).toBe(true);
+      expect(existsSync(join(process.cwd(), "public", w.thumbnailSrc))).toBe(true);
       expect(w.thumbnailAlt.trim()).not.toBe("");
       if (w.liveUrl) expect(safeLiveUrl(w.liveUrl)).toBe(w.liveUrl);
       expect(w.presetServices.length).toBeGreaterThan(0);

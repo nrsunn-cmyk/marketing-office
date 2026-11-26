@@ -76,8 +76,10 @@ describe("나다움브랜드 공개 화면", () => {
     for (const c of SERVICES.cards) for (const p of c.preset) expect(SERVICE_OPTIONS).toContain(p);
   });
 
-  it("작업물: 지어낸 사례 없이 '프로젝트 준비 중', 가짜 실적·가격·주소·이메일 없음", () => {
-    expect(count(/프로젝트 준비 중/g)).toBeGreaterThanOrEqual(3);
+  it("작업물: 지어낸 사례 없이 자체 콘셉트 시안만(배지 '콘셉트 시안'), 가짜 실적·가격·주소·이메일 없음", () => {
+    expect(PORTFOLIO_ITEMS.every((w) => w.kind === "concept")).toBe(true);
+    expect(count(/콘셉트 시안<\/span>/g)).toBe(PORTFOLIO_ITEMS.length);
+    expect(t).not.toContain("실제 사례");
     for (const bad of [/만족도/, /전환율/, /\d+\s*%/, /\d+\s*건 이상/, /가격표|₩|원\s*부터/, /@[a-z0-9.-]+\.[a-z]{2,}/i, /서울|경기|주소:/]) expect(t).not.toMatch(bad);
     expect(t).toContain("전화: [전화번호 직접 입력 예정]");
   });
@@ -122,7 +124,9 @@ describe("나다움브랜드 공개 화면", () => {
   it("장식 이미지(뫼비우스·카드)는 대체 텍스트를 비우고, 로고 링크에는 이름이 있다", () => {
     expect(html).toMatch(/aria-label="NADAUM 맨 위로"/);
     expect(html).toMatch(/alt=""[^>]*src="\/brand\/nadaum\/mobius-3d\.png"|src="\/brand\/nadaum\/mobius-3d\.png"[^>]*alt=""/);
-    expect(count(/src="\/brand\/nadaum\/service-[a-z-]+\.png"/g)).toBe(3);
+    // 서비스 카드 3장(장식) + 작업물 카드(같은 사진을 쓰되 대체 글자 있음)
+    expect(count(/src="\/brand\/nadaum\/service-[a-z-]+\.png"/g)).toBe(3 + PORTFOLIO_ITEMS.length);
+    for (const w of PORTFOLIO_ITEMS) expect(html).toContain(`alt="${w.thumbnailAlt}"`);
   });
 
   it("개인정보 고지 4요소(목적·항목·보유 기간·거부 권리)를 동의 칸 아래 늘 보이고 aria-describedby 로 잇는다", () => {
