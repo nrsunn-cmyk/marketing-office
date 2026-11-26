@@ -1,6 +1,8 @@
 import { addTextAssetAction, addUrlAssetAction, confirmSourceUploadAction, confirmUploadAction, prepareSourceUploadAction } from "@/features/assets/actions";
 import { listAssets, type AssetOwner } from "@/features/assets/server";
 import { ASSET_KIND_LABELS, EXTRACTION_STATUS_LABELS, UPLOAD_STATUS_LABELS } from "@/domain/state/labels";
+import Link from "next/link";
+import { isTextTruncated, LIBRARY_TEXT_COPY, TEXT_PREVIEW_CHARS, textAssetHref } from "../assets/library-text-copy";
 import styles from "../ui.module.css";
 import { ActionForm } from "./action-form";
 import { MobileActionSheet } from "./mobile-action-sheet";
@@ -51,7 +53,20 @@ export async function AssetsPanel({ owner, heading = "자료" }: { owner: AssetO
                     </a>
                   </div>
                 )}
-                {a.kind === "text" && <div className={styles.muted}>{a.text_content?.slice(0, 120)}</div>}
+                {a.kind === "text" && (
+                  <div className={styles.muted}>
+                    {a.text_content?.slice(0, TEXT_PREVIEW_CHARS)}
+                    {/* AUDIT-05 C2: 잘린 메모는 전체 보기로 */}
+                    {isTextTruncated(a.text_content) && (
+                      <>
+                        {"… "}
+                        <Link href={textAssetHref(a.id)} className={styles.metaLink}>
+                          {LIBRARY_TEXT_COPY.fullViewLink}
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                )}
                 {a.kind === "file" && (
                   <div className={styles.muted}>
                     {a.mime} · {formatBytes(a.bytes)} · {EXTRACTION_STATUS_LABELS[a.extraction_status]}
