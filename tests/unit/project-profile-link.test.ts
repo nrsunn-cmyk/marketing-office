@@ -13,7 +13,7 @@ const P3 = "33333333-3333-4333-8333-333333333333";
 
 const fake = {
   latest: { id: "v-9" } as { id: string } | null,
-  projects: [{ id: P1 }, { id: P2 }, { id: P3 }] as Array<{ id: string }>,
+  projects: [{ id: P1 }, { id: P2 }, { id: P3 }] as Array<{ id: string; status?: string }>,
   links: [{ project_id: P2 }] as Array<{ project_id: string }>,
   inserted: [] as Array<Record<string, unknown>>,
   filters: {} as Record<string, Array<[string, unknown]>>,
@@ -32,12 +32,22 @@ vi.mock("@/server/supabase/server", () => ({
         table === "company_profile_versions"
           ? { data: fake.latest, error: null }
           : table === "projects"
-            ? { data: fake.projects.filter((p) => f.every(([c, v]) => c !== "id" || v === p.id)), error: null }
+            ? {
+                data: fake.projects
+                  .filter((p) => f.every(([c, v]) => c !== "id" || v === p.id))
+                  .filter((p) => f.every(([c, v]) => c !== "status!=" || (p.status ?? "active") !== v))
+                  .map(({ id }) => ({ id })),
+                error: null,
+              }
             : { data: fake.links, error: null };
       const q = {
         select: () => q,
         eq: (c: string, v: unknown) => {
           f.push([c, v]);
+          return q;
+        },
+        neq: (c: string, v: unknown) => {
+          f.push([`${c}!=`, v]);
           return q;
         },
         in: (c: string, v: unknown) => {
@@ -82,7 +92,18 @@ describe("linkLatestProfileToUnlinkedProjects", () => {
     ]);
     // 모든 표에 본인 업무실 조건, 프로젝트는 그 고객의 고객 프로젝트만
     for (const t of ["company_profile_versions", "projects", "project_profiles"]) expect(fake.filters[t], t).toContainEqual(["workspace_id", "ws-1"]);
-    expect(fake.filters.projects).toEqual(expect.arrayContaining([["client_id", C], ["kind", "client"]]));
+    expect(fake.filters.projects).toEqual(expect.arrayContaining([["client_id", C], ["kind", "client"], ["status!=", "archived"]]));
+  });
+
+  it("보관(읽기 전용) 프로젝트는 연결하지 않고 개수에도 넣지 않는다", async () => {
+    fake.projects = [{ id: P1, status: "archived" }, { id: P2 }, { id: P3, status: "active" }];
+    const r = await linkLatestProfileToUnlinkedProjects(C);
+    expect(r).toEqual({ ok: true, data: { linked: 1, versionId: "v-9" } });
+    expect(fake.inserted.map((x) => x.project_id)).toEqual([P3]);
+    // 한 건만 볼 때도 보관이면 0
+    fake.inserted = [];
+    expect(await linkLatestProfileToUnlinkedProjects(C, { projectId: P1 })).toEqual({ ok: true, data: { linked: 0, versionId: "v-9" } });
+    expect(fake.inserted).toEqual([]);
   });
 
   it("projectId 를 주면 그 한 건만 본다", async () => {
