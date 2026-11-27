@@ -208,9 +208,10 @@ async function ClientWorkspace({
         )}
         <details>
           <summary>새 프로젝트</summary>
-          {/* UX-SCENARIO-AUDIT-05 C1: 프로필이 없을 때만 먼저 저장하라고 알린다 */}
+          {/* UX-SCENARIO-AUDIT-05 C1: 프로필이 없을 때만, 나중에 저장하면 자동으로 연결된다고 알린다.
+              자동 연결(C1-2)로 위험 상황이 아니므로 보통 안내 톤(AGY msg_9ddade427412) */}
           {!current && (
-            <p className={styles.warnNotice} role="note" data-no-profile="">
+            <p className={styles.notice} role="note" data-no-profile="">
               {ONBOARDING_COPY.noProfileBeforeProject}
             </p>
           )}
