@@ -167,7 +167,14 @@ export async function linkLatestProfileToUnlinkedProjects(
   if (latestError) return fromDbError("linkLatestProfile.latest", latestError);
   if (!latest) return ok({ linked: 0, versionId: null });
 
-  let projectQuery = sb.from("projects").select("id").eq("workspace_id", workspace.id).eq("client_id", clientId).eq("kind", "client");
+  // 보관(읽기 전용) 프로젝트는 연결하지 않는다. 다른 쓰기 RPC 들의 status <> 'archived' 와 같다(Tester QA-PROJECT-PROFILE-LINK-01 경미 1)
+  let projectQuery = sb
+    .from("projects")
+    .select("id")
+    .eq("workspace_id", workspace.id)
+    .eq("client_id", clientId)
+    .eq("kind", "client")
+    .neq("status", "archived");
   if (opts.projectId) projectQuery = projectQuery.eq("id", opts.projectId);
   const { data: projects, error: projectError } = await projectQuery;
   if (projectError) return fromDbError("linkLatestProfile.projects", projectError);
