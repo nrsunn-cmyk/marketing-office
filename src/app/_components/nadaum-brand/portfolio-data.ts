@@ -14,7 +14,7 @@ export type PortfolioItem = {
   categoryLabel: string;
   title: string;
   summary: string;
-  /** /brand/nadaum/works/<id>.webp (960x600) */
+  /** public 아래 사진 경로(/brand/nadaum/…, 960x600). 실제 사례 사진은 /brand/nadaum/works/<id>.webp */
   thumbnailSrc: string;
   thumbnailAlt: string;
   /** 고객 업종(공개 동의 범위). 예: "B2B 제조" */
@@ -31,8 +31,58 @@ export type PortfolioItem = {
   presetServices: ServiceOption[];
 };
 
-/** 사례 목록. 공개 허락이 확인된 사례만 여기에 추가한다(사진은 public/brand/nadaum/works/) */
-export const PORTFOLIO_ITEMS: readonly PortfolioItem[] = [];
+/**
+ * 사례 목록. 공개 허락이 확인된 사례와 자체 제작 콘셉트 시안만 넣는다.
+ * NADAUM-PORTFOLIO-CONCEPT3-FRONT-01: 주인님 1-A안 확정(자체 콘셉트 시안 3건 우선 공개), 내용은 AGY 배정 msg_4461a18d0584 그대로.
+ * 모두 kind 'concept'·liveUrl 없음이므로 hasVerifiedWorks 는 계속 false(검색 노출 안전장치 유지)
+ */
+export const PORTFOLIO_ITEMS: readonly PortfolioItem[] = [
+  {
+    id: "website-brand-concept",
+    kind: "concept",
+    category: "website",
+    categoryLabel: "홈페이지 제작",
+    title: "프리미엄 브랜드 원페이지 홍보 사이트 시안",
+    summary: "방문자가 3초 안에 핵심 서비스를 이해하고 통합 상담 폼으로 자연스럽게 이어지는 다크 스페이셜 벤토 구조",
+    thumbnailSrc: "/brand/nadaum/service-website.png",
+    thumbnailAlt: "나다움브랜드 홈페이지 제작 콘셉트 시안 3D 비주얼",
+    industry: "자체 제작 쇼케이스 (B2B · 브랜드 홍보)",
+    deliverables: ["반응형 원페이지 UI", "통합 상담 폼 연동", "모바일 접근성 최적화"],
+    challenge: "서비스 소개와 문의 동선이 흩어져 방문자가 이탈하기 쉬운 기존 기업 홍보 사이트의 한계를 정리해야 했습니다.",
+    solution: "첫 화면 3D 비주얼과 3가지 핵심 서비스 카드를 중심으로 시선을 모으고, 모든 상담 진입을 단일 #contact 폼과 서비스 프리선택으로 연결했습니다.",
+    presetServices: ["홈페이지 제작"],
+  },
+  {
+    id: "detail-commerce-concept",
+    kind: "concept",
+    category: "detail",
+    categoryLabel: "상세페이지 제작",
+    title: "전환 중심 제품 상세페이지 구조 시안",
+    summary: "제품의 핵심 강점과 신뢰 근거를 모바일 스크롤 흐름에 맞춰 설득력 있게 배치한 상세페이지 레이아웃",
+    thumbnailSrc: "/brand/nadaum/service-detail.png",
+    thumbnailAlt: "나다움브랜드 상세페이지 제작 콘셉트 시안 3D 비주얼",
+    industry: "자체 제작 쇼케이스 (커머스 · 브랜드 제품)",
+    deliverables: ["전환 스토리보드", "모바일 퍼스트 상세페이지", "핵심 포인트 비주얼"],
+    challenge: "긴 설명과 과도한 이미지 나열로 모바일 방문자가 핵심 장점을 파악하기 전에 이탈하는 문제를 줄여야 했습니다.",
+    solution: "도입 후킹 → 핵심 가치 3단 요약 → 사용 시나리오 → FAQ 흐름으로 정보 밀도를 재설계해 읽기 피로도를 낮췄습니다.",
+    presetServices: ["상세페이지 제작"],
+  },
+  {
+    id: "ai-visual-motion-concept",
+    kind: "concept",
+    category: "ai-visual",
+    categoryLabel: "AI 영상·비주얼",
+    title: "AI 기반 브랜드 쇼츠 · 3D 키비주얼 시안",
+    summary: "브랜드 고유의 톤앤매너를 유지하면서 쇼츠·릴스·광고 이미지를 빠르게 확장하는 AI 비주얼 제작 워크플로우",
+    thumbnailSrc: "/brand/nadaum/service-ai-video.png",
+    thumbnailAlt: "나다움브랜드 AI 영상 및 비주얼 콘셉트 시안 3D 이미지",
+    industry: "자체 제작 쇼케이스 (디지털 캠페인 · SNS)",
+    deliverables: ["3D 키비주얼 에셋", "쇼츠·릴스 숏폼 구성", "SNS 광고 이미지 세트"],
+    challenge: "매체별 규격과 캠페인 일정에 맞춰 일관된 브랜드 무드의 영상·이미지를 신속하게 제작해야 했습니다.",
+    solution: "브랜드 컬러와 질감 기준을 먼저 고정한 뒤 AI 생성·후보정 파이프라인으로 키비주얼과 숏폼을 하나의 톤으로 통일했습니다.",
+    presetServices: ["쇼츠·릴스 영상", "광고·상품 이미지"],
+  },
+];
 
 /** 화면 문구 — AGY PORTFOLIO-WORKS-SPEC-01 그대로 */
 export const PORTFOLIO_COPY = {

@@ -7,6 +7,11 @@ import { PORTFOLIO_COPY as P, filterItems, safeLiveUrl, showFilters, type Portfo
 import s from "./nadaum.module.css";
 
 /** '비슷한 프로젝트 상담하기': 상담 구획으로 옮긴다(이미 #contact 면 해시 변화가 없으니 직접 스크롤) */
+/** '사례 보기 →' → '사례 보기'. 끝 화살표는 화면 읽기에서 빼고 따로 그린다 */
+export function hintText(hint: string): string {
+  return hint.replace(/\s*→\s*$/, "");
+}
+
 function goToContact() {
   if (window.location.hash !== "#contact") {
     window.location.hash = "contact";
@@ -91,8 +96,10 @@ export function PortfolioWorks({ items }: { items: readonly PortfolioItem[] }) {
                 <span className={s.workCategory}>{w.categoryLabel}</span>
                 <span className={s.workTitle}>{w.title}</span>
                 <span className={s.workSummary}>{w.summary}</span>
-                <span className={s.workHint} aria-hidden="true">
-                  {P.viewHint}
+                {/* Tester QA-NADAUM-PORTFOLIO-CONCEPT3-01 제안: 보이는 글자가 단추 이름에 들어가야 한다(WCAG 2.5.3). 화살표만 숨긴다 */}
+                <span className={s.workHint}>
+                  {hintText(P.viewHint)}
+                  <span aria-hidden="true"> →</span>
                 </span>
               </span>
             </button>
