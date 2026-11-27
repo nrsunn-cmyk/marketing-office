@@ -107,3 +107,51 @@ export async function saveSupplierVersion(input: SupplierInput, baseVersion: num
   if (error.code === "23505") return fail("CONFLICT", SUPPLIER_CONFLICT_MESSAGE);
   return fromDbError("saveSupplierVersion", error);
 }
+
+// ─────────────────────────────────────────────
+// 업무실 이름 (AUDIT-05 C3, WORKSPACE-RENAME-BACKEND-01)
+// 로그인 역할에는 workspaces 쓰기 권한이 없다(PERM-CLEANUP). 정의자 RPC rename_workspace 로만 바꾼다.
+// expectedRevision = 이 화면이 읽어 온 revision. 그사이 다른 곳에서 바꿨으면 덮어쓰지 않고 CONFLICT.
+// ─────────────────────────────────────────────
+export const WORKSPACE_NAME_MAX = 200;
+export const WORKSPACE_CONFLICT_MESSAGE = "다른 곳에서 먼저 업무실 이름을 바꿨습니다. 화면을 새로 고친 뒤 다시 시도해 주세요.";
+
+export const workspaceNameSchema = z
+  .string()
+  .trim()
+  .min(1, "업무실 이름을 입력해 주세요.")
+  .max(WORKSPACE_NAME_MAX, `업무실 이름은 ${WORKSPACE_NAME_MAX}자까지 입력할 수 있습니다.`);
+
+export interface WorkspaceSettings {
+  name: string;
+  revision: number;
+}
+
+export async function getWorkspaceSettings(): Promise<WorkspaceSettings | null> {
+  const { workspace } = await requireWorkspace();
+  const sb = await createSupabaseServerClient();
+  const { data, error } = await sb.from("workspaces").select("name, revision").eq("id", workspace.id).maybeSingle();
+  if (error) throw new Error(`업무실 정보를 불러오지 못했습니다: ${error.message}`);
+  return (data as WorkspaceSettings | null) ?? null;
+}
+
+type RenameRpc = {
+  rpc: (fn: "rename_workspace", args: { p_name: string; p_expected_revision: number }) => PromiseLike<{
+    data: number | null;
+    error: { code?: string; message: string } | null;
+  }>;
+};
+
+export async function renameWorkspace(name: string, expectedRevision: number): Promise<Result<{ revision: number }>> {
+  const parsed = workspaceNameSchema.safeParse(name);
+  if (!parsed.success) return fail("VALIDATION", parsed.error.issues[0]?.message ?? "업무실 이름을 확인해 주세요.");
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 1) return fail("CONFLICT", WORKSPACE_CONFLICT_MESSAGE);
+  await requireWorkspace();
+  const sb = (await createSupabaseServerClient()) as unknown as RenameRpc;
+  const { data, error } = await sb.rpc("rename_workspace", { p_name: parsed.data, p_expected_revision: expectedRevision });
+  if (!error && typeof data === "number") return ok({ revision: data });
+  if (error?.message?.includes("CONFLICT")) return fail("CONFLICT", WORKSPACE_CONFLICT_MESSAGE);
+  if (error?.message?.includes("VALIDATION")) return fail("VALIDATION", "업무실 이름은 1~200자로 입력해 주세요.");
+  if (error) return fromDbError("renameWorkspace", { code: error.code ?? "", message: error.message });
+  return fail("ERROR", "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+}
