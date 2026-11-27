@@ -6,7 +6,7 @@ import { z } from "zod";
 import { clientInputSchema, companyProfileInputSchema, projectInputSchema } from "@/contracts";
 import { parseWon } from "@/domain/quote/parse";
 import { fieldErrors, type FormState } from "@/app/_components/form-state";
-import { createProjectRecord } from "@/features/projects/server";
+import { createProjectRecord, linkLatestProfileToUnlinkedProjects } from "@/features/projects/server";
 import { addProfileVersion, createClientRecord, setClientArchived, updateClientRecord } from "./server";
 
 const idSchema = z.uuid();
@@ -76,8 +76,24 @@ export async function addProfileVersionAction(_prev: FormState, fd: FormData): P
   }
   const r = await addProfileVersion(clientId.data, parsed.data);
   if (!r.ok) return { message: r.message };
+  // AUDIT-05 C1-2(주인님 결정: 자동 연결): 프로필 없이 만든 이 고객의 프로젝트에 방금 저장한 최신 판을 연결한다.
+  // 이미 연결된 프로젝트는 그대로다(R06). 연결이 실패해도 프로필은 이미 저장됐으므로 저장 성공으로 두고 기록만 남긴다.
+  const linked = await linkProfileQuietly(clientId.data);
   refresh();
-  return { ok: true, message: `회사 프로필 ${r.data.version}번 버전을 저장했습니다.` };
+  const saved = `회사 프로필 ${r.data.version}번 버전을 저장했습니다.`;
+  return { ok: true, message: linked > 0 ? `${saved} 프로필이 연결되지 않았던 프로젝트 ${linked}개에도 연결했습니다.` : saved };
+}
+
+/** 연결한 프로젝트 수. 실패·예외는 0으로 보고 서버 기록만 남긴다(오류 원문은 화면에 내보내지 않는다) */
+async function linkProfileQuietly(clientId: string): Promise<number> {
+  try {
+    const l = await linkLatestProfileToUnlinkedProjects(clientId);
+    if (l.ok) return l.data.linked;
+    console.error("[addProfileVersionAction.link]", l.code);
+  } catch (e) {
+    console.error("[addProfileVersionAction.link] 예외:", (e as Error).message);
+  }
+  return 0;
 }
 
 export async function createProjectAction(_prev: FormState, fd: FormData): Promise<FormState> {

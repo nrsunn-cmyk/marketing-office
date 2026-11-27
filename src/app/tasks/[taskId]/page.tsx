@@ -11,6 +11,7 @@ import { requireWorkspace } from "@/server/auth/session";
 import { ActionForm } from "../../_components/action-form";
 import { AppNav } from "../../_components/app-nav";
 import { CopyButton } from "../../_components/copy-button";
+import { logoPrefillNote } from "../../_components/onboarding-copy";
 import { formatDateTimeIn } from "../../_components/format-time";
 import styles from "../../ui.module.css";
 import { DeliveryPanel } from "./delivery-panel";
@@ -248,7 +249,8 @@ function LogoInput({ detail }: { detail: TaskDetail }) {
       <h2 id="logo-input" className={styles.subtitle}>
         로고 입력
       </h2>
-      <p className={styles.muted}>고객 정보와 회사 프로필에서 미리 채웠습니다. 목록 항목은 한 줄에 하나씩 적습니다.</p>
+      {/* UX-SCENARIO-AUDIT-05 C1: 실제로 무엇에서 채웠는지(logoDefaults 순서)에 맞춰 안내한다 */}
+      <p className={styles.muted}>{logoPrefillNote({ hasLastInput: Boolean(detail.versions[0]?.content?.input), hasProfile: Boolean(detail.profile) })}</p>
       <fieldset className={styles.row} aria-label="생성 방식">
         <label>
           <input type="radio" name="mode-display" defaultChecked readOnly /> 입력 조합으로 만들기

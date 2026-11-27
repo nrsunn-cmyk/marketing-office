@@ -13,6 +13,7 @@ import {
 import { todayIn } from "@/features/quotes/server";
 import { requireWorkspace } from "@/server/auth/session";
 import { AppNav } from "../_components/app-nav";
+import { ONBOARDING_COPY } from "../_components/onboarding-copy";
 import { formatDateTimeIn } from "../_components/format-time";
 import { FollowupDueCard, PendingCountCards } from "../_components/production-overview";
 import styles from "../ui.module.css";
@@ -174,6 +175,11 @@ function Dashboard({
             <li>
               <strong>고객 등록</strong>
               <span className={styles.muted}>고객사 이름만 있으면 됩니다.</span>
+            </li>
+            {/* UX-SCENARIO-AUDIT-05 C1: 프로필 없이 만든 프로젝트에는 나중에 저장한 프로필이 연결되지 않는다 */}
+            <li data-step="profile">
+              <strong>{ONBOARDING_COPY.profileStepTitle}</strong>
+              <span className={styles.muted}>{ONBOARDING_COPY.profileStepNote}</span>
             </li>
             <li>
               <strong>프로젝트 만들기</strong>

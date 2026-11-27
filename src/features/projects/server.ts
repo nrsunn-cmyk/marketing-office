@@ -136,3 +136,60 @@ export async function changeProjectStatus(id: string, expectedRevision: number, 
   if (error) return fromDbError("changeProjectStatus", error);
   return data.length === 1 ? ok(null) : fail("CONFLICT", CONFLICT_MESSAGE);
 }
+
+// ─────────────────────────────────────────────
+// 프로필 없이 만든 고객 프로젝트에 최신 프로필 연결 (AUDIT-05 C1-2, PROJECT-PROFILE-LINK-BACKEND-01)
+// project_profiles 는 연결 이력을 쌓기만 하는 표다. 연결이 한 줄도 없는 프로젝트에만 최신 판을 한 줄 넣는다.
+// 이미 연결된 프로젝트는 새 판이 나와도 그대로 둔다(R06: 그 프로젝트가 쓰던 판을 유지).
+// 부르는 곳(프로젝트 화면 단추 / 프로필 저장 뒤 자동)은 주인님·Master 결정 뒤 붙인다. projectId 를 주면 그 한 건만 본다.
+// 동시에 두 번 불리면 같은 판이 두 줄 들어갈 수 있다. 읽는 쪽은 최신 한 줄만 쓰므로 결과는 같다.
+// ─────────────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function linkLatestProfileToUnlinkedProjects(
+  clientId: string,
+  opts: { projectId?: string } = {},
+): Promise<Result<{ linked: number; versionId: string | null }>> {
+  if (!UUID_RE.test(clientId) || (opts.projectId !== undefined && !UUID_RE.test(opts.projectId))) {
+    return fail("NOT_FOUND", "고객이나 프로젝트를 찾을 수 없습니다.");
+  }
+  const { workspace } = await requireWorkspace();
+  const sb = await createSupabaseServerClient();
+
+  const { data: latest, error: latestError } = await sb
+    .from("company_profile_versions")
+    .select("id")
+    .eq("workspace_id", workspace.id)
+    .eq("client_id", clientId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latestError) return fromDbError("linkLatestProfile.latest", latestError);
+  if (!latest) return ok({ linked: 0, versionId: null });
+
+  // 보관(읽기 전용) 프로젝트는 연결하지 않는다. 다른 쓰기 RPC 들의 status <> 'archived' 와 같다(Tester QA-PROJECT-PROFILE-LINK-01 경미 1)
+  let projectQuery = sb
+    .from("projects")
+    .select("id")
+    .eq("workspace_id", workspace.id)
+    .eq("client_id", clientId)
+    .eq("kind", "client")
+    .neq("status", "archived");
+  if (opts.projectId) projectQuery = projectQuery.eq("id", opts.projectId);
+  const { data: projects, error: projectError } = await projectQuery;
+  if (projectError) return fromDbError("linkLatestProfile.projects", projectError);
+  const ids = ((projects ?? []) as Array<{ id: string }>).map((p) => p.id);
+  if (ids.length === 0) return ok({ linked: 0, versionId: latest.id });
+
+  const { data: links, error: linkReadError } = await sb.from("project_profiles").select("project_id").eq("workspace_id", workspace.id).in("project_id", ids);
+  if (linkReadError) return fromDbError("linkLatestProfile.links", linkReadError);
+  const linked = new Set(((links ?? []) as Array<{ project_id: string }>).map((l) => l.project_id));
+  const missing = ids.filter((id) => !linked.has(id));
+  if (missing.length === 0) return ok({ linked: 0, versionId: latest.id });
+
+  const { error: insertError } = await sb.from("project_profiles").insert(
+    missing.map((projectId) => ({ workspace_id: workspace.id, project_id: projectId, client_id: clientId, company_profile_version_id: latest.id })),
+  );
+  if (insertError) return fromDbError("linkLatestProfile.insert", insertError);
+  return ok({ linked: missing.length, versionId: latest.id });
+}
