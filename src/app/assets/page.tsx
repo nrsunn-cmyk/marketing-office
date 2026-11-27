@@ -8,6 +8,7 @@ import { ASSET_KINDS, listLibrary, type AssetKind } from "@/features/library/ser
 import { AppNav } from "../_components/app-nav";
 import { Pager } from "../_components/pager";
 import styles from "../ui.module.css";
+import { LIBRARY_TEXT_COPY, textAssetHref } from "./library-text-copy";
 
 export const metadata: Metadata = { title: "자료실 · 마케팅 업무실" };
 
@@ -157,6 +158,12 @@ async function Library({ searchParams }: { searchParams: PageProps<"/assets">["s
                     <a href={`/assets/${a.id}/download`} className={styles.touchLink}>
                       내려받기
                     </a>
+                  )}
+                  {/* AUDIT-05 C2: 메모는 목록에 내용이 없으므로 보기 화면으로 */}
+                  {a.kind === "text" && (
+                    <Link href={textAssetHref(a.id)} className={styles.touchLink}>
+                      {LIBRARY_TEXT_COPY.viewLink}
+                    </Link>
                   )}
                   {a.kind === "url" && a.url && (
                     <a href={a.url} target="_blank" rel="noopener noreferrer nofollow" className={styles.touchLink}>
